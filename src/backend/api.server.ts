@@ -8,6 +8,8 @@ import { ApiError, body, errorResponse, json } from "./http.server";
 import { sendAccountLink } from "./email.server";
 import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
 import { hashPassword, verifyPassword } from "@/lib/password.server";
+import { unlink } from "node:fs/promises";
+// or if using callbacks: import { unlink } from "node:fs";
 import {
   createUserRecord,
   findUserByEmail,
@@ -754,15 +756,13 @@ async function route(request: Request, url: URL): Promise<Response> {
       // Get all real database tables
       const allTables = getRealDatabaseTables();
       
-      if (allTables.length === 0) {
-        return json({ 
-          tables: [], 
-          status: "disconnected",
-          error: "No database tables found. Database may not be initialized.",
-          totalTables: 0,
-          totalRecords: 0
-        }, { status: 503 });
-      }
+    return json({ 
+  tables: [], 
+  status: "disconnected",
+  error: "No database tables found. Database may not be initialized.",
+  totalTables: 0,
+  totalRecords: 0
+}, 503); // 👈 Changed `{ status: 503 }` to just `503`
 
       // Friendly mapping for table names
       const tableLabels: Record<string, string> = {
@@ -836,7 +836,7 @@ async function route(request: Request, url: URL): Promise<Response> {
         error: msg,
         totalTables: 0,
         totalRecords: 0
-      }, { status: 500 });
+      }, 500);
     }
   }
 
@@ -972,8 +972,7 @@ async function route(request: Request, url: URL): Promise<Response> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Reports/summary error:", msg);
-      return json({ role: "ADMIN", cards: [], charts: { monthlyUsers: [], jobsByStatus: [] }, scope: null, generatedAt: new Date().toISOString(), error: msg }, { status: 500 });
-    }
+     return json({ role: "ADMIN", cards: [], charts: { monthlyUsers: [], jobsByStatus: [] }, scope: null, generatedAt: new Date().toISOString(), error: msg }, 500);    }
   }
 
   // Helper: Build standardized WHERE clause for reports
@@ -1319,10 +1318,10 @@ async function route(request: Request, url: URL): Promise<Response> {
 </body>
 </html>`;
 
-        const puppeteer = await import('puppeteer');
+        const puppeteer = await import('puppeteer-core');
         const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
         const pageP = await browser.newPage();
-        await pageP.setContent(html, { waitUntil: 'networkidle0' });
+       await pageP.setContent(html, { waitUntil: 'domcontentloaded' });
         const pdfBuffer = await pageP.pdf({
           format: 'A4',
           printBackground: true,
@@ -1333,7 +1332,7 @@ async function route(request: Request, url: URL): Promise<Response> {
         });
         await browser.close();
         if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) throw new ApiError(500, 'PDF generation failed (empty)');
-        return new Response(pdfBuffer, { headers: { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.pdf"` } });
+        return new Response(new Uint8Array(pdfBuffer), { headers: { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.pdf"` } });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         throw new ApiError(500, `Failed to generate PDF. ${msg}`);
