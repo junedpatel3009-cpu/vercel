@@ -1,0 +1,7 @@
+ALTER TABLE "User" ADD COLUMN "professionalCategory" TEXT;
+ALTER TABLE "User" ADD COLUMN "professionalCity" TEXT;
+ALTER TABLE "User" ADD COLUMN "serviceRadiusKm" INTEGER;
+ALTER TABLE "User" ADD COLUMN "averageRating" REAL NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "reviewCount" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN "isVerified" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "availabilityStatus" TEXT NOT NULL DEFAULT 'available';

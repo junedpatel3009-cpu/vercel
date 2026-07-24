@@ -1,0 +1,10 @@
+ALTER TABLE "User" ADD COLUMN "professionalSkillsJson" TEXT;
+ALTER TABLE "User" ADD COLUMN "experienceYears" INTEGER;
+ALTER TABLE "User" ADD COLUMN "hourlyRate" INTEGER;
+ALTER TABLE "User" ADD COLUMN "fixedRate" INTEGER;
+ALTER TABLE "User" ADD COLUMN "portfolioUrl" TEXT;
+ALTER TABLE "User" ADD COLUMN "workPhotosJson" TEXT;
+ALTER TABLE "User" ADD COLUMN "certificationsJson" TEXT;
+ALTER TABLE "User" ADD COLUMN "tradeLicenseUrl" TEXT;
+ALTER TABLE "User" ADD COLUMN "serviceArea" TEXT;
+ALTER TABLE "User" ADD COLUMN "workMode" TEXT NOT NULL DEFAULT 'both';

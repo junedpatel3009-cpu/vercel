@@ -1,0 +1,309 @@
+﻿// PROFILE UPDATE ENDPOINT
+  if (method === "PATCH" && pathname === `${API_PREFIX}/profile`) {
+    const user = currentUser(request);
+    const input = parse(profile, await body(request));
+    const fields = [];
+    const values = [];
+    const columnMap = {
+      firstName: "firstName",
+      lastName: "lastName",
+      phone: "phone",
+      avatarUrl: "avatarUrl",
+      companyName: "companyName",
+      address: "address",
+      professionalCategory: "professionalCategory",
+      professionalCity: "professionalCity",
+      skills: "professionalSkillsJson",
+      experienceYears: "experienceYears",
+      hourlyRate: "hourlyRate",
+      fixedRate: "fixedRate",
+      portfolioUrl: "portfolioUrl",
+      workPhotosJson: "workPhotosJson",
+      certificationsJson: "certificationsJson",
+      tradeLicenseUrl: "tradeLicenseUrl",
+      serviceArea: "serviceArea",
+      workMode: "workMode",
+      serviceRadiusKm: "serviceRadiusKm",
+      averageRating: "averageRating",
+      reviewCount: "reviewCount",
+      isVerified: "isVerified",
+      availabilityStatus: "availabilityStatus",
+      savedLocationsJson: "savedLocationsJson",
+      hiringNeedsJson: "hiringNeedsJson"
+    };
+    for (const [key, value] of Object.entries(input)) {
+      if (value !== undefined) {
+        let column = key;
+        if (columnMap.hasOwnProperty(key)) {
+          column = columnMap[key];
+        }
+        // JSON stringify for object/array fields
+        if (["professionalSkillsJson", "workPhotosJson", "certificationsJson", "savedLocationsJson", "hiringNeedsJson"].includes(column)) {
+          if (typeof value === "object") {
+            value = JSON.stringify(value);
+          }
+        }
+        fields.push(`${column}=?`);
+        values.push(value);
+      }
+    }
+    if (fields.length === 0) {
+        throw new ApiError(400, "No fields to update.");
+      }
+      values.push(new Date().toISOString()); // updatedAt
+      values.push(user.id);
+      const sql = `UPDATE "User" SET ${fields.join(", ")}, updatedAt=? WHERE id=?`;
+      db.prepare(sql).run(...values);
+      return json({ success: true });
+    }
+    
+    // JOB CANCELLATION ENDPOINT
+    if (method === "PATCH" && pathname.startsWith(`${API_PREFIX}/jobs/`) && pathname.endsWith(`/cancel`)) {
+      const user = currentUser(request);
+      const jobIdMatch = pathname.match(`${API_PREFIX}/jobs/(\\d+)/cancel`);
+      if (!jobIdMatch) {
+        throw new ApiError(400, "Invalid job ID.");
+      }
+      const jobId = parseInt(jobIdMatch[1]);
+      const job = db.prepare(`SELECT * FROM "ClientJob" WHERE id=?`).get(jobId);
+      if (!job) {
+        throw new ApiError(404, "Job not found.");
+      }
+      if (job.userId !== user.id) {
+        throw new ApiError(403, "Not authorized to cancel this job.");
+      }
+      if (job.status !== "OPEN") {
+        throw new ApiError(409, "Only open jobs can be cancelled.");
+      }
+      db.prepare(`UPDATE "ClientJob" SET status='CANCELLED', updatedAt=? WHERE id=?`)
+        .run(new Date().toISOString(), jobId);
+      return json({ success: true });
+    }
+    
+    // VIEW JOB APPLICATIONS ENDPOINT
+    if (method === "GET" && pathname.startsWith(`${API_PREFIX}/jobs/`) && pathname.endsWith(`/applications`)) {
+      const user = currentUser(request);
+      const jobIdMatch = pathname.match(`${API_PREFIX}/jobs/(\\d+)/applications`);
+      if (!jobIdMatch) {
+        throw new ApiError(400, "Invalid job ID.");
+      }
+      const jobId = parseInt(jobIdMatch[1]);
+      const job = db.prepare(`SELECT * FROM "ClientJob" WHERE id=?`).get(jobId);
+      if (!job) {
+        throw new ApiError(404, "Job not found.");
+      }
+      if (job.userId !== user.id) {
+        throw new ApiError(403, "Not authorized to view applications for this job.");
+      }
+      // Get applications from ProjectRequest table
+      const applications = db.prepare(`
+        SELECT pr.*, u.firstName, u.lastName, u.avatarUrl
+        FROM "ProjectRequest" pr
+        JOIN "User" u ON u.id = pr.professionalId
+        WHERE pr.jobId = ?
+      `).all(jobId);
+      return json(applications);
+    }
+    
+    // HIRE PROFESSIONAL ENDPOINT
+    if (method === "POST" && pathname.startsWith(`${API_PREFIX}/jobs/`) && pathname.endsWith(`/hire`)) {
+      const user = currentUser(request);
+      const jobIdMatch = pathname.match(`${API_PREFIX}/jobs/(\\d+)/hire`);
+      if (!jobIdMatch) {
+        throw new ApiError(400, "Invalid job ID.");
+      }
+      const jobId = parseInt(jobIdMatch[1]);
+      const job = db.prepare(`SELECT * FROM "ClientJob" WHERE id=?`).get(jobId);
+      if (!job) {
+        throw new ApiError(404, "Job not found.");
+      }
+      if (job.userId !== user.id) {
+        throw new ApiError(403, "Not authorized to hire for this job.");
+      }
+      if (job.status !== "OPEN") {
+        throw new ApiError(409, "Job must be open to hire.");
+      }
+      const input = parse(z.object({ professionalId: z.number().int().positive() }), await body(request));
+      const professionalId = input.professionalId;
+      // Check if professional has applied for this job
+      const application = db.prepare(`SELECT * FROM "ProjectRequest" WHERE jobId=? AND professionalId=?`).get(jobId, professionalId);
+      if (!application) {
+        throw new ApiError(400, "Professional has not applied for this job.");
+      }
+      // Create hire contract
+      const hireContract = createHireContract({
+        jobId,
+        professionalId,
+        clientId: user.id,
+      });
+      // Update job status
+      db.prepare(`UPDATE "ClientJob" SET status='IN_PROGRESS', updatedAt=? WHERE id=?`)
+        .run(new Date().toISOString(), jobId);
+      return json(hireContract, 201);
+    }
+    
+    // LEAVE JOB REVIEW ENDPOINT
+    if (method === "POST" && pathname.startsWith(`${API_PREFIX}/jobs/`) && pathname.endsWith(`/review`)) {
+      const user = currentUser(request);
+      const jobIdMatch = pathname.match(`${API_PREFIX}/jobs/(\\d+)/review`);
+      if (!jobIdMatch) {
+        throw new ApiError(400, "Invalid job ID.");
+      }
+      const jobId = parseInt(jobIdMatch[1]);
+      const job = db.prepare(`SELECT * FROM "ClientJob" WHERE id=?`).get(jobId);
+      if (!job) {
+        throw new ApiError(404, "Job not found.");
+      }
+      if (job.userId !== user.id) {
+        throw new ApiError(403, "Not authorized to review this job.");
+      }
+      if (job.status !== "CLOSED") {
+        throw new ApiError(409, "Job must be closed to leave a review.");
+      }
+      const input = parse(z.object({ rating: z.number().int().min(1).max(5), comment: z.string().optional() }), await body(request));
+      // For simplicity, we'll require professionalId in the request for now
+      // In a real implementation, you'd look up the hired professional from hire contracts
+      const reviewInput = z.object({ 
+        professionalId: z.number().int().positive(),
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().optional()
+      });
+      const reviewData = parse(reviewInput, await body(request));
+      const { professionalId, rating, comment } = reviewData;
+      
+      // Verify the professional was actually hired for this job
+      const hireContract = db.prepare(`
+        SELECT * FROM "HireContract" 
+        WHERE jobId = ? AND clientId = ? AND professionalId = ?
+      `).get(jobId, user.id, professionalId);
+      if (!hireContract) {
+        throw new ApiError(400, "Professional was not hired for this job.");
+      }
+      
+      // Create review
+      const stamp = now();
+      const result = db.prepare(`
+        INSERT INTO "ProjectReview" (trackingId, clientId, professionalId, rating, comment, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        hireContract.trackingId,
+        user.id,
+        professionalId,
+        rating,
+        comment ?? null,
+        stamp,
+        stamp
+      );
+      return json({ 
+        id: Number(result.lastInsertRowid),
+        rating,
+        comment
+      }, 201);
+    }
+    
+    // GET PROFESSIONAL REVIEWS ENDPOINT
+    if (method === "GET" && pathname === `${API_PREFIX}/professional/reviews`) {
+      const user = currentUser(request, ["PROFESSIONAL"]);
+      const reviews = db.prepare(`
+        SELECT pr.*, u.firstName as clientFirstName, u.lastName as clientLastName
+        FROM "ProjectReview" pr
+        JOIN "User" u ON u.id = pr.clientId
+        WHERE pr.professionalId = ?
+        ORDER BY pr.createdAt DESC
+      `).all(user.id);
+      return json(reviews);
+    }
+    
+    // UPDATE CMS PAGE ENDPOINT (ADMIN ONLY)
+    if (method === "PATCH" && pathname.startsWith(`${API_PREFIX}/pages/`)) {
+      const user = currentUser(request, ["ADMIN"]);
+      const pageIdMatch = pathname.match(`${API_PREFIX}/pages/(\\d+)`);
+      if (!pageIdMatch) {
+        throw new ApiError(400, "Invalid page ID.");
+      }
+      const pageId = parseInt(pageIdMatch[1]);
+      const input = parse(z.object({
+        title: z.string().optional(),
+        slug: z.string().optional(),
+        content: z.string().optional(),
+        metaTitle: z.string().optional(),
+        metaDescription: z.string().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+        pageKey: z.string().optional(),
+        sections: z.string().optional(),
+        keywords: z.string().optional(),
+        ogTitle: z.string().optional(),
+        ogDescription: z.string().optional(),
+        ogImage: z.string().optional(),
+        canonicalUrl: z.string().optional()
+      }), await body(request));
+      const fields = [];
+      const values = [];
+      const columnMap = {
+        title: "title",
+        slug: "slug",
+        content: "content",
+        metaTitle: "metaTitle",
+        metaDescription: "metaDescription",
+        status: "status",
+        pageKey: "pageKey",
+        sections: "sections",
+        keywords: "keywords",
+        ogTitle: "ogTitle",
+        ogDescription: "ogDescription",
+        ogImage: "ogImage",
+        canonicalUrl: "canonicalUrl"
+      };
+      for (const [key, value] of Object.entries(input)) {
+        if (value !== undefined) {
+          let column = key;
+          if (columnMap.hasOwnProperty(key)) {
+            column = columnMap[key];
+          }
+          fields.push(`${column}=?`);
+          values.push(value);
+        }
+      }
+      if (fields.length === 0) {
+        throw new ApiError(400, "No fields to update.");
+      }
+      values.push(new Date().toISOString()); // updatedAt
+      values.push(pageId);
+      const sql = `UPDATE "CmsPage" SET ${fields.join(", ")}, updatedAt=? WHERE id=?`;
+      db.prepare(sql).run(...values);
+      return json({ success: true });
+    }
+    
+    // DELETE CMS PAGE ENDPOINT (ADMIN ONLY)
+    if (method === "DELETE" && pathname.startsWith(`${API_PREFIX}/pages/`)) {
+      const user = currentUser(request, ["ADMIN"]);
+      const pageIdMatch = pathname.match(`${API_PREFIX}/pages/(\\d+)`);
+      if (!pageIdMatch) {
+        throw new ApiError(400, "Invalid page ID.");
+      }
+      const pageId = parseInt(pageIdMatch[1]);
+      const page = db.prepare(`SELECT * FROM "CmsPage" WHERE id=?`).get(pageId);
+      if (!page) {
+        throw new ApiError(404, "Page not found.");
+      }
+      db.prepare(`DELETE FROM "CmsPage" WHERE id=?`).run(pageId);
+      return json({ success: true });
+    }
+    
+    // WALLET TRANSACTIONS ENDPOINT
+    if (method === "GET" && pathname === `${API_PREFIX}/wallet/transactions`) {
+      const user = currentUser(request);
+      const wallet = db.prepare(`SELECT * FROM "Wallet" WHERE userId=?`).get(user.id);
+      if (!wallet) {
+        return json([]);
+      }
+      // Get transactions for this wallet.
+      const transactions = db.prepare(`
+        SELECT wt.*, p.amount as paymentAmount, p.currency as paymentCurrency
+        FROM "WalletTransaction" wt
+        LEFT JOIN "Payment" p ON wt.paymentId = p.id
+        WHERE wt.walletId = ?
+        ORDER BY wt.createdAt DESC
+      `).all(wallet.id);
+      return json(transactions);
+    }

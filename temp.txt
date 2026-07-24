@@ -1,0 +1,786 @@
+﻿import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { z } from "zod";
+import { issueAccessToken, opaqueToken, readAccessToken, tokenHash } from "./auth.server";
+import { getApiDatabase } from "./database.server";
+import { ApiError, body, errorResponse, json } from "./http.server";
+import { sendAccountLink } from "./email.server";
+import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
+import { hashPassword, verifyPassword } from "@/lib/password.server";
+import {
+  createUserRecord,
+  findUserByEmail,
+  findUserById,
+  updateUserPasswordByEmail,
+  type PublicUser,
+  type UserRole,
+} from "@/lib/user-db.server";
+import { listWebsitePages, saveWebsitePage } from "@/lib/website-page-cms.server";
+import { clientJobSchema, type ClientJobInput } from "@/lib/validation/client-job";
+import {
+  createClientJob,
+  deleteClientJob,
+  getClientJobById,
+  getClientJobsByUserId,
+  getOpenClientJobs,
+  updateClientJob,
+} from "@/lib/job-db.server";
+import {
+  createProjectRequest,
+  getClientProjectRequests,
+  getProfessionalProjectRequests,
+  getProfessionalTransactions,
+  getProfessionalWithdrawals,
+  createProfessionalWithdrawalRequest,
+  rateCompletedProject,
+} from "@/lib/project-request-db.server";
+import { createHireContract } from "@/lib/hire-db.server";
+import { getUserNotifications, markUserNotificationsRead } from "@/lib/notification-db.server";
+import {
+  getAdminDashboardSnapshot,
+  getAdminJobRecords,
+  getAdminPaymentTransactions,
+} from "@/lib/admin-dashboard-db.server";
+import {
+  getAdminUsers,
+  updateProfessionalVerifiedStatusByAdmin,
+  updateUserActiveStatusByAdmin,
+} from "@/lib/user-db.server";
+
+const API_PREFIX = "/api/v1";
+const email = z
+  .string()
+  .trim()
+  .email()
+  .transform((value) => value.toLowerCase());
+const registration = z.object({
+  role: z.enum(["CLIENT", "PROFESSIONAL"]),
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
+  email,
+  phone: z.string().trim().max(30).nullable().optional(),
+  password: z.string().min(8).max(128),
+});
+const login = z.object({ email, password: z.string().min(1).max(128) });
+const profile = z.object({
+  firstName: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().min(1).max(80).optional(),
+  phone: z.string().trim().max(30).nullable().optional(),
+  avatarUrl: z.string().url().nullable().optional(),
+  companyName: z.string().trim().max(160).nullable().optional(),
+  address: z.string().trim().max(300).nullable().optional(),
+  professionalCategory: z.string().trim().max(120).nullable().optional(),
+  professionalCity: z.string().trim().max(120).nullable().optional(),
+  skills: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
+  hourlyRate: z.number().int().nonnegative().nullable().optional(),
+  serviceRadiusKm: z.number().int().positive().max(1000).nullable().optional(),
+});
+
+function parse<T>(schema: z.ZodType<T>, input: unknown): T {
+  const result = schema.safeParse(input);
+  if (!result.success) throw new ApiError(422, "Validation failed.", result.error.flatten());
+  return result.data;
+}
+
+function publicAccount(user: ReturnType<typeof findUserByEmail> | PublicUser) {
+  if (!user) return null;
+  const { id, role, firstName, lastName, email, phone, avatarUrl, authProvider } = user;
+  return { id, role, firstName, lastName, email, phone, avatarUrl, authProvider };
+}
+
+function currentUser(request: Request, roles?: UserRole[]) {
+  const jwt = readAccessToken(request);
+  const session = readSessionFromCookieHeader(request.headers.get("cookie"));
+  const id = jwt?.sub ?? session?.userId;
+  const user = id ? findUserById(id) : null;
+  const account = user ? findUserByEmail(user.email) : null;
+  if (!user || !account?.isActive) throw new ApiError(401, "Authentication required.");
+  if (roles && !roles.includes(user.role))
+    throw new ApiError(403, "You do not have permission to perform this action.");
+  return user;
+}
+
+function match(pathname: string, pattern: RegExp) {
+  return pathname.match(pattern);
+}
+function now() {
+  return new Date().toISOString();
+}
+
+export async function handleBackendApi(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith(API_PREFIX)) return null;
+  const startedAt = Date.now();
+  const requestId = request.headers.get("x-request-id") || randomUUID();
+  try {
+    const response = await route(request, url);
+    response.headers.set("x-request-id", requestId);
+    console.info(
+      JSON.stringify({
+        level: "info",
+        requestId,
+        method: request.method,
+        path: url.pathname,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+      }),
+    );
+    return response;
+  } catch (error) {
+    return errorResponse(error, requestId);
+  }
+}
+
+async function route(request: Request, url: URL): Promise<Response> {
+  const db = getApiDatabase();
+  const method = request.method;
+  const pathname = url.pathname;
+
+  if (method === "GET" && pathname === `${API_PREFIX}/health`)
+    return json({ ok: true, database: "connected", timestamp: now() });
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/register`) {
+    const input = parse(registration, await body(request));
+    if (findUserByEmail(input.email)) throw new ApiError(409, "Email is already registered.");
+    const user = createUserRecord({
+      ...input,
+      phone: input.phone ?? null,
+      passwordHash: hashPassword(input.password),
+      authProvider: "LOCAL",
+    });
+    const verificationToken = createAccountToken(user.id, "EMAIL_VERIFY", 24 * 60);
+    const verificationEmailSent = await sendAccountLink(user.email, "verify", verificationToken);
+    return json(
+      {
+        user: publicAccount(user),
+        accessToken: issueAccessToken(user),
+        verificationEmailSent,
+        verificationToken: process.env.NODE_ENV === "production" ? undefined : verificationToken,
+      },
+      201,
+    );
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/login`) {
+    const input = parse(login, await body(request));
+    const user = findUserByEmail(input.email);
+    const check = await verifyPassword(input.password, user?.passwordHash ?? null);
+    if (!user || !user.isActive || !check.valid)
+      throw new ApiError(401, "Invalid email or password.");
+    if (check.needsUpgrade) updateUserPasswordByEmail(user.email, hashPassword(input.password));
+    return json({ user: publicAccount(user), accessToken: issueAccessToken(user) });
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/auth/me`)
+    return json(publicAccount(currentUser(request)));
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/verify-email`) {
+    const input = parse(z.object({ token: z.string().min(20) }), await body(request));
+    consumeAccountToken(input.token, "EMAIL_VERIFY", (userId) =>
+      db
+        .prepare(`UPDATE "User" SET emailVerifiedAt = ?, updatedAt = ? WHERE id = ?`)
+        .run(now(), now(), userId),
+    );
+    return json({ verified: true });
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/password/forgot`) {
+    const input = parse(z.object({ email }), await body(request));
+    const user = findUserByEmail(input.email);
+    const resetToken = user ? createAccountToken(user.id, "PASSWORD_RESET", 30) : undefined;
+    if (user && resetToken) await sendAccountLink(user.email, "reset", resetToken);
+    return json({
+      accepted: true,
+      resetToken: process.env.NODE_ENV === "production" ? undefined : resetToken,
+    });
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/password/reset`) {
+    const input = parse(
+      z.object({ token: z.string().min(20), password: z.string().min(8).max(128) }),
+      await body(request),
+    );
+    consumeAccountToken(input.token, "PASSWORD_RESET", (userId) => {
+      const user = findUserById(userId);
+      if (!user) throw new ApiError(404, "Account not found.");
+      updateUserPasswordByEmail(user.email, hashPassword(input.password));
+    });
+    return json({ reset: true });
+  }
+
+  if (method === "GET" && pathname === `${API_PREFIX}/profile`)
+    return json(publicAccount(currentUser(request)));
+  if (method === "PATCH" && pathname === `${API_PREFIX}/profile`) {
+    const user = currentUser(request);
+    const input = parse(profile, await body(request));
+    const fields: Record<string, unknown> = { ...input };
+    if (input.skills) {
+      fields.professionalSkillsJson = JSON.stringify(input.skills);
+      delete fields.skills;
+    }
+    const allowed = Object.entries(fields);
+    if (allowed.length)
+      db.prepare(
+        `UPDATE "User" SET ${allowed.map(([key]) => `"${key}" = ?`).join(", ")}, "updatedAt" = ? WHERE id = ?`,
+      ).run(...allowed.map(([, value]) => value), now(), user.id);
+    return json(publicAccount(findUserById(user.id)!));
+  }
+
+  if (method === "GET" && pathname === `${API_PREFIX}/jobs`) {
+    currentUser(request);
+    return json(getOpenClientJobs());
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/categories`) {
+    return json(db.prepare(`SELECT * FROM "ServiceCategory" ORDER BY sortOrder,id`).all());
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/services`) {
+    return json(db.prepare(`SELECT * FROM "Service" WHERE isActive=1 ORDER BY id DESC`).all());
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/client/jobs`) {
+    const user = currentUser(request, ["CLIENT"]);
+    return json(getClientJobsByUserId(user.id));
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/client/jobs`) {
+    const user = currentUser(request, ["CLIENT"]);
+    return json(
+      createClientJob(user.id, parse(clientJobSchema, await body(request)) as ClientJobInput),
+      201,
+    );
+  }
+  let routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/client/jobs/(\\d+)$`));
+  if (routeMatch && method === "GET") {
+    const user = currentUser(request, ["CLIENT"]);
+    const result = getClientJobById(user.id, Number(routeMatch[1]));
+    if (!result) throw new ApiError(404, "Job not found.");
+    return json(result);
+  }
+  if (routeMatch && method === "PATCH") {
+    const user = currentUser(request, ["CLIENT"]);
+    const result = updateClientJob(
+      user.id,
+      Number(routeMatch[1]),
+      parse(clientJobSchema, await body(request)) as ClientJobInput,
+    );
+    if (!result) throw new ApiError(404, "Job not found.");
+    return json(result);
+  }
+  if (routeMatch && method === "DELETE") {
+    const user = currentUser(request, ["CLIENT"]);
+    if (!deleteClientJob(user.id, Number(routeMatch[1]))) throw new ApiError(404, "Job not found.");
+    return json({ cancelled: true });
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/client/applications`) {
+    const user = currentUser(request, ["CLIENT"]);
+    return json(getClientProjectRequests(user.id));
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/client/hire`) {
+    const user = currentUser(request, ["CLIENT"]);
+    return json(createHireContract(user.id, (await body(request)) as never), 201);
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/client/reviews`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const input = parse(
+      z.object({
+        trackingId: z.number().int().positive(),
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().trim().max(2000).optional(),
+      }),
+      await body(request),
+    );
+    return json(rateCompletedProject(user.id, input), 201);
+  }
+
+  if (method === "POST" && pathname === `${API_PREFIX}/professional/applications`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    const input = parse(
+      z.object({
+        jobId: z.number().int().positive(),
+        bidAmount: z.number().int().positive().nullable(),
+        duration: z.string().trim().max(120),
+        coverLetter: z.string().trim().min(20).max(4000),
+        attachments: z
+          .array(
+            z.object({
+              fileName: z.string(),
+              fileType: z.string().optional(),
+              fileSize: z.number().optional(),
+              fileUrl: z.string().optional(),
+            }),
+          )
+          .max(10)
+          .optional(),
+      }),
+      await body(request),
+    );
+    return json(createProjectRequest({ ...input, professionalId: user.id }), 201);
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/professional/services`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    const input = parse(
+      z.object({
+        categoryId: z.number().int().positive(),
+        name: z.string().trim().min(2).max(160),
+        description: z.string().trim().min(20).max(4000),
+        price: z.number().int().nonnegative().nullable().optional(),
+        imageUrl: z.string().url().nullable().optional(),
+      }),
+      await body(request),
+    );
+    const stamp = now();
+    const result = db
+      .prepare(
+        `INSERT INTO "Service" (categoryId,professionalId,name,description,price,imageUrl,isActive,createdAt,updatedAt) VALUES (?,?,?,?,?,?,1,?,?)`,
+      )
+      .run(
+        input.categoryId,
+        user.id,
+        input.name,
+        input.description,
+        input.price ?? null,
+        input.imageUrl ?? null,
+        stamp,
+        stamp,
+      );
+    return json(
+      db.prepare(`SELECT * FROM "Service" WHERE id=?`).get(Number(result.lastInsertRowid)),
+      201,
+    );
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/professional/jobs/history`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    return json(getProfessionalProjectRequests(user.id));
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/professional/earnings`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    return json({
+      transactions: getProfessionalTransactions(user.id),
+      withdrawals: getProfessionalWithdrawals(user.id),
+    });
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/professional/payouts`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    const input = parse(
+      z.object({
+        amount: z.number().int().positive(),
+        destinationType: z.enum(["BANK", "UPI", "WALLET"]),
+        destinationLabel: z.string().trim().min(2).max(200),
+        note: z.string().trim().max(500).optional(),
+      }),
+      await body(request),
+    );
+    return json(createProfessionalWithdrawalRequest(user.id, input), 201);
+  }
+
+  if (method === "GET" && pathname === `${API_PREFIX}/notifications`) {
+    const user = currentUser(request);
+    return json(getUserNotifications(user.id, user.role));
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/notifications/read`) {
+    const user = currentUser(request);
+    return json(markUserNotificationsRead(user.id, user.role));
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/notifications/browser-subscriptions`) {
+    const user = currentUser(request);
+    const input = parse(
+      z.object({ endpoint: z.string().url(), p256dh: z.string().min(1), auth: z.string().min(1) }),
+      await body(request),
+    );
+    db.prepare(
+      `INSERT INTO "BrowserSubscription" (userId, endpoint, p256dh, auth, createdAt) VALUES (?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET userId=excluded.userId,p256dh=excluded.p256dh,auth=excluded.auth`,
+    ).run(user.id, input.endpoint, input.p256dh, input.auth, now());
+    return json({ subscribed: true }, 201);
+  }
+
+  if (method === "GET" && pathname === `${API_PREFIX}/maps/address-search`) {
+    currentUser(request);
+    const query = z.string().trim().min(3).parse(url.searchParams.get("q"));
+    const endpoint = process.env.GEOCODING_API_URL || "https://nominatim.openstreetmap.org/search";
+    const response = await fetch(
+      `${endpoint}?format=jsonv2&limit=8&q=${encodeURIComponent(query)}`,
+      { headers: { "user-agent": process.env.GEOCODING_USER_AGENT || "Servio/1.0" } },
+    );
+    if (!response.ok) throw new ApiError(502, "Address provider is unavailable.");
+    return json(await response.json());
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/maps/distance`) {
+    currentUser(request);
+    const input = parse(
+      z.object({
+        from: z.object({
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+        }),
+        to: z.object({
+          latitude: z.number().min(-90).max(90),
+          longitude: z.number().min(-180).max(180),
+        }),
+      }),
+      await body(request),
+    );
+    return json({
+      kilometers: haversine(
+        input.from.latitude,
+        input.from.longitude,
+        input.to.latitude,
+        input.to.longitude,
+      ),
+    });
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/maps/nearby-services`) {
+    currentUser(request);
+    const latitude = Number(url.searchParams.get("latitude"));
+    const longitude = Number(url.searchParams.get("longitude"));
+    const radius = Math.min(Number(url.searchParams.get("radiusKm") || 25), 500);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude))
+      throw new ApiError(422, "latitude and longitude are required.");
+    const users = db
+      .prepare(
+        `SELECT id, firstName, lastName, professionalCategory, professionalCity, serviceArea, serviceRadiusKm, averageRating FROM "User" WHERE role='PROFESSIONAL' AND isActive=1 AND isVerified=1`,
+      )
+      .all();
+    return json({ center: { latitude, longitude }, radiusKm: radius, professionals: users });
+  }
+
+  if (method === "POST" && pathname === `${API_PREFIX}/files`) return uploadFile(request);
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/files/(\\d+)/access$`));
+  if (routeMatch && method === "GET") {
+    const user = currentUser(request);
+    const file = db.prepare(`SELECT * FROM "StoredFile" WHERE id=?`).get(Number(routeMatch[1])) as
+      | { id: number; ownerId: number; isPublic: number }
+      | undefined;
+    if (!file || (!file.isPublic && file.ownerId !== user.id && user.role !== "ADMIN"))
+      throw new ApiError(404, "File not found.");
+    const expires = Date.now() + 300000;
+    return json({
+      url: `${API_PREFIX}/files/${file.id}/content?expires=${expires}&signature=${fileSignature(file.id, expires)}`,
+    });
+  }
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/files/(\\d+)/content$`));
+  if (routeMatch && method === "GET") return downloadFile(Number(routeMatch[1]), url);
+
+  if (method === "GET" && pathname === `${API_PREFIX}/wallet`) {
+    const user = currentUser(request);
+    ensureWallet(user.id);
+    const wallet = db.prepare(`SELECT * FROM "Wallet" WHERE userId=?`).get(user.id);
+    const transactions = db
+      .prepare(
+        `SELECT * FROM "WalletTransaction" WHERE walletId=(SELECT id FROM "Wallet" WHERE userId=?) ORDER BY id DESC`,
+      )
+      .all(user.id);
+    return json({ wallet, transactions });
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/payments`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const input = parse(
+      z.object({
+        professionalId: z.number().int().positive(),
+        jobId: z.number().int().positive().optional(),
+        amount: z.number().int().positive(),
+        currency: z.string().length(3).optional(),
+        idempotencyKey: z.string().min(8).max(100),
+      }),
+      await body(request),
+    );
+    return json(createPayment(user.id, { ...input, currency: input.currency || "USD" }), 201);
+  }
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/payments/(\\d+)/refund$`));
+  if (routeMatch && method === "POST") {
+    const user = currentUser(request, ["CLIENT", "ADMIN"]);
+    return json(refundPayment(Number(routeMatch[1]), user));
+  }
+
+  if (method === "GET" && pathname === `${API_PREFIX}/faq`)
+    return json(db.prepare(`SELECT * FROM "Faq" WHERE isPublished=1 ORDER BY sortOrder,id`).all());
+  if (method === "POST" && pathname === `${API_PREFIX}/contact`) {
+    const input = parse(
+      z.object({
+        name: z.string().trim().min(2).max(120),
+        email,
+        subject: z.string().trim().min(2).max(200),
+        message: z.string().trim().min(10).max(5000),
+      }),
+      await body(request),
+    );
+    const stamp = now();
+    const result = db
+      .prepare(
+        `INSERT INTO "ContactRequest" (name,email,subject,message,status,createdAt,updatedAt) VALUES (?,?,?,?, 'OPEN',?,?)`,
+      )
+      .run(input.name, input.email, input.subject, input.message, stamp, stamp);
+    return json({ id: Number(result.lastInsertRowid), status: "OPEN" }, 201);
+  }
+
+  if (pathname.startsWith(`${API_PREFIX}/admin/`)) currentUser(request, ["ADMIN"]);
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/dashboard`)
+    return json(getAdminDashboardSnapshot());
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/users`) return json(getAdminUsers());
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/admin/users/(\\d+)/status$`));
+  if (routeMatch && method === "PATCH") {
+    const input = parse(z.object({ isActive: z.boolean() }), await body(request));
+    return json(updateUserActiveStatusByAdmin(Number(routeMatch[1]), input.isActive));
+  }
+  routeMatch = match(
+    pathname,
+    new RegExp(`^${API_PREFIX}/admin/professionals/(\\d+)/verification$`),
+  );
+  if (routeMatch && method === "PATCH") {
+    const input = parse(z.object({ isVerified: z.boolean() }), await body(request));
+    return json(updateProfessionalVerifiedStatusByAdmin(Number(routeMatch[1]), input.isVerified));
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/jobs`)
+    return json(getAdminJobRecords());
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/admin/jobs/(\\d+)/status$`));
+  if (routeMatch && method === "PATCH") {
+    const input = parse(
+      z.object({ status: z.enum(["DRAFT", "OPEN", "CLOSED"]) }),
+      await body(request),
+    );
+    const result = db
+      .prepare(`UPDATE "ClientJob" SET status=?,updatedAt=? WHERE id=?`)
+      .run(input.status, now(), Number(routeMatch[1]));
+    if (!result.changes) throw new ApiError(404, "Job not found.");
+    return json({ id: Number(routeMatch[1]), status: input.status });
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/payments`)
+    return json(getAdminPaymentTransactions());
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/reports`)
+    return json({
+      dashboard: getAdminDashboardSnapshot(),
+      payments: getAdminPaymentTransactions(),
+    });
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/cms`) return json(listWebsitePages());
+  routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/admin/cms/([a-z0-9-]+)$`));
+  if (routeMatch && method === "PATCH") {
+    const input = parse(
+      z.object({ content: z.string().max(500000), status: z.enum(["DRAFT", "PUBLISHED"]) }),
+      await body(request),
+    );
+    return json(saveWebsitePage(routeMatch[1], input));
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/faq`)
+    return json(db.prepare(`SELECT * FROM "Faq" ORDER BY sortOrder,id`).all());
+  if (method === "POST" && pathname === `${API_PREFIX}/admin/faq`) {
+    const input = parse(
+      z.object({
+        question: z.string().min(3),
+        answer: z.string().min(3),
+        sortOrder: z.number().int().default(0),
+        isPublished: z.boolean().default(true),
+      }),
+      await body(request),
+    );
+    const stamp = now();
+    const result = db
+      .prepare(
+        `INSERT INTO "Faq" (question,answer,sortOrder,isPublished,createdAt,updatedAt) VALUES (?,?,?,?,?,?)`,
+      )
+      .run(input.question, input.answer, input.sortOrder, Number(input.isPublished), stamp, stamp);
+    return json({ id: Number(result.lastInsertRowid) }, 201);
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/contact-requests`)
+    return json(db.prepare(`SELECT * FROM "ContactRequest" ORDER BY id DESC`).all());
+
+  throw new ApiError(404, "API route not found.");
+}
+
+function createAccountToken(userId: number, kind: string, minutes: number) {
+  const db = getApiDatabase();
+  const token = opaqueToken();
+  db.prepare(`DELETE FROM "ApiToken" WHERE userId=? AND kind=?`).run(userId, kind);
+  db.prepare(
+    `INSERT INTO "ApiToken" (userId,tokenHash,kind,expiresAt,createdAt) VALUES (?,?,?,?,?)`,
+  ).run(
+    userId,
+    tokenHash(token),
+    kind,
+    new Date(Date.now() + minutes * 60000).toISOString(),
+    now(),
+  );
+  return token;
+}
+function consumeAccountToken(token: string, kind: string, action: (userId: number) => void) {
+  const db = getApiDatabase();
+  const row = db
+    .prepare(
+      `SELECT * FROM "ApiToken" WHERE tokenHash=? AND kind=? AND usedAt IS NULL AND expiresAt>?`,
+    )
+    .get(tokenHash(token), kind, now()) as { id: number; userId: number } | undefined;
+  if (!row) throw new ApiError(400, "Token is invalid or expired.");
+  db.transaction(() => {
+    action(row.userId);
+    db.prepare(`UPDATE "ApiToken" SET usedAt=? WHERE id=?`).run(now(), row.id);
+  })();
+}
+function haversine(a: number, b: number, c: number, d: number) {
+  const r = 6371,
+    toRad = (v: number) => (v * Math.PI) / 180;
+  const x = toRad(c - a),
+    y = toRad(d - b);
+  const q = Math.sin(x / 2) ** 2 + Math.cos(toRad(a)) * Math.cos(toRad(c)) * Math.sin(y / 2) ** 2;
+  return Math.round(r * 2 * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q)) * 100) / 100;
+}
+
+async function uploadFile(request: Request) {
+  const user = currentUser(request);
+  const form = await request.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) throw new ApiError(422, "A file field is required.");
+  const max = Number(process.env.MAX_UPLOAD_BYTES || 10 * 1024 * 1024);
+  if (file.size > max) throw new ApiError(413, "File is too large.");
+  const allowed = (
+    process.env.ALLOWED_UPLOAD_TYPES || "image/jpeg,image/png,image/webp,application/pdf"
+  ).split(",");
+  if (!allowed.includes(file.type)) throw new ApiError(415, "File type is not allowed.");
+  const key = `${user.id}/${randomUUID()}${path.extname(file.name).toLowerCase()}`;
+  const root = path.resolve(process.cwd(), process.env.FILE_STORAGE_PATH || "storage");
+  const target = path.resolve(root, key);
+  if (!target.startsWith(root)) throw new ApiError(400, "Invalid storage path.");
+  await mkdir(path.dirname(target), { recursive: true });
+  await writeFile(target, Buffer.from(await file.arrayBuffer()));
+  const db = getApiDatabase(),
+    stamp = now();
+  const result = db
+    .prepare(
+      `INSERT INTO "StoredFile" (ownerId,purpose,fileName,mimeType,sizeBytes,storageKey,isPublic,createdAt) VALUES (?,?,?,?,?,?,?,?)`,
+    )
+    .run(
+      user.id,
+      String(form.get("purpose") || "document"),
+      file.name,
+      file.type,
+      file.size,
+      key,
+      form.get("public") === "true" ? 1 : 0,
+      stamp,
+    );
+  return json(
+    {
+      id: Number(result.lastInsertRowid),
+      fileName: file.name,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    },
+    201,
+  );
+}
+function fileSecret() {
+  return process.env.FILE_SIGNING_SECRET || process.env.AUTH_SECRET || "dev-file-secret";
+}
+function fileSignature(id: number, expires: number) {
+  return createHmac("sha256", fileSecret()).update(`${id}:${expires}`).digest("base64url");
+}
+async function downloadFile(id: number, url: URL) {
+  const db = getApiDatabase();
+  const file = db.prepare(`SELECT * FROM "StoredFile" WHERE id=?`).get(id) as
+    | { isPublic: number; storageKey: string; mimeType: string; fileName: string }
+    | undefined;
+  if (!file) throw new ApiError(404, "File not found.");
+  if (!file.isPublic) {
+    const expires = Number(url.searchParams.get("expires")),
+      provided = Buffer.from(url.searchParams.get("signature") || ""),
+      expected = Buffer.from(fileSignature(id, expires));
+    if (
+      expires < Date.now() ||
+      provided.length !== expected.length ||
+      !timingSafeEqual(provided, expected)
+    )
+      throw new ApiError(403, "File access link is invalid or expired.");
+  }
+  const root = path.resolve(process.cwd(), process.env.FILE_STORAGE_PATH || "storage");
+  return new Response(await readFile(path.resolve(root, file.storageKey)), {
+    headers: {
+      "content-type": file.mimeType,
+      "content-disposition": `inline; filename="${file.fileName.replace(/[\r\n"]/g, "")}"`,
+    },
+  });
+}
+function ensureWallet(userId: number) {
+  getApiDatabase()
+    .prepare(
+      `INSERT OR IGNORE INTO "Wallet" (userId,currency,balance,pendingBalance,updatedAt) VALUES (?,'USD',0,0,?)`,
+    )
+    .run(userId, now());
+}
+function createPayment(
+  clientId: number,
+  input: {
+    professionalId: number;
+    jobId?: number;
+    amount: number;
+    currency: string;
+    idempotencyKey: string;
+  },
+) {
+  const db = getApiDatabase();
+  const existing = db
+    .prepare(`SELECT * FROM "Payment" WHERE idempotencyKey=?`)
+    .get(input.idempotencyKey);
+  if (existing) return existing;
+  const commission = Math.round(input.amount * Number(process.env.PLATFORM_COMMISSION_RATE || 0.1)),
+    stamp = now();
+  return db.transaction(() => {
+    ensureWallet(input.professionalId);
+    const result = db
+      .prepare(
+        `INSERT INTO "Payment" (clientId,professionalId,jobId,amount,commissionAmount,currency,provider,status,idempotencyKey,createdAt,updatedAt) VALUES (?,?,?,?,?,?,'WALLET','COMPLETED',?,?,?)`,
+      )
+      .run(
+        clientId,
+        input.professionalId,
+        input.jobId ?? null,
+        input.amount,
+        commission,
+        input.currency,
+        input.idempotencyKey,
+        stamp,
+        stamp,
+      );
+    const paymentId = Number(result.lastInsertRowid);
+    const wallet = db
+      .prepare(`SELECT id FROM "Wallet" WHERE userId=?`)
+      .get(input.professionalId) as { id: number };
+    const net = input.amount - commission;
+    db.prepare(`UPDATE "Wallet" SET balance=balance+?,updatedAt=? WHERE id=?`).run(
+      net,
+      stamp,
+      wallet.id,
+    );
+    db.prepare(
+      `INSERT INTO "WalletTransaction" (walletId,paymentId,type,amount,status,description,createdAt) VALUES (?,?,'CREDIT',?,'COMPLETED','Service payment',?)`,
+    ).run(wallet.id, paymentId, net, stamp);
+    return db.prepare(`SELECT * FROM "Payment" WHERE id=?`).get(paymentId);
+  })();
+}
+function refundPayment(id: number, user: PublicUser) {
+  const db = getApiDatabase();
+  const payment = db.prepare(`SELECT * FROM "Payment" WHERE id=?`).get(id) as
+    | {
+        id: number;
+        clientId: number;
+        professionalId: number;
+        amount: number;
+        commissionAmount: number;
+        status: string;
+      }
+    | undefined;
+  if (!payment || (user.role !== "ADMIN" && payment.clientId !== user.id))
+    throw new ApiError(404, "Payment not found.");
+  if (payment.status !== "COMPLETED")
+    throw new ApiError(409, "Only completed payments can be refunded.");
+  return db.transaction(() => {
+    ensureWallet(payment.professionalId);
+    const net = payment.amount - payment.commissionAmount;
+    const wallet = db
+      .prepare(`SELECT id,balance FROM "Wallet" WHERE userId=?`)
+      .get(payment.professionalId) as { id: number; balance: number };
+    if (wallet.balance < net)
+      throw new ApiError(409, "Professional wallet has insufficient funds for this refund.");
+    db.prepare(`UPDATE "Wallet" SET balance=balance-?,updatedAt=? WHERE id=?`).run(
+      net,
+      now(),
+      wallet.id,
+    );
+    db.prepare(`UPDATE "Payment" SET status='REFUNDED',updatedAt=? WHERE id=?`).run(now(), id);
+    db.prepare(
+      `INSERT INTO "WalletTransaction" (walletId,paymentId,type,amount,status,description,createdAt) VALUES (?,?,'DEBIT',?,'COMPLETED','Payment refund',?)`,
+    ).run(wallet.id, id, -net, now());
+    return db.prepare(`SELECT * FROM "Payment" WHERE id=?`).get(id);
+  })();
+}
+
+
