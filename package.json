@@ -12,7 +12,7 @@
     "backend:socket": "node server/socket-server.mjs",
     "backend:health": "node -e \"fetch('http://localhost:5173/api/health').then(async r => { console.log(r.status); console.log(await r.text()); }).catch(error => { console.error(error.message); process.exit(1); })\"",
     "socket": "node server/socket-server.mjs",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "start": "node server/http-server.mjs",
