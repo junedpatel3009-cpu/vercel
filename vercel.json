@@ -1,6 +1,9 @@
 {
-  "buildCommand": "npm run build -- --mode production && echo 'Build complete'",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist/client",
+  "env": {
+    "SKIP_ENV_VALIDATION": "true"
+  },
   "functions": {
     "api/ssr.ts": {
       "memory": 1024,
