@@ -11,6 +11,7 @@ export default defineConfig({
       alias: [
         { find: /^parse5$/, replacement: path.resolve(__dirname, "src/parse5-shim.ts") },
         { find: "@asamuzakjp/css-color", replacement: path.resolve(__dirname, "src/css-color-shim.ts") },
+        { find: "css-tree", replacement: path.resolve(__dirname, "src/css-tree-shim.ts") },
       ],
     },
     ssr: {
