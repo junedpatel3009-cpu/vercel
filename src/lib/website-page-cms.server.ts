@@ -1,10 +1,63 @@
 ﻿import path from "node:path";
 import Database from "better-sqlite3";
-import { JSDOM } from "jsdom";
-import DOMPurify from "dompurify";
+import sanitizeHtml from "sanitize-html";
 
-const window = new JSDOM("").window;
-const purify = DOMPurify(window);
+const sanitizeOptions = {
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "img",
+    "section",
+    "div",
+    "span",
+    "p",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "u",
+    "br",
+    "blockquote",
+    "pre",
+    "code",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+  ]),
+  allowedAttributes: {
+    a: ["href", "name", "target", "rel"],
+    img: ["src", "alt", "title", "width", "height"],
+    div: ["class"],
+    span: ["class"],
+    p: ["class"],
+    section: ["class"],
+    table: ["class"],
+    th: ["scope", "class"],
+    td: ["colspan", "rowspan", "class"],
+    code: ["class"],
+  },
+  allowedSchemesByTag: {
+    a: ["http", "https", "mailto", "tel"],
+    img: ["http", "https", "data"],
+  },
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  selfClosing: ["img", "br", "hr"],
+};
+
+const purify = {
+  sanitize: (value: string) => sanitizeHtml(value, sanitizeOptions),
+};
 
 export type WebsitePageStatus = "DRAFT" | "PUBLISHED";
 export type WebsitePageRecord = {
