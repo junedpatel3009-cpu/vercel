@@ -14,3 +14,12 @@ export const getRouter = () => {
 
   return router;
 };
+
+// Route hooks obtain their data type from TanStack Router's global Register.
+// Register the same router instance that this application creates; otherwise
+// useLoaderData falls back to AnyRouter and turns every loader result into any.
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: ReturnType<typeof getRouter>;
+  }
+}
