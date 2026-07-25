@@ -1,41 +1,51 @@
-export default async function handler(req: any, res: any) {
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    // @ts-expect-error The server entry is generated during the Vite build and is not part of the source tree.
+    // @ts-expect-error Generated build output
     const { default: serverEntry } = await import("../dist/server/server.js");
 
-    const url = new URL(req.url || "/", `https://${req.headers.host}`);
-    
+    const host = req.headers.host || "localhost";
+    const url = new URL(req.url || "/", `https://${host}`);
+
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (Array.isArray(value)) {
+        value.forEach((v) => headers.append(key, v));
+      } else if (value) {
+        headers.set(key, value);
+      }
+    }
+
     const response = await serverEntry.fetch(
       new Request(url, {
         method: req.method,
-        headers: new Headers(req.headers as Record<string, string>),
-        body:
-          req.method !== "GET" && req.method !== "HEAD" && req.body
-            ? typeof req.body === "string"
-              ? req.body
-              : JSON.stringify(req.body)
-            : undefined,
+        headers,
       }),
       {},
       {}
     );
 
-    res.status(response.status);
+    res.statusCode = response.status;
     response.headers.forEach((value: string, key: string) => {
       res.setHeader(key, value);
     });
 
     if (response.body) {
       const buffer = await response.arrayBuffer();
-      res.send(Buffer.from(buffer));
+      res.end(Buffer.from(buffer));
     } else {
-      res.send("");
+      res.end("");
     }
   } catch (error) {
     console.error("SSR Error:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : String(error),
-    });
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json");
+    res.end(
+      JSON.stringify({
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : String(error),
+      })
+    );
   }
 }
