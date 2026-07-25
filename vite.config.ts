@@ -23,6 +23,8 @@ export default defineConfig({
         "html-encoding-sniffer",
         "@exodus/bytes",
         "@asamuzakjp/css-color",
+        "css-tree",
+        "@asamuzakjp/dom-selector",
         "/^@asamuzakjp\\/.*/",
       ],
     },
