@@ -404,6 +404,10 @@ export function getUserNotifications(userId: number, role: "CLIENT" | "PROFESSIO
 
   return notifications
     .map((notification) => {
+      if (!notification) {
+        return null;
+      }
+
       const state = states.get(notification.key);
 
       if (state?.clearedAt) {
@@ -411,11 +415,16 @@ export function getUserNotifications(userId: number, role: "CLIENT" | "PROFESSIO
       }
 
       return {
-        ...notification,
+        key: notification.key,
+        type: notification.type,
+        title: notification.title,
+        description: notification.description,
+        href: notification.href,
+        createdAt: notification.createdAt,
         readAt: notification.readAt ?? state?.readAt ?? null,
       } satisfies UserNotification;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification))
+    .flatMap((notification) => (notification ? [notification] : []))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -748,7 +757,7 @@ function getProjectRequestNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getHireContractNotifications(
@@ -785,7 +794,7 @@ function getHireContractNotifications(
       `,
     )
     .all(String(userId), String(userId))
-    .map((row) => {
+    .map((row): UserNotification | null => {
       const contract = row as HireContractNotificationRow;
       const title = contract.title || "Direct hire request";
 
@@ -840,7 +849,7 @@ function getHireContractNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getWorkUploadNotifications(
@@ -912,7 +921,7 @@ function getWorkUploadNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getRevisionNotifications(
@@ -984,7 +993,7 @@ function getRevisionNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getMilestoneNotifications(
@@ -1068,7 +1077,7 @@ function getMilestoneNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getCompletionNotifications(
@@ -1156,7 +1165,7 @@ function getCompletionNotifications(
 
       return null;
     })
-    .filter((notification): notification is UserNotification => Boolean(notification));
+    .flatMap((notification) => (notification ? [notification] : []));
 }
 
 function getNotificationStates(db: BetterSqlite3Database, userId: number) {

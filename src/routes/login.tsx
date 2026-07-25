@@ -102,7 +102,7 @@ const submitLogin = createServerFn({ method: "POST" })
         isProfileComplete = !!(
           proProfile?.professionalCategory &&
           proProfile?.professionalCity &&
-          proProfile?.professionalSkillsJson &&
+          proProfile?.skills?.some((skill) => skill.trim().length > 0) &&
           proProfile?.companyDescription &&
           proProfile?.address
         );

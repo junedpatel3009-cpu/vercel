@@ -148,6 +148,11 @@ function HireProfessional() {
       return;
     }
 
+    if (!viewer) {
+      setSubmitError("Please log in as a client to send a hire request.");
+      return;
+    }
+
     const payload: HireContractInput = {
       professionalId: pro.id,
       clientProjectId: selectedProject.id,

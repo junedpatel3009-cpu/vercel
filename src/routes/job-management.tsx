@@ -10,6 +10,7 @@ import {
   Clock3,
   DollarSign,
   Eye,
+  FileText,
   ListChecks,
   Mail,
   MapPin,

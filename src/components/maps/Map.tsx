@@ -2,16 +2,18 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+type LeafletMap = ReturnType<typeof L.map>;
+
 type MapProps = {
   center?: { lat: number; lng: number };
   zoom?: number;
   className?: string;
-  onMapReady?: (map: L.Map) => void;
+  onMapReady?: (map: LeafletMap) => void;
 };
 
 export default function Map({ center = { lat: 21.1702, lng: 72.8311 }, zoom = 5, className, onMapReady }: MapProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;

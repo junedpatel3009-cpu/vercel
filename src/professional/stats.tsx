@@ -126,7 +126,14 @@ const updateHireRequestStatus = createServerFn({ method: "POST" })
       throw new Error("Only professionals can update hire requests.");
     }
 
-    return updateProfessionalHireContractStatus(viewer.id, data.contractId, data.status);
+    const updated = updateProfessionalHireContractStatus(viewer.id, data.contractId, data.status);
+
+    return {
+      ok: true as const,
+      contractId: data.contractId,
+      status: data.status,
+      result: updated ?? null,
+    };
   });
 
 const sendHireNegotiationOffer = createServerFn({ method: "POST" })
@@ -1757,6 +1764,7 @@ function StatBox({
   tint: string;
   to?:
     | "/earnings"
+    | "/professional-stats"
     | "/professional-stats/projects"
     | "/professional-stats/project-requests"
     | "/professional-stats/hire-requests"
@@ -1787,7 +1795,7 @@ function StatBox({
   if (to) {
     return (
       <Link
-        to={to}
+        to={to as never}
         className="block rounded-xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/50 hover:bg-primary/5"
       >
         {content}

@@ -177,8 +177,9 @@ function UserManagement() {
   const displayName =
     `${data.viewer.firstName} ${data.viewer.lastName}`.trim() || data.viewer.email;
   const selectedUser = users.find((user) => user.id === selectedUserId) || null;
+  const userDetails = (data.userDetails ?? {}) as Record<number, AdminManagedUserDetail | undefined>;
   const selectedUserDetail = selectedUserId
-    ? (data.userDetails[selectedUserId] as AdminManagedUserDetail | undefined)
+    ? userDetails[selectedUserId]
     : undefined;
 
   async function handleStatusChange(user: AdminUserRecord, isActive: boolean) {
@@ -523,9 +524,10 @@ function UserDetailDialog({
 
   if (!user) return null;
 
-  const fullName = getFullName(user);
-  const isProfessional = user.role === "PROFESSIONAL";
-  const passwordPending = pendingAction === `password-${user.id}`;
+  const currentUser = user;
+  const fullName = getFullName(currentUser);
+  const isProfessional = currentUser.role === "PROFESSIONAL";
+  const passwordPending = pendingAction === `password-${currentUser.id}`;
 
   async function submitPasswordChange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -543,7 +545,7 @@ function UserDetailDialog({
     }
 
     try {
-      await onPasswordChange(user, newPassword);
+      await onPasswordChange(currentUser, newPassword);
       setNewPassword("");
       setConfirmPassword("");
       setPasswordMessage({

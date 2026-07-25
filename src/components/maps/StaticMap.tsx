@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
+type LeafletMap = ReturnType<typeof L.map>;
+
 export default function StaticMap({
   lat,
   lng,
@@ -14,7 +16,7 @@ export default function StaticMap({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;

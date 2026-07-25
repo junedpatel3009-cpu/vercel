@@ -1,5 +1,5 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "api/**/*.ts", "vite.config.ts", "eslint.config.js"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts", "api/**/*.ts", "api/**/*.d.ts", "vite.config.ts", "eslint.config.js"],
   "exclude": ["node_modules", "dist", "backups", "*.test.ts", "debug-query.ts", "part*.ts", "original.ts", "fixed*.ts", "src/backend.api.server.ts", "src/routes/api/**"],
   "compilerOptions": {
     "target": "ES2022",

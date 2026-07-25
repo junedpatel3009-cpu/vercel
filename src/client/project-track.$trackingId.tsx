@@ -420,6 +420,10 @@ function ProjectTrack() {
   const projectActivityRecipientId = isProfessional ? tracking.clientId : tracking.professionalId;
 
   function emitProjectActivity(title: string, description?: string) {
+    if (!tracking) {
+      return;
+    }
+
     socketRef.current?.emit("project:activity", {
       trackingId: tracking.id,
       actorId: viewer.id,
@@ -534,6 +538,10 @@ function ProjectTrack() {
   }
 
   async function handleDeleteWorkUpload(uploadId: number) {
+    if (!tracking) {
+      return;
+    }
+
     setDeletingUploadId(uploadId);
 
     try {
@@ -586,6 +594,10 @@ function ProjectTrack() {
   }
 
   async function handleClearRevision(revisionId: number) {
+    if (!tracking) {
+      return;
+    }
+
     setClearingRevisionId(revisionId);
 
     try {
@@ -593,7 +605,7 @@ function ProjectTrack() {
       toast.success("Revision cleared");
       emitProjectActivity(
         "Revision cleared",
-        `${displayName || "Client"} cleared a revision request for ${tracking.projectTitle}.`,
+        `${displayName || "Client"} cleared a revision request for ${tracking.projectTitle ?? "the project"}.`,
       );
       await router.invalidate();
     } finally {
@@ -672,6 +684,10 @@ function ProjectTrack() {
   }
 
   async function handleMilestoneStatus(milestoneId: number, status: ProjectMilestoneStatus) {
+    if (!tracking) {
+      return;
+    }
+
     setUpdatingMilestoneId(milestoneId);
     const paidMilestoneCountAfterChange = tracking.milestones.filter((milestone) =>
       milestone.id === milestoneId ? status === "PAID" : milestone.status === "PAID",
@@ -703,6 +719,10 @@ function ProjectTrack() {
   }
 
   async function handleDeleteMilestone(milestoneId: number) {
+    if (!tracking) {
+      return;
+    }
+
     setUpdatingMilestoneId(milestoneId);
 
     try {
@@ -757,6 +777,10 @@ function ProjectTrack() {
   }
 
   async function handleReviewCompletion(completionId: number, status: ProjectCompletionStatus) {
+    if (!tracking) {
+      return;
+    }
+
     setReviewingCompletionId(completionId);
 
     try {
@@ -764,7 +788,7 @@ function ProjectTrack() {
       toast.success(status === "APPROVED" ? "Project completed" : "Revision requested");
       emitProjectActivity(
         status === "APPROVED" ? "Project completed" : "Final revision requested",
-        `${displayName || "Client"} ${status === "APPROVED" ? "approved" : "requested changes to"} final work for ${tracking.projectTitle}.`,
+        `${displayName || "Client"} ${status === "APPROVED" ? "approved" : "requested changes to"} final work for ${tracking.projectTitle ?? "the project"}.`,
       );
       await router.invalidate();
     } finally {
@@ -1030,7 +1054,7 @@ function ProjectTrack() {
             <div className="mt-5 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
               <InfoLine
                 icon={DollarSign}
-                text={`Posted budget ${formatBudget(tracking.projectBudgetMin, tracking.projectBudgetMax, tracking.projectTimingType)}`}
+                text={`Posted budget ${formatBudget(tracking.projectBudgetMin ?? 0, tracking.projectBudgetMax ?? 0, tracking.projectTimingType ?? "FIXED")}`}
               />
               <InfoLine
                 icon={CalendarDays}

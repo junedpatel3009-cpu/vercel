@@ -1,5 +1,6 @@
 export default async function handler(req: any, res: any) {
   try {
+    // @ts-expect-error The server entry is generated during the Vite build and is not part of the source tree.
     const { default: serverEntry } = await import("../dist/server/server.js");
 
     const url = new URL(req.url || "/", `https://${req.headers.host}`);

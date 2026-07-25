@@ -283,7 +283,7 @@ export function ServicesPageContent({
                   <Link
                     key={c.name}
                     to="/discover"
-                    search={{ category: c.name }}
+                    search={{ category: c.name } as never}
                     className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-card"
                   >
                     <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground">

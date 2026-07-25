@@ -10,6 +10,7 @@ import {
   Building2,
   CalendarRange,
   ClipboardList,
+  Clock3,
   DollarSign,
   ReceiptText,
   Radio,
@@ -21,6 +22,7 @@ import {
   Zap,
   Command,
   LayoutTemplate,
+  MapPin,
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
@@ -40,6 +42,7 @@ import { Switch } from "@/components/ui/switch";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSummaryCard } from "@/components/admin/AdminSummaryCard";
 import { AdminSection } from "@/components/admin/AdminSection";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
 import {
   formatBudget,
   formatDate,

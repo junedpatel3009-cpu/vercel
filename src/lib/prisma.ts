@@ -1,11 +1,17 @@
 import { PrismaClient } from "@/generated/prisma/client.ts";
 
+interface PrismaClientOptionsLike {
+  log?: Array<"info" | "query" | "warn" | "error">;
+  accelerateUrl?: string;
+  adapter?: unknown;
+}
+
 const globalForPrisma = globalThis as typeof globalThis & {
   prisma?: PrismaClient;
 };
 
 async function createPrismaClient() {
-  const options: ConstructorParameters<typeof PrismaClient>[0] = {
+  const options: PrismaClientOptionsLike = {
     log: ["warn", "error"],
   };
 
@@ -27,7 +33,7 @@ async function createPrismaClient() {
     }
   }
 
-  return new PrismaClient(options);
+  return new PrismaClient(options as ConstructorParameters<typeof PrismaClient>[0]);
 }
 
 export const prisma = globalForPrisma.prisma ?? (await createPrismaClient());
