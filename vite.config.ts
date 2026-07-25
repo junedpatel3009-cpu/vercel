@@ -21,6 +21,7 @@ export default defineConfig({
       noExternal: [
         "isomorphic-dompurify",
         "jsdom",
+        "lru-cache",
         "whatwg-url",
         "tough-cookie",
         "html-encoding-sniffer",
