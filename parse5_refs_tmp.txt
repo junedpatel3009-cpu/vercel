@@ -1,0 +1,20 @@
+
+Path                                                                                     LineNumber Line                                
+----                                                                                     ---------- ----                                
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\serializer\index.d.ts         24  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\serializer\index.d.ts         47  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\serializer\index.js           41  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\serializer\index.js           70  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\index.d.ts                    39  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\index.d.ts                    53  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\cjs\index.js                      35  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\serializer\index.d.ts             24  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\serializer\index.d.ts             47  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\serializer\index.js               37  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\serializer\index.js               66  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\index.d.ts                        39  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\index.d.ts                        53  * const parse5 = require('parse5');
+D:\skill-shine-gateway-main-main-main\node_modules\parse5\dist\index.js                          23  * const parse5 = require('parse5');
+
+
+
