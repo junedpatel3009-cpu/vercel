@@ -1,3 +1,26 @@
 {
-  "rewrites": [{ "source": "(.*)", "destination": "/index.html" }]
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "functions": {
+    "api/ssr.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/.*",
+      "dest": "/api/ssr"
+    },
+    {
+      "src": "/public/.*",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": ".*",
+      "dest": "/api/ssr"
+    }
+  ]
 }
