@@ -8,7 +8,25 @@ export default defineConfig({
   vite: {
     ssr: {
       external: ["better-sqlite3"],
-      noExternal: ["sanitize-html"],
+      noExternal: [
+        "sanitize-html",
+        "htmlparser2",
+        "domhandler",
+        "domutils",
+        "dom-serializer",
+        "domelementtype",
+        "entities",
+        "deepmerge",
+        "escape-string-regexp",
+        "is-plain-object",
+        "parse-srcset",
+        "postcss",
+        "launder",
+        "dayjs",
+        "nanoid",
+        "picocolors",
+        "source-map-js",
+      ],
     },
   },
 });
