@@ -3,6 +3,9 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "editor:sync-pages": "node scripts/sync-web-editor-pages.mjs",
     "admin:create": "node scripts/create-admin.mjs",
