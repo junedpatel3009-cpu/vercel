@@ -1,3 +1,4 @@
+import path from "path";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
@@ -6,6 +7,12 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    resolve: {
+      alias: [
+        { find: /^parse5$/, replacement: path.resolve(__dirname, "src/parse5-shim.ts") },
+        { find: "@asamuzakjp/css-color", replacement: path.resolve(__dirname, "src/css-color-shim.ts") },
+      ],
+    },
     ssr: {
       external: ["better-sqlite3"],
       noExternal: [
