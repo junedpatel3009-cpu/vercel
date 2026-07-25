@@ -90,6 +90,9 @@ async function ensureLegalPages() {
       })),
       skipDuplicates: true,
     });
+  })();
+
+  return legalPagesInitializationPromise;
 }
 
 export async function listLegalPages(): Promise<LegalPageRecord[]> {
