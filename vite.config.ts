@@ -1,4 +1,3 @@
-import path from "path";
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
@@ -7,30 +6,9 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
-    resolve: {
-      alias: [
-        { find: /^parse5$/, replacement: path.resolve(__dirname, "src/parse5-shim.ts") },
-        { find: "tough-cookie", replacement: path.resolve(__dirname, "src/tough-cookie-shim.ts") },
-        { find: "@asamuzakjp/css-color", replacement: path.resolve(__dirname, "src/css-color-shim.ts") },
-        { find: "css-tree", replacement: path.resolve(__dirname, "src/css-tree-shim.ts") },
-        { find: "@asamuzakjp/dom-selector", replacement: path.resolve(__dirname, "src/dom-selector-shim.ts") },
-      ],
-    },
     ssr: {
       external: ["better-sqlite3"],
-      noExternal: [
-        "isomorphic-dompurify",
-        "jsdom",
-        "lru-cache",
-        "whatwg-url",
-        "tough-cookie",
-        "html-encoding-sniffer",
-        "@exodus/bytes",
-        "@asamuzakjp/css-color",
-        "css-tree",
-        "@asamuzakjp/dom-selector",
-        "/^@asamuzakjp\\/.*/",
-      ],
+      noExternal: ["sanitize-html"],
     },
   },
 });

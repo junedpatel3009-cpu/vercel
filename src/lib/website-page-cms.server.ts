@@ -1,24 +1,26 @@
 ﻿import path from "node:path";
 import Database from "better-sqlite3";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 
-// DOMPurify Configuration
-const purifyOptions = {
-  ALLOWED_TAGS: [
+const sanitizerOptions = {
+  allowedTags: [
     "h1", "h2", "h3", "h4", "h5", "h6", "img", "section", "div", "span",
     "p", "ul", "ol", "li", "a", "strong", "em", "b", "i", "u", "br",
     "blockquote", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr"
   ],
-  ALLOWED_ATTR: [
+  allowedAttributes: {
+    "*": [
     "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
     "class", "scope", "colspan", "rowspan"
-  ],
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|data:image\/)/i,
+    ],
+  },
+  allowedSchemes: ["http", "https", "mailto", "tel"],
+  allowedSchemesByTag: { img: ["http", "https", "data"] },
 };
 
-const purify = {
-  sanitize: (value: string) => DOMPurify.sanitize(value, purifyOptions),
-};
+function sanitizeCmsHtml(value: string) {
+  return sanitizeHtml(value, sanitizerOptions);
+}
 
 export type WebsitePageStatus = "DRAFT" | "PUBLISHED";
 export type WebsitePageRecord = {
@@ -107,7 +109,7 @@ export function saveWebsitePage(
     throw new Error("This page is not editable.");
   }
   const db = getDatabase();
-  const sanitizedContent = purify.sanitize(input.content);
+  const sanitizedContent = sanitizeCmsHtml(input.content);
   db.prepare(
     `UPDATE "WebsitePage" SET content = ?, status = ?, updatedAt = ? WHERE pageKey = ?`,
   ).run(sanitizedContent, input.status, new Date().toISOString(), pageKey);
