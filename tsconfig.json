@@ -1,6 +1,6 @@
 {
   "include": ["src/**/*.ts", "src/**/*.tsx", "api/**/*.ts", "vite.config.ts", "eslint.config.js"],
-  "exclude": ["node_modules", "dist", "backups", "*.test.ts", "debug-query.ts", "part*.ts", "original.ts", "fixed*.ts"],
+  "exclude": ["node_modules", "dist", "backups", "*.test.ts", "debug-query.ts", "part*.ts", "original.ts", "fixed*.ts", "src/backend.api.server.ts", "src/routes/api/**"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -16,7 +16,8 @@
 
     /* Linting */
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
+    "strictNullChecks": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,

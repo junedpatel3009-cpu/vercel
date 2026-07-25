@@ -18,7 +18,6 @@ import {
   type PublicUser,
   type UserRole,
 } from "@/lib/user-db.server";
-import { listWebsitePages, saveWebsitePage } from "@/lib/website-page-cms.server";
 import { clientJobSchema, type ClientJobInput } from "@/lib/validation/client-job";
 import {
   createClientJob,
@@ -568,13 +567,17 @@ async function route(request: Request, url: URL): Promise<Response> {
       dashboard: getAdminDashboardSnapshot(),
       payments: getAdminPaymentTransactions(),
     });
-  if (method === "GET" && pathname === `${API_PREFIX}/admin/cms`) return json(listWebsitePages());
+  if (method === "GET" && pathname === `${API_PREFIX}/admin/cms`) {
+    const { listWebsitePages } = await import("@/lib/website-page-cms.server");
+    return json(listWebsitePages());
+  }
   routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/admin/cms/([a-z0-9-]+)$`));
   if (routeMatch && method === "PATCH") {
     const input = parse(
       z.object({ content: z.string().max(500000), status: z.enum(["DRAFT", "PUBLISHED"]) }),
       await body(request),
     );
+    const { saveWebsitePage } = await import("@/lib/website-page-cms.server");
     return json(saveWebsitePage(routeMatch[1], input));
   }
   if (method === "GET" && pathname === `${API_PREFIX}/admin/faq`)
