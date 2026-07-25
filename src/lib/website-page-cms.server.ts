@@ -1,62 +1,23 @@
 ﻿import path from "node:path";
 import Database from "better-sqlite3";
-import sanitizeHtml from "sanitize-html";
+import DOMPurify from "isomorphic-dompurify";
 
-const sanitizeOptions = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "img",
-    "section",
-    "div",
-    "span",
-    "p",
-    "ul",
-    "ol",
-    "li",
-    "a",
-    "strong",
-    "em",
-    "b",
-    "i",
-    "u",
-    "br",
-    "blockquote",
-    "pre",
-    "code",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-  ]),
-  allowedAttributes: {
-    a: ["href", "name", "target", "rel"],
-    img: ["src", "alt", "title", "width", "height"],
-    div: ["class"],
-    span: ["class"],
-    p: ["class"],
-    section: ["class"],
-    table: ["class"],
-    th: ["scope", "class"],
-    td: ["colspan", "rowspan", "class"],
-    code: ["class"],
-  },
-  allowedSchemesByTag: {
-    a: ["http", "https", "mailto", "tel"],
-    img: ["http", "https", "data"],
-  },
-  allowedSchemes: ["http", "https", "mailto", "tel"],
-  selfClosing: ["img", "br", "hr"],
+// DOMPurify Configuration
+const purifyOptions = {
+  ALLOWED_TAGS: [
+    "h1", "h2", "h3", "h4", "h5", "h6", "img", "section", "div", "span",
+    "p", "ul", "ol", "li", "a", "strong", "em", "b", "i", "u", "br",
+    "blockquote", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr"
+  ],
+  ALLOWED_ATTR: [
+    "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
+    "class", "scope", "colspan", "rowspan"
+  ],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|data:image\/)/i,
 };
 
 const purify = {
-  sanitize: (value: string) => sanitizeHtml(value, sanitizeOptions),
+  sanitize: (value: string) => DOMPurify.sanitize(value, purifyOptions),
 };
 
 export type WebsitePageStatus = "DRAFT" | "PUBLISHED";
@@ -160,5 +121,5 @@ export function saveWebsitePage(
 }
 
 function createDefaultContent(title: string) {
-  return `<section class="cms-hero center"><div class="cms-wrap"><p class="cms-kicker">Servio</p><h1>\${title}</h1><p>Edit this page visually or open Source Editing to paste HTML.</p></div></section><section class="cms-section"><div class="cms-wrap"><h2>Main section</h2><div class="cms-grid two"><div class="cms-card"><h3>Content card one</h3><p>Add your page content here.</p></div><div class="cms-card"><h3>Content card two</h3><p>Add supporting information here.</p></div></div><div class="cms-cta"><div><h2>Ready to get started?</h2><p>Join Servio today.</p></div><a class="cms-btn orange" href="/signup">Create account</a></div></div></section>`;
+  return `<section class="cms-hero center"><div class="cms-wrap"><p class="cms-kicker">Servio</p><h1>${title}</h1><p>Edit this page visually or open Source Editing to paste HTML.</p></div></section><section class="cms-section"><div class="cms-wrap"><h2>Main section</h2><div class="cms-grid two"><div class="cms-card"><h3>Content card one</h3><p>Add your page content here.</p></div><div class="cms-card"><h3>Content card two</h3><p>Add supporting information here.</p></div></div><div class="cms-cta"><div><h2>Ready to get started?</h2><p>Join Servio today.</p></div><a class="cms-btn orange" href="/signup">Create account</a></div></div></section>`;
 }

@@ -1,62 +1,23 @@
 ﻿import path from "node:path";
 import Database from "better-sqlite3";
-import sanitizeHtml from "sanitize-html";
+import DOMPurify from "isomorphic-dompurify";
 
-const sanitizeOptions = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "img",
-    "section",
-    "div",
-    "span",
-    "p",
-    "ul",
-    "ol",
-    "li",
-    "a",
-    "strong",
-    "em",
-    "b",
-    "i",
-    "u",
-    "br",
-    "blockquote",
-    "pre",
-    "code",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-  ]),
-  allowedAttributes: {
-    a: ["href", "name", "target", "rel"],
-    img: ["src", "alt", "title", "width", "height"],
-    div: ["class"],
-    span: ["class"],
-    p: ["class"],
-    section: ["class"],
-    table: ["class"],
-    th: ["scope", "class"],
-    td: ["colspan", "rowspan", "class"],
-    code: ["class"],
-  },
-  allowedSchemesByTag: {
-    a: ["http", "https", "mailto", "tel"],
-    img: ["http", "https", "data"],
-  },
-  allowedSchemes: ["http", "https", "mailto", "tel"],
-  selfClosing: ["img", "br", "hr"],
+// DOMPurify Configuration (replaces sanitizeHtml options)
+const purifyOptions = {
+  ALLOWED_TAGS: [
+    "h1", "h2", "h3", "h4", "h5", "h6", "img", "section", "div", "span",
+    "p", "ul", "ol", "li", "a", "strong", "em", "b", "i", "u", "br",
+    "blockquote", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr"
+  ],
+  ALLOWED_ATTR: [
+    "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
+    "class", "scope", "colspan", "rowspan"
+  ],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|data:image\/)/i,
 };
 
 const purify = {
-  sanitize: (value: string) => sanitizeHtml(value, sanitizeOptions),
+  sanitize: (value: string) => DOMPurify.sanitize(value, purifyOptions),
 };
 
 export type LegalPageSlug = string;
@@ -125,8 +86,8 @@ function ensureLegalPagesTable(db: InstanceType<typeof Database>) {
     CREATE TABLE IF NOT EXISTS "LegalPage" (
       "slug" TEXT NOT NULL PRIMARY KEY,
       "title" TEXT NOT NULL,
-      "content" TEXT NOT NULL DEFAULT \'\',
-      "status" TEXT NOT NULL DEFAULT \'PUBLISHED\',
+      "content" TEXT NOT NULL DEFAULT '',
+      "status" TEXT NOT NULL DEFAULT 'PUBLISHED',
       "updatedAt" TEXT NOT NULL
     );
   `);
@@ -150,9 +111,9 @@ export function listLegalPages(): LegalPageRecord[] {
         SELECT slug, title, content, status, updatedAt
         FROM "LegalPage"
         ORDER BY CASE slug
-          WHEN \'faq\' THEN 0
-          WHEN \'terms-and-conditions\' THEN 1
-          WHEN \'privacy-policy\' THEN 2
+          WHEN 'faq' THEN 0
+          WHEN 'terms-and-conditions' THEN 1
+          WHEN 'privacy-policy' THEN 2
           ELSE 3
         END
       `,
