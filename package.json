@@ -27,6 +27,9 @@
     "prisma:studio": "prisma studio",
     "prisma:deploy": "prisma migrate deploy"
   },
+  "overrides": {
+    "@exodus/bytes": "1.4.0"
+  },
   "dependencies": {
     "@ckeditor/ckeditor5-react": "^11.2.0",
     "@cloudflare/vite-plugin": "^1.25.5",

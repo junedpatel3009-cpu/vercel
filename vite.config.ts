@@ -8,6 +8,12 @@ export default defineConfig({
   vite: {
     ssr: {
       external: ["better-sqlite3"],
+      noExternal: [
+        "isomorphic-dompurify",
+        "jsdom",
+        "html-encoding-sniffer",
+        "@exodus/bytes",
+      ],
     },
   },
 });
