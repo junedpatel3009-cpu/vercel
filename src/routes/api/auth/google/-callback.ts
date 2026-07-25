@@ -19,7 +19,7 @@ function redirectTo(path: string, cookie: string) {
 }
 
 export const APIRoute = createAPIFileRoute("/api/auth/google/callback")({
-  GET: async ({ request }) => {
+  GET: async ({ request }: { request: Request }) => {
     const url = new URL(request.url);
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
@@ -60,7 +60,7 @@ export const APIRoute = createAPIFileRoute("/api/auth/google/callback")({
         const isProfileComplete = !!(
           proProfile?.professionalCategory &&
           proProfile?.professionalCity &&
-          proProfile?.professionalSkillsJson &&
+          proProfile?.skills?.length &&
           proProfile?.companyDescription &&
           proProfile?.address
         );

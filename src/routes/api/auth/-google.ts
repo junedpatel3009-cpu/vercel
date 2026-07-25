@@ -13,7 +13,7 @@ function sanitizeReturnTo(value: string | null) {
 }
 
 export const APIRoute = createAPIFileRoute("/api/auth/google")({
-  GET: async ({ request }) => {
+  GET: async ({ request }: { request: Request }) => {
     const requestUrl = new URL(request.url);
     const returnTo = sanitizeReturnTo(requestUrl.searchParams.get("returnTo"));
     const state = randomBytes(24).toString("hex");

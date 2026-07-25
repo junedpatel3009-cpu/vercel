@@ -5,7 +5,7 @@ import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { requireCurrentUserRole } from "@/lib/current-user.server";
 
 export const APIRoute = createAPIFileRoute("/api/admin/payments")({
-  GET: async () => {
+  GET: async (_ctx: { request: Request }) => {
     requireCurrentUserRole("ADMIN");
 
     const db = new Database(path.resolve(process.cwd(), "prisma", "app.db"));
