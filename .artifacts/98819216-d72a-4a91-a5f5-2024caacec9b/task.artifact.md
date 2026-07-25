@@ -1,0 +1,3 @@
+- [x] Create `src/tough-cookie-shim.ts`
+- [x] Update `vite.config.ts` with alias and `noExternal` entry
+- [x] Verify build locally

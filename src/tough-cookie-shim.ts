@@ -1,13 +1,5 @@
-import * as toughCookie from "../node_modules/tough-cookie/dist/index.js";
+import * as toughCookie from "tough-cookie";
 
-// Provide a default export wrapper for ESM interop at runtime
-const _default = {
-  ...toughCookie,
-  Cookie: (toughCookie as any).Cookie,
-  CookieJar: (toughCookie as any).CookieJar,
-  MemoryCookieStore: (toughCookie as any).MemoryCookieStore,
-  Store: (toughCookie as any).Store,
-} as any;
-
+const _default = toughCookie as any;
 export default _default;
-export * from "../node_modules/tough-cookie/dist/index.js";
+export * from "tough-cookie";
