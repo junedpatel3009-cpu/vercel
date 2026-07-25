@@ -6,6 +6,11 @@
   "engines": {
     "node": "22.x"
   },
+  "overrides": {
+    "sanitize-html": {
+      "htmlparser2": "10.1.0"
+    }
+  },
   "scripts": {
     "editor:sync-pages": "node scripts/sync-web-editor-pages.mjs",
     "admin:create": "node scripts/create-admin.mjs",
