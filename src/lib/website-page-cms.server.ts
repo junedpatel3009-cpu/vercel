@@ -1,6 +1,7 @@
-﻿import path from "node:path";
-import Database from "better-sqlite3";
-import sanitizeHtml from "sanitize-html";
+﻿import sanitizeHtml from "sanitize-html";
+import { prisma } from "@/lib/prisma";
+import { ensureCmsSchema } from "@/lib/cms-schema.server.ts";
+import type { CmsPageStatus } from "@/generated/prisma/client.ts";
 
 const sanitizerOptions = {
   allowedTags: [
@@ -10,8 +11,8 @@ const sanitizerOptions = {
   ],
   allowedAttributes: {
     "*": [
-    "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
-    "class", "scope", "colspan", "rowspan"
+      "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
+      "class", "scope", "colspan", "rowspan"
     ],
   },
   allowedSchemes: ["http", "https", "mailto", "tel"],
@@ -22,7 +23,7 @@ function sanitizeCmsHtml(value: string) {
   return sanitizeHtml(value, sanitizerOptions);
 }
 
-export type WebsitePageStatus = "DRAFT" | "PUBLISHED";
+export type WebsitePageStatus = CmsPageStatus;
 export type WebsitePageRecord = {
   pageKey: string;
   path: string;
@@ -46,80 +47,133 @@ export const editableWebsitePages = [
   { pageKey: "terms", path: "/terms-and-conditions", title: "Terms & Conditions" },
 ] as const;
 
-const globalForWebsiteCms = globalThis as typeof globalThis & {
-  websiteCmsDb?: InstanceType<typeof Database>;
-};
+let websitePagesInitializationPromise: Promise<void> | undefined;
 
-function getDatabase() {
-  if (!globalForWebsiteCms.websiteCmsDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
-    globalForWebsiteCms.websiteCmsDb = new Database(databasePath);
-    ensureTable(globalForWebsiteCms.websiteCmsDb);
+async function ensureWebsitePages() {
+  if (websitePagesInitializationPromise) {
+    return websitePagesInitializationPromise;
   }
-  return globalForWebsiteCms.websiteCmsDb;
+
+  websitePagesInitializationPromise = (async () => {
+    await ensureCmsSchema();
+
+    await prisma.websitePage.createMany({
+      data: editableWebsitePages.map((page) => ({
+        pageKey: page.pageKey,
+        path: page.path,
+        title: page.title,
+        content: createDefaultContent(page.title),
+        status: "DRAFT",
+        updatedAt: new Date(),
+      })),
+      skipDuplicates: true,
+    });
+  })();
+
+  return websitePagesInitializationPromise;
 }
 
-function ensureTable(db: InstanceType<typeof Database>) {
-  db.exec(`CREATE TABLE IF NOT EXISTS "WebsitePage" (
-    "pageKey" TEXT NOT NULL PRIMARY KEY,
-    "path" TEXT NOT NULL UNIQUE,
-    "title" TEXT NOT NULL,
-    "content" TEXT NOT NULL DEFAULT '',
-    "status" TEXT NOT NULL DEFAULT 'DRAFT',
-    "updatedAt" TEXT NOT NULL
-  );`);
-  const insert = db.prepare(`INSERT OR IGNORE INTO "WebsitePage"
-    ("pageKey", "path", "title", "content", "status", "updatedAt")
-    VALUES (?, ?, ?, ?, 'DRAFT', ?)`);
-  const now = new Date().toISOString();
-  for (const page of editableWebsitePages) {
-    insert.run(page.pageKey, page.path, page.title, createDefaultContent(page.title), now);
-  }
+export async function listWebsitePages(): Promise<WebsitePageRecord[]> {
+  await ensureWebsitePages();
+  const pages = await prisma.websitePage.findMany({
+    orderBy: { pageKey: "asc" },
+    select: {
+      pageKey: true,
+      path: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+  return pages.map((page) => ({
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  }));
 }
 
-export function listWebsitePages(): WebsitePageRecord[] {
-  return getDatabase()
-    .prepare(
-      `SELECT pageKey, path, title, content, status, updatedAt FROM "WebsitePage" ORDER BY rowid`,
-    )
-    .all() as WebsitePageRecord[];
+export async function listPublishedWebsitePages(): Promise<WebsitePageRecord[]> {
+  await ensureWebsitePages();
+  const pages = await prisma.websitePage.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: { pageKey: "asc" },
+    select: {
+      pageKey: true,
+      path: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+  return pages.map((page) => ({
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  }));
 }
 
-export function listPublishedWebsitePages(): WebsitePageRecord[] {
-  return getDatabase()
-    .prepare(
-      `SELECT pageKey, path, title, content, status, updatedAt FROM "WebsitePage" WHERE status = 'PUBLISHED'`,
-    )
-    .all() as WebsitePageRecord[];
+export async function getPublishedWebsitePage(
+  pageKey: string,
+): Promise<WebsitePageRecord | undefined> {
+  await ensureWebsitePages();
+  const page = await prisma.websitePage.findUnique({
+    where: { pageKey },
+    select: {
+      pageKey: true,
+      path: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+  if (!page || page.status !== "PUBLISHED") return undefined;
+  return {
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  };
 }
 
-export function getPublishedWebsitePage(pageKey: string): WebsitePageRecord | undefined {
-  return getDatabase()
-    .prepare(
-      `SELECT pageKey, path, title, content, status, updatedAt FROM "WebsitePage" WHERE pageKey = ? AND status = 'PUBLISHED'`,
-    )
-    .get(pageKey) as WebsitePageRecord | undefined;
-}
-
-export function saveWebsitePage(
+export async function saveWebsitePage(
   pageKey: string,
   input: Pick<WebsitePageRecord, "content" | "status">,
-): WebsitePageRecord {
+): Promise<WebsitePageRecord> {
+  await ensureWebsitePages();
   if (!editableWebsitePages.some((page) => page.pageKey === pageKey)) {
     throw new Error("This page is not editable.");
   }
-  const db = getDatabase();
+
   const sanitizedContent = sanitizeCmsHtml(input.content);
-  db.prepare(
-    `UPDATE "WebsitePage" SET content = ?, status = ?, updatedAt = ? WHERE pageKey = ?`,
-  ).run(sanitizedContent, input.status, new Date().toISOString(), pageKey);
-  const saved = db
-    .prepare(
-      `SELECT pageKey, path, title, content, status, updatedAt FROM "WebsitePage" WHERE pageKey = ?`,
-    )
-    .get(pageKey) as WebsitePageRecord | undefined;
-  if (!saved) throw new Error("Unable to save website page.");
-  return saved;
+  const updatedAt = new Date();
+  const page = await prisma.websitePage.upsert({
+    where: { pageKey },
+    create: {
+      pageKey,
+      path: editableWebsitePages.find((page) => page.pageKey === pageKey)?.path ?? "/",
+      title: editableWebsitePages.find((page) => page.pageKey === pageKey)?.title ?? pageKey,
+      content: sanitizedContent,
+      status: input.status,
+      updatedAt,
+    },
+    update: {
+      content: sanitizedContent,
+      status: input.status,
+      updatedAt,
+    },
+    select: {
+      pageKey: true,
+      path: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+
+  return {
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  };
 }
 
 function createDefaultContent(title: string) {

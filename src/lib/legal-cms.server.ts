@@ -1,6 +1,7 @@
-﻿import path from "node:path";
-import Database from "better-sqlite3";
-import sanitizeHtml from "sanitize-html";
+﻿import sanitizeHtml from "sanitize-html";
+import { prisma } from "@/lib/prisma";
+import { ensureCmsSchema } from "@/lib/cms-schema.server.ts";
+import type { CmsPageStatus } from "@/generated/prisma/client.ts";
 
 const sanitizerOptions = {
   allowedTags: [
@@ -23,7 +24,7 @@ function sanitizeCmsHtml(value: string) {
 }
 
 export type LegalPageSlug = string;
-export type LegalPageStatus = "DRAFT" | "PUBLISHED";
+export type LegalPageStatus = CmsPageStatus;
 
 type DefaultLegalPageSlug = "faq" | "terms-and-conditions" | "privacy-policy";
 
@@ -69,102 +70,104 @@ function getDefaultLegalPageTemplate(slug: string): Omit<LegalPageRecord, "updat
   return (defaultLegalPages as Record<string, Omit<LegalPageRecord, "updatedAt">>)[slug] || null;
 }
 
-const globalForLegalCms = globalThis as typeof globalThis & {
-  legalCmsDb?: InstanceType<typeof Database>;
-};
+let legalPagesInitializationPromise: Promise<void> | undefined;
 
-function getDatabase() {
-  if (!globalForLegalCms.legalCmsDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
-    globalForLegalCms.legalCmsDb = new Database(databasePath);
-    ensureLegalPagesTable(globalForLegalCms.legalCmsDb);
+async function ensureLegalPages() {
+  if (legalPagesInitializationPromise) {
+    return legalPagesInitializationPromise;
   }
 
-  return globalForLegalCms.legalCmsDb;
+  legalPagesInitializationPromise = (async () => {
+    await ensureCmsSchema();
+
+    await prisma.legalPage.createMany({
+      data: Object.values(defaultLegalPages).map((page) => ({
+        slug: page.slug,
+        title: page.title,
+        content: page.content,
+        status: page.status,
+        updatedAt: new Date(),
+      })),
+      skipDuplicates: true,
+    });
 }
 
-function ensureLegalPagesTable(db: InstanceType<typeof Database>) {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS "LegalPage" (
-      "slug" TEXT NOT NULL PRIMARY KEY,
-      "title" TEXT NOT NULL,
-      "content" TEXT NOT NULL DEFAULT '',
-      "status" TEXT NOT NULL DEFAULT 'PUBLISHED',
-      "updatedAt" TEXT NOT NULL
-    );
-  `);
-
-  const now = new Date().toISOString();
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO "LegalPage" ("slug", "title", "content", "status", "updatedAt")
-    VALUES (?, ?, ?, ?, ?)
-  `);
-
-  for (const page of Object.values(defaultLegalPages)) {
-    insert.run(page.slug, page.title, page.content, page.status, now);
-  }
+export async function listLegalPages(): Promise<LegalPageRecord[]> {
+  await ensureLegalPages();
+  const pages = await prisma.legalPage.findMany({
+    orderBy: { slug: "asc" },
+    select: {
+      slug: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+  return pages.map((page) => ({
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  }));
 }
 
-export function listLegalPages(): LegalPageRecord[] {
-  const db = getDatabase();
-  return db
-    .prepare(
-      `
-        SELECT slug, title, content, status, updatedAt
-        FROM "LegalPage"
-        ORDER BY CASE slug
-          WHEN 'faq' THEN 0
-          WHEN 'terms-and-conditions' THEN 1
-          WHEN 'privacy-policy' THEN 2
-          ELSE 3
-        END
-      `,
-    )
-    .all() as LegalPageRecord[];
+export async function getLegalPageBySlug(slug: LegalPageSlug): Promise<LegalPageRecord | undefined> {
+  await ensureLegalPages();
+  const page = await prisma.legalPage.findUnique({
+    where: { slug },
+    select: {
+      slug: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+  return page ? { ...page, updatedAt: page.updatedAt.toISOString() } : undefined;
 }
 
-export function getLegalPageBySlug(slug: LegalPageSlug): LegalPageRecord | undefined {
-  const db = getDatabase();
-  return db
-    .prepare(
-      `
-        SELECT slug, title, content, status, updatedAt
-        FROM "LegalPage"
-        WHERE slug = ?
-        LIMIT 1
-      `,
-    )
-    .get(slug) as LegalPageRecord | undefined;
-}
-
-export function getPublishedLegalPageBySlug(slug: LegalPageSlug): LegalPageRecord | undefined {
-  const page = getLegalPageBySlug(slug);
+export async function getPublishedLegalPageBySlug(
+  slug: LegalPageSlug,
+): Promise<LegalPageRecord | undefined> {
+  const page = await getLegalPageBySlug(slug);
   return page?.status === "PUBLISHED" ? page : undefined;
 }
 
-export function saveLegalPage(slug: LegalPageSlug, input: LegalPageInput): LegalPageRecord {
-  const db = getDatabase();
+export async function saveLegalPage(
+  slug: LegalPageSlug,
+  input: LegalPageInput,
+): Promise<LegalPageRecord> {
+  await ensureLegalPages();
   const sanitizedContent = sanitizeCmsHtml(input.content);
-  const updatedAt = new Date().toISOString();
+  const updatedAt = new Date();
   const defaultTemplate = getDefaultLegalPageTemplate(slug);
   const fallbackTitle = defaultTemplate?.title || slug.replace(/[-_]+/g, " ").trim() || "New page";
 
-  db.prepare(
-    `
-      INSERT INTO "LegalPage" ("slug", "title", "content", "status", "updatedAt")
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT("slug") DO UPDATE SET
-        title = excluded.title,
-        content = excluded.content,
-        status = excluded.status,
-        updatedAt = excluded.updatedAt
-    `,
-  ).run(slug, input.title.trim() || fallbackTitle, sanitizedContent, input.status, updatedAt);
+  const page = await prisma.legalPage.upsert({
+    where: { slug },
+    create: {
+      slug,
+      title: input.title.trim() || fallbackTitle,
+      content: sanitizedContent,
+      status: input.status,
+      updatedAt,
+    },
+    update: {
+      title: input.title.trim() || fallbackTitle,
+      content: sanitizedContent,
+      status: input.status,
+      updatedAt,
+    },
+    select: {
+      slug: true,
+      title: true,
+      content: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
 
-  const page = getLegalPageBySlug(slug);
-  if (!page) {
-    throw new Error("Unable to save legal page.");
-  }
-
-  return page;
+  return {
+    ...page,
+    updatedAt: page.updatedAt.toISOString(),
+  };
 }

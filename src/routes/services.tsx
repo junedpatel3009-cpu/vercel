@@ -5,8 +5,8 @@ import { getServiceCategories, getTotalProfessionalsCount } from "@/lib/services
 
 const loadServicesData = createServerFn({ method: "GET" }).handler(async () => {
   return {
-    categories: getServiceCategories(),
-    totalPros: getTotalProfessionalsCount(),
+    categories: await getServiceCategories(),
+    totalPros: await getTotalProfessionalsCount(),
   };
 });
 

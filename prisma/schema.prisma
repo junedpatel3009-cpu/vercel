@@ -89,6 +89,34 @@ model CmsMedia {
   @@map("cms_media")
 }
 
+model WebsitePage {
+  pageKey   String       @id @map("pageKey")
+  path      String       @unique
+  title     String
+  content   String       @default("")
+  status    CmsPageStatus @default(DRAFT)
+  updatedAt DateTime
+}
+
+model LegalPage {
+  slug      String       @id @map("slug")
+  title     String
+  content   String       @default("")
+  status    CmsPageStatus @default(PUBLISHED)
+  updatedAt DateTime
+}
+
+model ServiceCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String   @default("")
+  iconName    String   @default("")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+}
+
 model User {
   id                     Int             @id @default(autoincrement())
   role                   UserRole        @default(CLIENT)
@@ -186,6 +214,8 @@ model ClientJob {
   budgetMin       Int?
   budgetMax       Int?
   urgency         JobUrgency            @default(MEDIUM)
+  timingType      String                @default("FIXED")
+  hourlyRate      Int?
   jobDate         DateTime?
   deadline        DateTime
   workMode        JobWorkMode           @default(BOTH)

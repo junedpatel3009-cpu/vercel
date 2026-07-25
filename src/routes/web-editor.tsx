@@ -12,7 +12,7 @@ const getWebEditorData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
   if (!viewer || viewer.role !== "ADMIN") return { viewer: null, pages: [] as WebsitePageRecord[] };
   const { listWebsitePages } = await import("@/lib/website-page-cms.server");
-  return { viewer, pages: listWebsitePages() };
+  return { viewer, pages: await listWebsitePages() };
 });
 
 const saveWebEditorPage = createServerFn({ method: "POST" })

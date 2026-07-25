@@ -65,12 +65,12 @@ type StepId = "basics" | "files" | "timing" | "location";
 
 const getPostJobAccess = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = requireCurrentUserRole("CLIENT");
-  const clientProfile = getClientProfileByUserId(viewer.id);
+  const clientProfile = await getClientProfileByUserId(viewer.id);
 
   return {
     viewer,
     clientProfile,
-    categories: getServiceCategories(),
+    categories: await getServiceCategories(),
   };
 });
 
@@ -95,7 +95,7 @@ const getDraftJob = createServerFn({ method: "GET" })
   .inputValidator((data: { draftId: number }) => data)
   .handler(async ({ data }) => {
     const viewer = requireCurrentUserRole("CLIENT");
-    const job = getClientJobById(viewer.id, data.draftId);
+    const job = await getClientJobById(viewer.id, data.draftId);
 
     if (!job || job.status !== "DRAFT") {
       return null;

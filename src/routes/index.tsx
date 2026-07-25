@@ -15,7 +15,7 @@ const getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
 const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const user = getCurrentUser();
   const { getPublishedWebsitePage } = await import("@/lib/website-page-cms.server");
-  const editorPage = getPublishedWebsitePage("home");
+  const editorPage = await getPublishedWebsitePage("home");
 
   return {
     homeIntroHtml: editorPage ? extractFirstSection(editorPage.content) : null,

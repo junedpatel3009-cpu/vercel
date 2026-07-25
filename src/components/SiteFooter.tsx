@@ -6,7 +6,7 @@ import type { LegalPageRecord } from "@/lib/legal-cms.server";
 
 const loadFooterPages = createServerFn({ method: "GET" }).handler(async () => {
   const { listLegalPages } = await import("@/lib/legal-cms.server");
-  return listLegalPages().filter((page) => page.status === "PUBLISHED");
+  return (await listLegalPages()).filter((page) => page.status === "PUBLISHED");
 });
 
 const fallbackColumns: FooterColumn[] = [
