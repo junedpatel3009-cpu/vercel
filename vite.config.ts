@@ -7,8 +7,9 @@ export default defineConfig({
   },
   vite: {
     ssr: {
-      external: ["better-sqlite3", "sanitize-html"],
+      external: ["better-sqlite3"],
       noExternal: [
+        "sanitize-html",
         "htmlparser2",
         "domhandler",
         "domutils",
