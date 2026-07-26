@@ -1,7 +1,7 @@
 ﻿let _sanitizeHtml: any | undefined;
 async function getSanitizeHtml() {
   if (!_sanitizeHtml) {
-    const mod = await import("sanitize-html");
+    const mod = await import("@/lib/sanitize-html-shim.mjs");
     _sanitizeHtml = mod.default ?? mod;
   }
   return _sanitizeHtml;
