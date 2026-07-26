@@ -4,13 +4,7 @@
   "sideEffects": false,
   "type": "module",
   "engines": {
-    "node": "22.x"
-  },
-  "overrides": {
-    "htmlparser2": "10.1.0",
-    "sanitize-html": {
-      "htmlparser2": "10.1.0"
-    }
+    "node": "20.x"
   },
   "scripts": {
     "editor:sync-pages": "node scripts/sync-web-editor-pages.mjs",
