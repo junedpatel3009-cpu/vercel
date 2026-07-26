@@ -7,7 +7,7 @@ const port = Number(process.env.PORT || 3000);
 const server = http.createServer(async (incoming, outgoing) => {
   const start = Date.now();
   try {
-    const origin = \`http://\${incoming.headers.host || \`localhost:\${port}\`}\`;
+    const origin = 'http://' + (incoming.headers.host || ('localhost:' + port));
     const init = {
       method: incoming.method,
       headers: new Headers(
@@ -39,8 +39,8 @@ const server = http.createServer(async (incoming, outgoing) => {
     outgoing.end(JSON.stringify({ error: { message: "Internal server error." } }));
   } finally {
     const end = Date.now();
-    console.log(\`\${incoming.method} \${incoming.url} \${outgoing.statusCode} -\${end - start}ms\`);
+    console.log(`${incoming.method} ${incoming.url} ${outgoing.statusCode} -${end - start}ms`);
   }
 });
 
-server.listen(port, () => console.log(\`Servio listening on http://localhost:\${port}\`));
+server.listen(port, () => console.log(`Servio listening on http://localhost:${port}`));

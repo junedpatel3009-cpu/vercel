@@ -1,4 +1,11 @@
-﻿import sanitizeHtml from "sanitize-html";
+﻿let _sanitizeHtml: any | undefined;
+async function getSanitizeHtml() {
+  if (!_sanitizeHtml) {
+    const mod = await import("sanitize-html");
+    _sanitizeHtml = mod.default ?? mod;
+  }
+  return _sanitizeHtml;
+}
 import { prisma } from "@/lib/prisma";
 import { ensureCmsSchema } from "@/lib/cms-schema.server.ts";
 import type { CmsPageStatus } from "@/generated/prisma/client.ts";
@@ -19,8 +26,9 @@ const sanitizerOptions = {
   allowedSchemesByTag: { img: ["http", "https", "data"] },
 };
 
-function sanitizeCmsHtml(value: string) {
-  return sanitizeHtml(value, sanitizerOptions);
+async function sanitizeCmsHtml(value: string) {
+  const fn = await getSanitizeHtml();
+  return fn(value, sanitizerOptions);
 }
 
 export type WebsitePageStatus = CmsPageStatus;
@@ -143,7 +151,7 @@ export async function saveWebsitePage(
     throw new Error("This page is not editable.");
   }
 
-  const sanitizedContent = sanitizeCmsHtml(input.content);
+  const sanitizedContent = await sanitizeCmsHtml(input.content);
   const updatedAt = new Date();
   const page = await prisma.websitePage.upsert({
     where: { pageKey },
