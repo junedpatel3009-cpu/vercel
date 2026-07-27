@@ -1,8 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getCurrentUser } from "@/lib/current-user.server";
 import { deleteClientJob, getClientJobById } from "@/lib/job-db.server";
+import { prisma } from "@/lib/prisma";
 import { getProjectTrackingDetailsByJob } from "@/lib/project-request-db.server";
 import { seedTestJobs } from "@/lib/seed-jobs.server";
+
+const usesPostgres = () => (process.env.DATABASE_URL || "").startsWith("postgres");
 
 export const checkProjectAuth = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
@@ -36,7 +39,22 @@ export const getProjectData = createServerFn({ method: "GET" })
       return null;
     }
 
-    let job = getClientJobById(viewer.id, numericId);
+    let job = usesPostgres()
+      ? (await prisma.clientJob.findFirst({
+          where: { id: numericId, userId: viewer.id },
+          include: { attachments: true },
+        }).then((record) => (record ? {
+          ...record,
+          jobDate: record.jobDate?.toISOString() ?? null,
+          deadline: record.deadline.toISOString(),
+          createdAt: record.createdAt.toISOString(),
+          updatedAt: record.updatedAt.toISOString(),
+          attachments: record.attachments.map((attachment) => ({
+            ...attachment,
+            createdAt: attachment.createdAt.toISOString(),
+          })),
+        } : null)))
+      : getClientJobById(viewer.id, numericId);
 
     // For development/testing: create test job if it doesn't exist
     if (!job && numericId === 1) {
@@ -46,7 +64,9 @@ export const getProjectData = createServerFn({ method: "GET" })
       }
     }
 
-    const tracking = job ? (getProjectTrackingDetailsByJob(viewer.id, job.id) ?? null) : null;
+    const tracking = !usesPostgres() && job
+      ? (getProjectTrackingDetailsByJob(viewer.id, job.id) ?? null)
+      : null;
 
     return { viewer, job, tracking };
   });
@@ -58,6 +78,13 @@ export const deleteProject = createServerFn({ method: "POST" })
 
     if (!viewer || viewer.role !== "CLIENT") {
       throw new Error("Only clients can delete projects.");
+    }
+
+    if (usesPostgres()) {
+      const result = await prisma.clientJob.deleteMany({
+        where: { id: data.projectId, userId: viewer.id },
+      });
+      return result.count > 0;
     }
 
     return deleteClientJob(viewer.id, data.projectId);

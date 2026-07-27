@@ -23,6 +23,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/current-user.server";
+import { prisma } from "@/lib/prisma";
 import {
   cancelHireProject,
   deleteRejectedHireRequest,
@@ -150,6 +151,14 @@ const updateProjectStatus = createServerFn({ method: "POST" })
       throw new Error("Only clients can update projects.");
     }
 
+    if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+      const result = await prisma.clientJob.updateMany({
+        where: { id: data.projectId, userId: viewer.id },
+        data: { status: data.status },
+      });
+      return result.count > 0;
+    }
+
     return updateClientJobStatus(viewer.id, data.projectId, data.status);
   });
 
@@ -160,6 +169,13 @@ const removeProjectImmediately = createServerFn({ method: "POST" })
 
     if (!viewer || viewer.role !== "CLIENT") {
       throw new Error("Only clients can remove projects.");
+    }
+
+    if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+      const result = await prisma.clientJob.deleteMany({
+        where: { id: data.projectId, userId: viewer.id },
+      });
+      return result.count > 0;
     }
 
     return deleteClientJob(viewer.id, data.projectId);
