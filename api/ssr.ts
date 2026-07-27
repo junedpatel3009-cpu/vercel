@@ -73,6 +73,16 @@ function initializeSsrDatabase() {
   }
 }
 
+async function readRequestBody(req: IncomingMessage) {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
+}
+
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
     // Vercel functions receive a fresh /tmp filesystem on cold starts. Create
@@ -84,6 +94,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const host = req.headers.host || "localhost";
     const url = new URL(req.url || "/", `https://${host}`);
+    const method = req.method || "GET";
 
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
@@ -94,10 +105,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       }
     }
 
+    const requestBody =
+      method === "GET" || method === "HEAD" ? undefined : await readRequestBody(req);
+
     const response = await serverEntry.fetch(
       new Request(url, {
-        method: req.method,
+        method,
         headers,
+        body: requestBody,
       }),
       {},
       {},
