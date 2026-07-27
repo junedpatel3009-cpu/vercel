@@ -183,6 +183,42 @@ function mapJob(
   } satisfies ClientJobRecord;
 }
 
+function mapPrismaClientJob(job: any) {
+  return mapJob(
+    {
+      id: job.id,
+      userId: job.userId,
+      category: job.category,
+      title: job.title,
+      description: job.description,
+      budgetMin: job.budgetMin,
+      budgetMax: job.budgetMax,
+      urgency: job.urgency,
+      timingType: job.timingType as unknown as JobTimingType,
+      hourlyRate: job.hourlyRate ?? null,
+      jobDate: job.jobDate ? job.jobDate.toISOString() : null,
+      deadline: job.deadline.toISOString(),
+      workMode: job.workMode as unknown as JobWorkMode,
+      locationLabel: job.locationLabel,
+      locationAddress: job.locationAddress,
+      locationLat: job.locationLat ?? null,
+      locationLng: job.locationLng ?? null,
+      status: job.status as unknown as JobStatus,
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString(),
+    },
+    job.attachments.map((attachment: any) => ({
+      id: attachment.id,
+      jobId: attachment.jobId,
+      fileName: attachment.fileName,
+      fileType: attachment.fileType ?? null,
+      fileSize: attachment.fileSize ?? null,
+      previewUrl: attachment.previewUrl ?? null,
+      createdAt: attachment.createdAt.toISOString(),
+    })),
+  );
+}
+
 function tableExists(db: BetterSqlite3Database, tableName: string) {
   const result = db
     .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1`)
@@ -436,7 +472,23 @@ export function getClientJobById(userId: number, jobId: number) {
   return mapJob(job, attachments);
 }
 
-export function getClientJobsByUserId(userId: number) {
+export async function getClientJobsByUserId(userId: number) {
+  const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+
+  if (isPostgres) {
+    const jobs = await prisma.clientJob.findMany({
+      where: { userId },
+      orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+      include: { attachments: true },
+    });
+
+    if (!jobs.length) {
+      return [];
+    }
+
+    return jobs.map(mapPrismaClientJob);
+  }
+
   const db = getDatabase();
   const jobs = db
     .prepare(

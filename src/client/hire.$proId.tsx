@@ -45,7 +45,7 @@ const getHireDetails = createServerFn({ method: "GET" })
     return {
       viewer,
       profile,
-      projects: viewer?.role === "CLIENT" ? getClientJobsByUserId(viewer.id) : [],
+      projects: viewer?.role === "CLIENT" ? await getClientJobsByUserId(viewer.id) : [],
     };
   });
 

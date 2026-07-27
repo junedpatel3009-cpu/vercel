@@ -78,7 +78,7 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
   return {
     viewer,
     clientProfile: await getClientProfileByUserId(viewer.id),
-    projects: getClientJobsByUserId(viewer.id),
+    projects: await getClientJobsByUserId(viewer.id),
     projectRequests: getClientProjectRequests(viewer.id),
     projectNegotiations: getProjectNegotiationsForClient(viewer.id),
     trackedProjects: getClientTrackedProjects(viewer.id),
