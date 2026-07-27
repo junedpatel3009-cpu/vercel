@@ -61,7 +61,7 @@ import {
 
 const getProfileSetupData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = requireCurrentUser();
-  const clientProfile = viewer.role === "CLIENT" ? getClientProfileByUserId(viewer.id) : null;
+  const clientProfile = viewer.role === "CLIENT" ? await getClientProfileByUserId(viewer.id) : null;
 
   return {
     viewer,
@@ -95,7 +95,7 @@ const saveClientProfile = createServerFn({ method: "POST" })
       };
     }
 
-    const profile = updateClientProfileByUserId({
+    const profile = await updateClientProfileByUserId({
       userId: viewer.id,
       fullName: data.fullName,
       email: normalizedEmail,

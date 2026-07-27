@@ -56,7 +56,7 @@ export const APIRoute = createAPIFileRoute("/api/auth/google/callback")({
       let finalDestination = savedState.returnTo || "/";
       if (user.role === "PROFESSIONAL" && finalDestination === "/") {
         const { getProfessionalProfileByUserId } = await import("@/lib/user-db.server");
-        const proProfile = getProfessionalProfileByUserId(user.id);
+        const proProfile = await getProfessionalProfileByUserId(user.id);
         const isProfileComplete = !!(
           proProfile?.professionalCategory &&
           proProfile?.professionalCity &&

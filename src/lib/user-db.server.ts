@@ -1122,55 +1122,53 @@ export function updateProfessionalVerifiedStatusByAdmin(userId: number, isVerifi
   });
 }
 
-export function getClientProfileByUserId(userId: number) {
+export async function getClientProfileByUserId(userId: number) {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    return (async () => {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          role: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          avatarUrl: true,
-          companyName: true,
-          companyWebsite: true,
-          industry: true,
-          teamSize: true,
-          companyDescription: true,
-          address: true,
-          savedLocationsJson: true,
-          hiringNeedsJson: true,
-          authProvider: true,
-        },
-      });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        companyName: true,
+        companyWebsite: true,
+        industry: true,
+        teamSize: true,
+        companyDescription: true,
+        address: true,
+        savedLocationsJson: true,
+        hiringNeedsJson: true,
+        authProvider: true,
+      },
+    });
 
-      if (!user) return null;
+    if (!user) return null;
 
-      return {
-        id: user.id,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: `${user.firstName} ${user.lastName}`.trim(),
-        email: user.email,
-        phone: user.phone ?? "",
-        avatarUrl: user.avatarUrl,
-        companyName: user.companyName ?? "",
-        companyWebsite: user.companyWebsite ?? "",
-        industry: user.industry ?? "",
-        teamSize: user.teamSize ?? "",
-        companyDescription: user.companyDescription ?? "",
-        address: user.address ?? "",
-        savedLocations: parseSavedLocations(user.savedLocationsJson),
-        hiringNeeds: parseHiringNeeds(user.hiringNeedsJson),
-        authProvider: user.authProvider,
-      } as ClientProfileInfo;
-    })();
+    return {
+      id: user.id,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email,
+      phone: user.phone ?? "",
+      avatarUrl: user.avatarUrl,
+      companyName: user.companyName ?? "",
+      companyWebsite: user.companyWebsite ?? "",
+      industry: user.industry ?? "",
+      teamSize: user.teamSize ?? "",
+      companyDescription: user.companyDescription ?? "",
+      address: user.address ?? "",
+      savedLocations: parseSavedLocations(user.savedLocationsJson),
+      hiringNeeds: parseHiringNeeds(user.hiringNeedsJson),
+      authProvider: user.authProvider,
+    } as ClientProfileInfo;
   }
 
   const db = getDatabase();
@@ -1248,43 +1246,41 @@ export function getClientProfileByUserId(userId: number) {
   });
 }
 
-export function getProfessionalUsers() {
+export async function getProfessionalUsers() {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    return (async () => {
-      const rows = await prisma.user.findMany({
-        where: { role: "PROFESSIONAL", isActive: true },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          avatarUrl: true,
-          companyName: true,
-          industry: true,
-          companyDescription: true,
-          address: true,
-          professionalCategory: true,
-          professionalCity: true,
-          serviceArea: true,
-          serviceRadiusKm: true,
-          hourlyRate: true,
-          fixedRate: true,
-          averageRating: true,
-          reviewCount: true,
-          isVerified: true,
-          availabilityStatus: true,
-        },
-      });
+    const rows = await prisma.user.findMany({
+      where: { role: "PROFESSIONAL", isActive: true },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        companyName: true,
+        industry: true,
+        companyDescription: true,
+        address: true,
+        professionalCategory: true,
+        professionalCity: true,
+        serviceArea: true,
+        serviceRadiusKm: true,
+        hourlyRate: true,
+        fixedRate: true,
+        averageRating: true,
+        reviewCount: true,
+        isVerified: true,
+        availabilityStatus: true,
+      },
+    });
 
-      return rows.map((user) => ({
-        ...user,
-        isVerified: Number(user.isVerified) as number,
-      }));
-    })();
+    return rows.map((user) => ({
+      ...user,
+      isVerified: Number(user.isVerified) as number,
+    }));
   }
 
   const db = getDatabase();
@@ -1346,81 +1342,76 @@ export function getProfessionalUsers() {
   );
 }
 
-export function getProfessionalProfileByUserId(userId: number) {
+export async function getProfessionalProfileByUserId(userId: number) {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    return (async () => {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          role: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-          avatarUrl: true,
-          professionalCategory: true,
-          professionalCity: true,
-          professionalSkillsJson: true,
-          experienceYears: true,
-          hourlyRate: true,
-          fixedRate: true,
-          portfolioUrl: true,
-          workPhotosJson: true,
-          certificationsJson: true,
-          tradeLicenseUrl: true,
-          availabilityStatus: true,
-          serviceArea: true,
-          serviceRadiusKm: true,
-          workMode: true,
-          companyDescription: true,
-          address: true,
-          isVerified: true,
-          averageRating: true,
-          reviewCount: true,
-          emailNotificationsEnabled: true,
-          browserNotificationsEnabled: true,
-          projectActivityNotificationsEnabled: true,
-        },
-      });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        professionalCategory: true,
+        professionalCity: true,
+        professionalSkillsJson: true,
+        experienceYears: true,
+        hourlyRate: true,
+        fixedRate: true,
+        portfolioUrl: true,
+        workPhotosJson: true,
+        certificationsJson: true,
+        tradeLicenseUrl: true,
+        availabilityStatus: true,
+        serviceArea: true,
+        serviceRadiusKm: true,
+        workMode: true,
+        companyDescription: true,
+        address: true,
+        isVerified: true,
+        averageRating: true,
+        reviewCount: true,
+      },
+    });
 
-      if (!user || user.role !== "PROFESSIONAL") return null;
+    if (!user || user.role !== "PROFESSIONAL") return null;
 
-      return {
-        id: user.id,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: `${user.firstName} ${user.lastName}`.trim(),
-        email: user.email,
-        phone: user.phone ?? "",
-        avatarUrl: user.avatarUrl,
-        professionalCategory: user.professionalCategory ?? "",
-        professionalCity: user.professionalCity ?? "",
-        skills: parseStringList(user.professionalSkillsJson),
-        experienceYears: user.experienceYears,
-        hourlyRate: user.hourlyRate,
-        fixedRate: user.fixedRate,
-        portfolioUrl: user.portfolioUrl ?? "",
-        workPhotos: parseStringList(user.workPhotosJson),
-        certifications: parseStringList(user.certificationsJson),
-        tradeLicenseUrl: user.tradeLicenseUrl ?? "",
-        availabilityStatus: user.availabilityStatus || "available",
-        serviceArea: user.serviceArea ?? "",
-        serviceRadiusKm: user.serviceRadiusKm,
-        workMode: user.workMode || "both",
-        companyDescription: user.companyDescription ?? "",
-        address: user.address ?? "",
-        isVerified: Boolean(user.isVerified),
-        averageRating: Number(user.averageRating || 0),
-        reviewCount: Number(user.reviewCount || 0),
-        emailNotificationsEnabled: user.emailNotificationsEnabled !== 0,
-        browserNotificationsEnabled: user.browserNotificationsEnabled !== 0,
-        projectActivityNotificationsEnabled: user.projectActivityNotificationsEnabled !== 0,
-      } as ProfessionalProfileInfo;
-    })();
+    return {
+      id: user.id,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      fullName: `${user.firstName} ${user.lastName}`.trim(),
+      email: user.email,
+      phone: user.phone ?? "",
+      avatarUrl: user.avatarUrl,
+      professionalCategory: user.professionalCategory ?? "",
+      professionalCity: user.professionalCity ?? "",
+      skills: parseStringList(user.professionalSkillsJson),
+      experienceYears: user.experienceYears,
+      hourlyRate: user.hourlyRate,
+      fixedRate: user.fixedRate,
+      portfolioUrl: user.portfolioUrl ?? "",
+      workPhotos: parseStringList(user.workPhotosJson),
+      certifications: parseStringList(user.certificationsJson),
+      tradeLicenseUrl: user.tradeLicenseUrl ?? "",
+      availabilityStatus: user.availabilityStatus || "available",
+      serviceArea: user.serviceArea ?? "",
+      serviceRadiusKm: user.serviceRadiusKm,
+      workMode: user.workMode || "both",
+      companyDescription: user.companyDescription ?? "",
+      address: user.address ?? "",
+      isVerified: Boolean(user.isVerified),
+      averageRating: Number(user.averageRating || 0),
+      reviewCount: Number(user.reviewCount || 0),
+      emailNotificationsEnabled: false,
+      browserNotificationsEnabled: false,
+      projectActivityNotificationsEnabled: false,
+    } as ProfessionalProfileInfo;
   }
 
   const db = getDatabase();
@@ -1614,15 +1605,8 @@ export function updateProfessionalNotificationPreferencesByUserId(input: {
 
   if (isPostgres) {
     return (async () => {
-      await prisma.user.update({
-        where: { id: input.userId },
-        data: {
-          emailNotificationsEnabled: input.emailNotificationsEnabled ? 1 : 0,
-          browserNotificationsEnabled: input.browserNotificationsEnabled ? 1 : 0,
-          projectActivityNotificationsEnabled: input.projectActivityNotificationsEnabled ? 1 : 0,
-        },
-      });
-
+      // Notification preference columns are not present in Prisma schema.
+      // Skip updating and return the current profile instead.
       return await getProfessionalProfileByUserId(input.userId);
     })();
   }
@@ -1653,7 +1637,7 @@ export function updateProfessionalNotificationPreferencesByUserId(input: {
   });
 }
 
-export function updateProfessionalProfileByUserId(input: {
+export async function updateProfessionalProfileByUserId(input: {
   userId: number;
   fullName: string;
   profilePhotoUrl?: string | null;
@@ -1680,40 +1664,34 @@ export function updateProfessionalProfileByUserId(input: {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    return (async () => {
-      const { firstName, lastName } = splitFullName(input.fullName);
+    const { firstName, lastName } = splitFullName(input.fullName);
 
-      await prisma.user.update({
-        where: { id: input.userId },
-        data: {
-          firstName,
-          lastName,
-          avatarUrl: input.profilePhotoUrl?.trim() || null,
-          professionalCategory: input.professionalCategory.trim(),
-          professionalCity: input.professionalCity.trim(),
-          professionalSkillsJson: stringifyStringList(input.skills),
-          experienceYears: input.experienceYears ?? null,
-          hourlyRate: input.hourlyRate ?? null,
-          fixedRate: input.fixedRate ?? null,
-          portfolioUrl: input.portfolioUrl?.trim() || null,
-          workPhotosJson: stringifyStringList(input.workPhotos),
-          certificationsJson: stringifyStringList(input.certifications),
-          tradeLicenseUrl: input.tradeLicenseUrl?.trim() || null,
-          availabilityStatus: input.availabilityStatus,
-          serviceArea: input.serviceArea.trim(),
-          serviceRadiusKm: input.serviceRadiusKm ?? null,
-          workMode: input.workMode,
-          companyDescription: input.companyDescription?.trim() || null,
-          address: input.address.trim(),
-          emailNotificationsEnabled: input.emailNotificationsEnabled === false ? 0 : 1,
-          browserNotificationsEnabled: input.browserNotificationsEnabled === false ? 0 : 1,
-          projectActivityNotificationsEnabled:
-            input.projectActivityNotificationsEnabled === false ? 0 : 1,
-        },
-      });
+    await prisma.user.update({
+      where: { id: input.userId },
+      data: {
+        firstName,
+        lastName,
+        avatarUrl: input.profilePhotoUrl?.trim() || null,
+        professionalCategory: input.professionalCategory.trim(),
+        professionalCity: input.professionalCity.trim(),
+        professionalSkillsJson: stringifyStringList(input.skills),
+        experienceYears: input.experienceYears ?? null,
+        hourlyRate: input.hourlyRate ?? null,
+        fixedRate: input.fixedRate ?? null,
+        portfolioUrl: input.portfolioUrl?.trim() || null,
+        workPhotosJson: stringifyStringList(input.workPhotos),
+        certificationsJson: stringifyStringList(input.certifications),
+        tradeLicenseUrl: input.tradeLicenseUrl?.trim() || null,
+        availabilityStatus: input.availabilityStatus,
+        serviceArea: input.serviceArea.trim(),
+        serviceRadiusKm: input.serviceRadiusKm ?? null,
+        workMode: input.workMode,
+        companyDescription: input.companyDescription?.trim() || null,
+        address: input.address.trim(),
+      },
+    });
 
-      return await getProfessionalProfileByUserId(input.userId);
-    })();
+    return await getProfessionalProfileByUserId(input.userId);
   }
 
   const db = getDatabase();

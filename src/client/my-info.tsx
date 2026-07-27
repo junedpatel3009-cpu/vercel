@@ -73,7 +73,7 @@ const getMyInfoData = createServerFn({ method: "GET" }).handler(async () => {
     return null;
   }
 
-  const clientProfile = getClientProfileByUserId(viewer.id);
+  const clientProfile = await getClientProfileByUserId(viewer.id);
   return {
     viewer,
     clientProfile,
@@ -107,7 +107,7 @@ const updateMyInfo = createServerFn({ method: "POST" })
       };
     }
 
-    const profile = updateClientProfileByUserId({
+    const profile = await updateClientProfileByUserId({
       userId: viewer.id,
       fullName: data.fullName,
       email: normalizedEmail,

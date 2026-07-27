@@ -91,7 +91,7 @@ export const getProfessionalStatsData = createServerFn({ method: "GET" }).handle
 
   return {
     viewer,
-    profile: getProfessionalProfileByUserId(viewer.id),
+    profile: await getProfessionalProfileByUserId(viewer.id),
     projectRequests: getProfessionalProjectRequests(viewer.id),
     favoriteJobs: await getFavoriteJobsByUserId(viewer.id),
     projectNegotiations: getProjectNegotiationsForProfessional(viewer.id),
