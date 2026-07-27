@@ -587,7 +587,63 @@ export async function createHireContract(clientId: number, input: HireContractIn
   };
 }
 
-export function getProfessionalHireRequests(professionalId: number) {
+export async function getProfessionalHireRequests(professionalId: number) {
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+    const contracts = await prisma.hireContract.findMany({
+      where: { professionalId: String(professionalId) },
+      include: { job: { include: { attachments: true } } },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const clientIds = [...new Set(contracts.map((contract) => Number(contract.clientId)))].filter(
+      Number.isInteger,
+    );
+    const clients = clientIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: clientIds } },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+        })
+      : [];
+    const clientsById = new Map(clients.map((client) => [client.id, client]));
+
+    return contracts.map((contract) => {
+      const client = clientsById.get(Number(contract.clientId));
+      return {
+        contractId: contract.id,
+        jobId: contract.jobId,
+        clientProjectId: contract.clientProjectId,
+        trackingId: contract.trackingId,
+        clientId: contract.clientId,
+        professionalId: contract.professionalId,
+        totalAmount: contract.totalAmount,
+        platformFee: contract.platformFee,
+        status: contract.status as HireContractStatus,
+        startDate: contract.startDate?.toISOString() ?? null,
+        endDate: contract.endDate?.toISOString() ?? null,
+        updatedAt: contract.updatedAt.toISOString(),
+        title: contract.job.title,
+        description: contract.job.description,
+        budgetMin: contract.job.budgetMin,
+        budgetMax: contract.job.budgetMax,
+        workMode: contract.job.jobType,
+        location: contract.job.city,
+        jobDate: contract.job.jobDate?.toISOString() ?? null,
+        deadline: contract.job.deadline?.toISOString() ?? null,
+        createdAt: contract.job.createdAt.toISOString(),
+        clientName: client ? `${client.firstName} ${client.lastName}`.trim() : null,
+        clientAvatarUrl: client?.avatarUrl?.startsWith("data:") ? null : (client?.avatarUrl ?? null),
+        attachmentsJson: JSON.stringify(
+          contract.job.attachments.map((attachment) => ({
+            fileUrl: attachment.fileUrl,
+            fileType: attachment.fileType,
+          })),
+        ),
+        milestonesJson: "[]",
+      } satisfies ProfessionalHireRequestRecord;
+    });
+  }
+
   const db = getDatabase();
 
   return db

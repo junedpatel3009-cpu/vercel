@@ -84,16 +84,29 @@ export const getProfessionalStatsData = createServerFn({ method: "GET" }).handle
     };
   }
 
+  const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  const postgresOnlyData = usesPostgres
+    ? {
+        projectRequests: [],
+        projectNegotiations: [],
+        hireNegotiations: [],
+        trackedProjects: [],
+        transactions: [],
+      }
+    : {
+        projectRequests: getProfessionalProjectRequests(viewer.id),
+        projectNegotiations: getProjectNegotiationsForProfessional(viewer.id),
+        hireNegotiations: getProfessionalHireNegotiations(viewer.id),
+        trackedProjects: getProfessionalTrackedProjects(viewer.id),
+        transactions: getUserProjectTransactions(viewer.id),
+      };
+
   return {
     viewer,
     profile: await getProfessionalProfileByUserId(viewer.id),
-    projectRequests: getProfessionalProjectRequests(viewer.id),
     favoriteJobs: await getFavoriteJobsByUserId(viewer.id),
-    projectNegotiations: getProjectNegotiationsForProfessional(viewer.id),
-    hireNegotiations: getProfessionalHireNegotiations(viewer.id),
-    hireRequests: getProfessionalHireRequests(viewer.id),
-    trackedProjects: getProfessionalTrackedProjects(viewer.id),
-    transactions: getUserProjectTransactions(viewer.id),
+    hireRequests: await getProfessionalHireRequests(viewer.id),
+    ...postgresOnlyData,
   };
 });
 
