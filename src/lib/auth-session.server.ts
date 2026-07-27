@@ -12,6 +12,11 @@ type SessionPayload = {
   userId: number;
   email: string;
   role: UserRole;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  authProvider: "LOCAL" | "GOOGLE";
   exp: number;
 };
 
@@ -107,6 +112,11 @@ export function createSessionCookie(user: PublicUser) {
     userId: user.id,
     email: user.email,
     role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone,
+    avatarUrl: user.avatarUrl,
+    authProvider: user.authProvider,
     exp: Date.now() + THIRTY_DAYS_IN_SECONDS * 1000,
   };
 

@@ -75,12 +75,12 @@ const submitSignup = createServerFn({ method: "POST" })
   .inputValidator((data: SignupInput) => signupSchema.parse(data))
   .handler(async ({ data }) => {
     try {
-      const { createUserRecord, findUserByEmailOrPhone } = await import("@/lib/user-db.server");
+      const { prisma } = await import("@/lib/prisma");
       const { verifySignupOtp } = await import("@/lib/otp.server");
 
       const email = data.email.trim().toLowerCase();
       const phone = normalizePhone(data.countryCode, data.phone);
-      const existingUser = findUserByEmailOrPhone(email, phone);
+      const existingUser = await prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
 
       const fieldErrors: Partial<Record<keyof SignupInput, string>> = {};
 
@@ -106,16 +106,21 @@ const submitSignup = createServerFn({ method: "POST" })
 
       const passwordHash = hashPassword(data.password);
 
-      const createdUser = createUserRecord({
-        role: data.accountType === "client" ? "CLIENT" : "PROFESSIONAL",
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
-        email,
-        phone,
-        passwordHash,
+      const createdUser = await prisma.user.create({
+        data: {
+          role: data.accountType === "client" ? "CLIENT" : "PROFESSIONAL",
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email,
+          phone,
+          passwordHash,
+        },
       });
 
-      setResponseHeader("Set-Cookie", createSessionCookie(createdUser));
+      setResponseHeader(
+        "Set-Cookie",
+        createSessionCookie({ ...createdUser, authProvider: createdUser.authProvider as "LOCAL" | "GOOGLE" }),
+      );
 
       return {
         ok: true as const,
