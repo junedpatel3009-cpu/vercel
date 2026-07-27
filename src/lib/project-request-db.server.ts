@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 import { getOpenClientJobById } from "@/lib/job-db.server";
 

@@ -7,19 +7,23 @@ function isPostgresUrl(url: string) {
 }
 
 export function getSqliteDatabasePath(rawDatabaseUrl = process.env.DATABASE_URL || "file:./prisma/app.db") {
+  const configured = isPostgresUrl(rawDatabaseUrl)
+    ? "file:./prisma/app.db"
+    : rawDatabaseUrl;
+
   if (isPostgresUrl(rawDatabaseUrl)) {
-    throw new Error(
-      "DATABASE_URL points to PostgreSQL, but this loader requires a SQLite file path. " +
-        "Use a file path like \"file:./prisma/app.db\" or configure a separate PostgreSQL adapter."
+    console.warn(
+      "DATABASE_URL points to PostgreSQL. Falling back to local SQLite for legacy database modules. " +
+        "This allows the app to start, but it will use a local SQLite file instead of Supabase/Postgres for these legacy paths."
     );
   }
 
-  const configured = rawDatabaseUrl.replace(/^file:/, "");
-  const pathToUse = path.isAbsolute(configured)
-    ? configured
+  const normalized = configured.replace(/^file:/, "");
+  const pathToUse = path.isAbsolute(normalized)
+    ? normalized
     : process.env.VERCEL
-    ? path.resolve(process.env.TMPDIR || os.tmpdir(), configured)
-    : path.resolve(process.cwd(), configured);
+    ? path.resolve(process.env.TMPDIR || os.tmpdir(), normalized)
+    : path.resolve(process.cwd(), normalized);
 
   mkdirSync(path.dirname(pathToUse), { recursive: true });
   return pathToUse;

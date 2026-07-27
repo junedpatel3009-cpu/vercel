@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import path from "node:path";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 import type { Database as BetterSqlite3Database } from "better-sqlite3";
 
 export type AdminDashboardSnapshot = {
