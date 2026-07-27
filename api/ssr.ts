@@ -1,11 +1,53 @@
+import { mkdirSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { initializeUserDatabase } from "../src/lib/user-db.server";
+import os from "node:os";
+import path from "node:path";
+import Database from "better-sqlite3";
+
+function initializeSsrDatabase() {
+  const databaseUrl = process.env.DATABASE_URL || "file:./prisma/app.db";
+  const configured = /^(postgres|postgresql):\/\//.test(databaseUrl)
+    ? "file:./prisma/app.db"
+    : databaseUrl;
+  const normalized = configured.replace(/^file:/, "");
+  const databasePath = path.isAbsolute(normalized)
+    ? normalized
+    : process.env.VERCEL
+      ? path.resolve(process.env.TMPDIR || os.tmpdir(), normalized)
+      : path.resolve(process.cwd(), normalized);
+
+  mkdirSync(path.dirname(databasePath), { recursive: true });
+  const db = new Database(databasePath);
+  try {
+    // The full user module upgrades this base table if it needs extra columns.
+    // This table must exist before the SSR bundle loads its first route module.
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS "User" (
+        "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        "role" TEXT NOT NULL DEFAULT 'CLIENT',
+        "firstName" TEXT NOT NULL,
+        "lastName" TEXT NOT NULL,
+        "email" TEXT NOT NULL UNIQUE,
+        "phone" TEXT UNIQUE,
+        "passwordHash" TEXT,
+        "googleId" TEXT UNIQUE,
+        "avatarUrl" TEXT,
+        "authProvider" TEXT NOT NULL DEFAULT 'LOCAL',
+        "isActive" INTEGER NOT NULL DEFAULT 1,
+        "createdAt" TEXT NOT NULL,
+        "updatedAt" TEXT NOT NULL
+      )
+    `);
+  } finally {
+    db.close();
+  }
+}
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    // Vercel functions receive a fresh /tmp filesystem on cold starts.  Create
-    // the SQLite schema before route modules issue their first User query.
-    initializeUserDatabase();
+    // Vercel functions receive a fresh /tmp filesystem on cold starts. Create
+    // the base user table before route modules issue their first User query.
+    initializeSsrDatabase();
 
     // @ts-expect-error Generated build output
     const { default: serverEntry } = await import("../dist/server/server.js");

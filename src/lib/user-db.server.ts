@@ -543,15 +543,6 @@ function getDatabase() {
   return globalForUserDb.userDb;
 }
 
-/**
- * Creates or upgrades the user tables without performing a query.  Serverless
- * runtimes can begin with an empty writable SQLite file, so the SSR entrypoint
- * calls this before loading any route modules that read from `User`.
- */
-export function initializeUserDatabase() {
-  getDatabase();
-}
-
 function syncClientProfileTables(
   db: BetterSqlite3Database,
   input: {
