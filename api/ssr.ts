@@ -19,8 +19,8 @@ function initializeSsrDatabase() {
   mkdirSync(path.dirname(databasePath), { recursive: true });
   const db = new Database(databasePath);
   try {
-    // The full user module upgrades this base table if it needs extra columns.
     // This table must exist before the SSR bundle loads its first route module.
+    // Keep this shape aligned with src/lib/user-db.server.ts.
     db.exec(`
       CREATE TABLE IF NOT EXISTS "User" (
         "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -32,8 +32,38 @@ function initializeSsrDatabase() {
         "passwordHash" TEXT,
         "googleId" TEXT UNIQUE,
         "avatarUrl" TEXT,
+        "companyName" TEXT,
+        "companyWebsite" TEXT,
+        "industry" TEXT,
+        "teamSize" TEXT,
+        "companyDescription" TEXT,
+        "address" TEXT,
+        "professionalCategory" TEXT,
+        "professionalCity" TEXT,
+        "professionalSkillsJson" TEXT,
+        "experienceYears" INTEGER,
+        "hourlyRate" INTEGER,
+        "fixedRate" INTEGER,
+        "portfolioUrl" TEXT,
+        "workPhotosJson" TEXT,
+        "certificationsJson" TEXT,
+        "tradeLicenseUrl" TEXT,
+        "serviceArea" TEXT,
+        "workMode" TEXT NOT NULL DEFAULT 'both',
+        "serviceRadiusKm" INTEGER,
+        "averageRating" REAL NOT NULL DEFAULT 0,
+        "reviewCount" INTEGER NOT NULL DEFAULT 0,
+        "emailNotificationsEnabled" INTEGER NOT NULL DEFAULT 1,
+        "browserNotificationsEnabled" INTEGER NOT NULL DEFAULT 1,
+        "projectActivityNotificationsEnabled" INTEGER NOT NULL DEFAULT 1,
+        "isVerified" INTEGER NOT NULL DEFAULT 0,
+        "availabilityStatus" TEXT NOT NULL DEFAULT 'available',
+        "savedLocationsJson" TEXT,
+        "hiringNeedsJson" TEXT,
         "authProvider" TEXT NOT NULL DEFAULT 'LOCAL',
         "isActive" INTEGER NOT NULL DEFAULT 1,
+        "lastLoginAt" TEXT,
+        "emailVerifiedAt" TEXT,
         "createdAt" TEXT NOT NULL,
         "updatedAt" TEXT NOT NULL
       )
