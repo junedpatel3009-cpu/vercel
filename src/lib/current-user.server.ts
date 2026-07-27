@@ -3,7 +3,7 @@ import { getRequest } from "@tanstack/react-start/server";
 import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
 import type { PublicUser, UserRole } from "@/lib/user-db.server";
 
-export function getCurrentUser() {
+export function getCurrentUser(): PublicUser | null {
   const request = getRequest();
   const session = readSessionFromCookieHeader(request.headers.get("cookie"));
 
