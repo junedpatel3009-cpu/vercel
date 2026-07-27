@@ -243,7 +243,7 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "GET" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);
-    return json(getClientJobsByUserId(user.id));
+    return json(await getClientJobsByUserId(user.id));
   }
   if (method === "POST" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);
