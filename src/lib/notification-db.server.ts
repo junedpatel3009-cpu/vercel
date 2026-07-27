@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -162,7 +163,7 @@ const globalForNotificationDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForNotificationDb.notificationDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForNotificationDb.notificationDb = new Database(databasePath);
   }
 

@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -39,7 +40,7 @@ const globalForProVerificationDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForProVerificationDb.proVerificationDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForProVerificationDb.proVerificationDb = new Database(databasePath);
     ensureVerificationTable(globalForProVerificationDb.proVerificationDb);
   }

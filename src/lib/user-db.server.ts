@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -533,7 +534,7 @@ function ensureUserTableShape(db: BetterSqlite3Database) {
 
 function getDatabase() {
   if (!globalForUserDb.userDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForUserDb.userDb = new Database(databasePath);
     ensureUserTableShape(globalForUserDb.userDb);
     ensureClientProfileTables(globalForUserDb.userDb);

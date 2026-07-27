@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
@@ -32,7 +33,7 @@ const globalForNotificationEmail = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForNotificationEmail.notificationEmailDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForNotificationEmail.notificationEmailDb = new Database(databasePath);
   }
 

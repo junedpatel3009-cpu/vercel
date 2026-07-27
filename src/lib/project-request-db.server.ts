@@ -385,7 +385,7 @@ const globalForProjectRequestDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForProjectRequestDb.projectRequestDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForProjectRequestDb.projectRequestDb = new Database(databasePath);
   }
 

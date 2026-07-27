@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -98,7 +99,7 @@ const globalForHireDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForHireDb.hireDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForHireDb.hireDb = new Database(databasePath);
   }
 

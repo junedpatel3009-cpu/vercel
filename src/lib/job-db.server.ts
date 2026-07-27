@@ -1,6 +1,7 @@
 import path from "node:path";
 import Database from "better-sqlite3";
 import { io as clientIo } from "socket.io-client";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 import type { ClientJobAttachmentInput, ClientJobInput } from "@/lib/validation/client-job";
 
@@ -57,7 +58,7 @@ const globalForJobDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForJobDb.jobDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForJobDb.jobDb = new Database(databasePath);
     ensureClientJobTables(globalForJobDb.jobDb);
   }

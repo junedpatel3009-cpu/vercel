@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -42,7 +43,7 @@ const globalForPhase1ProfileDb = globalThis as typeof globalThis & {
 
 function getDatabase() {
   if (!globalForPhase1ProfileDb.phase1ProfileDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForPhase1ProfileDb.phase1ProfileDb = new Database(databasePath);
     ensurePhase1ProfileTables(globalForPhase1ProfileDb.phase1ProfileDb);
   }

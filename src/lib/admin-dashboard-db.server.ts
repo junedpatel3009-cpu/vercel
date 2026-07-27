@@ -261,7 +261,7 @@ const PLATFORM_COMMISSION_RATE = 0.1;
 
 function getDatabase() {
   if (!globalForAdminDashboardDb.adminDashboardDb) {
-    const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+    const databasePath = getSqliteDatabasePath();
     globalForAdminDashboardDb.adminDashboardDb = new Database(databasePath);
   }
 

@@ -1,8 +1,9 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
 export function seedTestJobs(userId: number) {
-  const databasePath = path.resolve(process.cwd(), "prisma", "app.db");
+  const databasePath = getSqliteDatabasePath();
   const db = new Database(databasePath);
 
   const now = new Date().toISOString();
