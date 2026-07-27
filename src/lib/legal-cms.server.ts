@@ -12,14 +12,53 @@ import type { CmsPageStatus } from "@/generated/prisma/client.ts";
 
 const sanitizerOptions = {
   allowedTags: [
-    "h1", "h2", "h3", "h4", "h5", "h6", "img", "section", "div", "span",
-    "p", "ul", "ol", "li", "a", "strong", "em", "b", "i", "u", "br",
-    "blockquote", "pre", "code", "table", "thead", "tbody", "tr", "th", "td", "hr"
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "img",
+    "section",
+    "div",
+    "span",
+    "p",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "strong",
+    "em",
+    "b",
+    "i",
+    "u",
+    "br",
+    "blockquote",
+    "pre",
+    "code",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "hr",
   ],
   allowedAttributes: {
     "*": [
-    "href", "name", "target", "rel", "src", "alt", "title", "width", "height",
-    "class", "scope", "colspan", "rowspan"
+      "href",
+      "name",
+      "target",
+      "rel",
+      "src",
+      "alt",
+      "title",
+      "width",
+      "height",
+      "class",
+      "scope",
+      "colspan",
+      "rowspan",
     ],
   },
   allowedSchemes: ["http", "https", "mailto", "tel"],
@@ -121,7 +160,9 @@ export async function listLegalPages(): Promise<LegalPageRecord[]> {
   }));
 }
 
-export async function getLegalPageBySlug(slug: LegalPageSlug): Promise<LegalPageRecord | undefined> {
+export async function getLegalPageBySlug(
+  slug: LegalPageSlug,
+): Promise<LegalPageRecord | undefined> {
   await ensureLegalPages();
   const page = await prisma.legalPage.findUnique({
     where: { slug },

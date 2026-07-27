@@ -32,7 +32,9 @@ export function AdminPageHeader({
                   {crumb.label}
                 </Link>
               ) : (
-                <span className={index === breadcrumbs.length - 1 ? "text-foreground font-medium" : ""}>
+                <span
+                  className={index === breadcrumbs.length - 1 ? "text-foreground font-medium" : ""}
+                >
                   {crumb.label}
                 </span>
               )}
@@ -46,16 +48,10 @@ export function AdminPageHeader({
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary/80">{kicker}</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{title}</h1>
           {description && (
-            <p className="mt-2 max-w-2xl text-base text-muted-foreground">
-              {description}
-            </p>
+            <p className="mt-2 max-w-2xl text-base text-muted-foreground">{description}</p>
           )}
         </div>
-        {actions && (
-          <div className="flex flex-wrap gap-2">
-            {actions}
-          </div>
-        )}
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
       </div>
     </div>
   );

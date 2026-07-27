@@ -86,8 +86,12 @@ const saveFavoriteJob = createServerFn({ method: "POST" })
 
 export function Landing() {
   const { user } = indexRoute.useRouteContext();
-  const { openJobs = [], professionals = [], favoriteJobIds = [], homeIntroHtml } =
-    indexRoute.useLoaderData();
+  const {
+    openJobs = [],
+    professionals = [],
+    favoriteJobIds = [],
+    homeIntroHtml,
+  } = indexRoute.useLoaderData();
   const welcomeName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
   const isProfessional = user?.role === "PROFESSIONAL";
   const [selectedProfessional, setSelectedProfessional] = useState<any | null>(null);
@@ -339,18 +343,24 @@ export function Landing() {
                 if (user && homeIntroHtml) {
                   // Prefer replacing within an <h1> if present
                   if (/<h1[^>]*>[\s\S]*?<\/h1>/i.test(homeIntroHtml)) {
-                    introHtmlToRender = homeIntroHtml.replace(/<h1([^>]*)>([\s\S]*?)<\/h1>/i, (m, attrs, inner) => {
-                      if (/welcome/i.test(inner)) {
-                        nameInjected = true;
-                        return `<h1${attrs}>${inner.replace(/welcome/i, `Welcome, ${escapeHtml(welcomeName)}`)}</h1>`;
-                      }
-                      return m;
-                    });
+                    introHtmlToRender = homeIntroHtml.replace(
+                      /<h1([^>]*)>([\s\S]*?)<\/h1>/i,
+                      (m, attrs, inner) => {
+                        if (/welcome/i.test(inner)) {
+                          nameInjected = true;
+                          return `<h1${attrs}>${inner.replace(/welcome/i, `Welcome, ${escapeHtml(welcomeName)}`)}</h1>`;
+                        }
+                        return m;
+                      },
+                    );
                   }
 
                   // If not injected yet, replace first plain 'Welcome' word occurrence
                   if (!nameInjected && /\bWelcome\b/i.test(homeIntroHtml)) {
-                    introHtmlToRender = homeIntroHtml.replace(/\bWelcome\b/i, `Welcome, ${escapeHtml(welcomeName)}`);
+                    introHtmlToRender = homeIntroHtml.replace(
+                      /\bWelcome\b/i,
+                      `Welcome, ${escapeHtml(welcomeName)}`,
+                    );
                     nameInjected = true;
                   }
                 }
@@ -606,44 +616,45 @@ export function Landing() {
         </Dialog>
 
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+          <div className={isProfessional ? "" : "flex flex-col gap-6 lg:flex-row lg:items-start"}>
             <div
-              className={
-                isProfessional ? "" : "flex flex-col gap-6 lg:flex-row lg:items-start"
-              }
+              className={cn(
+                "rounded-2xl border border-border bg-card p-6 shadow-soft",
+                !isProfessional && "flex-1",
+              )}
             >
-              <div className={cn("rounded-2xl border border-border bg-card p-6 shadow-soft", !isProfessional && "flex-1")}>
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                      {isProfessional ? "Recommended Opportunities" : "Browse Marketplace"}
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {isProfessional
-                        ? "Review client requirements, budget, and location before applying for a job."
-                        : "Discover trusted professionals and explore available job posts in your area."}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {!isProfessional && (
-                       <Button
-                        type="button"
-                        className="h-10 gap-2 rounded-xl font-bold transition-all shadow-sm"
-                        asChild
-                      >
-                        <Link to="/post-job">Post a job</Link>
-                      </Button>
-                    )}
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                    {isProfessional ? "Recommended Opportunities" : "Browse Marketplace"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {isProfessional
+                      ? "Review client requirements, budget, and location before applying for a job."
+                      : "Discover trusted professionals and explore available job posts in your area."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {!isProfessional && (
                     <Button
                       type="button"
-                      variant="outline"
-                      className="h-10 gap-2 rounded-xl font-bold border-border shadow-sm hover:bg-primary/5 hover:text-primary transition-all"
-                      onClick={() => setShowJobsMap((value) => !value)}
+                      className="h-10 gap-2 rounded-xl font-bold transition-all shadow-sm"
+                      asChild
                     >
-                      <Map className="h-4 w-4" />
-                      {showJobsMap ? "Hide Map View" : "View on Map"}
+                      <Link to="/post-job">Post a job</Link>
                     </Button>
-                  </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 gap-2 rounded-xl font-bold border-border shadow-sm hover:bg-primary/5 hover:text-primary transition-all"
+                    onClick={() => setShowJobsMap((value) => !value)}
+                  >
+                    <Map className="h-4 w-4" />
+                    {showJobsMap ? "Hide Map View" : "View on Map"}
+                  </Button>
                 </div>
+              </div>
 
               {openJobs.length ? (
                 filteredOpenJobs.length ? (
@@ -866,7 +877,10 @@ export function Landing() {
                                   .toUpperCase()}
                               </div>
                               <span className="text-[10px] font-semibold text-muted-foreground">
-                                By <span className="text-foreground truncate max-w-[60px] inline-block align-bottom">{job.clientCompanyName || job.clientName}</span>
+                                By{" "}
+                                <span className="text-foreground truncate max-w-[60px] inline-block align-bottom">
+                                  {job.clientCompanyName || job.clientName}
+                                </span>
                               </span>
                             </div>
                             <Link

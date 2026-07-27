@@ -1,7 +1,7 @@
-import { createMultiByteDecoder } from '@exodus/bytes/multi-byte.js'
-import { setMultibyteDecoder } from '@exodus/bytes/fallback/encoding.js'
+import { createMultiByteDecoder } from "@exodus/bytes/multi-byte.js";
+import { setMultibyteDecoder } from "@exodus/bytes/fallback/encoding.js";
 
-setMultibyteDecoder(createMultiByteDecoder)
+setMultibyteDecoder(createMultiByteDecoder);
 
 export {
   TextDecoder,
@@ -10,4 +10,4 @@ export {
   getBOMEncoding,
   labelToName,
   legacyHookDecode,
-} from '@exodus/bytes/fallback/encoding.js'
+} from "@exodus/bytes/fallback/encoding.js";

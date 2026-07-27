@@ -467,19 +467,35 @@ function Admin() {
         description="Live view of users, client job posts, transactions, projects, and dispute queues."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => setSearchOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 rounded-xl"
+              onClick={() => setSearchOpen(true)}
+            >
               <Search className="h-4 w-4" />
               <span className="hidden sm:inline">Global Search</span>
               <kbd className="hidden items-center gap-1 rounded-lg border border-border bg-muted/50 px-2 py-0.5 text-[10px] md:inline-flex">
                 <Command className="h-3 w-3" />K
               </kbd>
             </Button>
-            <Badge variant="secondary" className="gap-2 rounded-xl px-4 py-1.5 font-bold uppercase tracking-widest text-[10px]">
+            <Badge
+              variant="secondary"
+              className="gap-2 rounded-xl px-4 py-1.5 font-bold uppercase tracking-widest text-[10px]"
+            >
               <ShieldCheck className="h-3.5 w-3.5 text-primary" />
               Secure Admin Session
             </Badge>
-            <Badge variant="outline" className="gap-2 rounded-xl px-4 py-1.5 font-bold uppercase tracking-widest text-[10px] bg-background">
-              <Radio className={cn("h-3.5 w-3.5", liveStatus.includes("connected") ? "text-emerald-500" : "text-rose-500")} />
+            <Badge
+              variant="outline"
+              className="gap-2 rounded-xl px-4 py-1.5 font-bold uppercase tracking-widest text-[10px] bg-background"
+            >
+              <Radio
+                className={cn(
+                  "h-3.5 w-3.5",
+                  liveStatus.includes("connected") ? "text-emerald-500" : "text-rose-500",
+                )}
+              />
               {liveStatus}
             </Badge>
           </div>
@@ -506,7 +522,7 @@ function Admin() {
                       "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-[11px] font-bold uppercase tracking-widest transition-all",
                       isActive
                         ? "border-primary bg-primary text-white shadow-md scale-105"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-muted/50"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:bg-muted/50",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -538,13 +554,19 @@ function Admin() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="pl-9 h-11 rounded-2xl shadow-sm border-border bg-background"
-                placeholder={tab === "users" ? "Search users by name or email..." : "Quick search..."}
+                placeholder={
+                  tab === "users" ? "Search users by name or email..." : "Quick search..."
+                }
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
             </div>
             <div className="flex gap-2">
-              <Button asChild variant="outline" className="rounded-xl h-11 px-6 font-bold shadow-sm">
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-xl h-11 px-6 font-bold shadow-sm"
+              >
                 <Link to="/web-editor">
                   <LayoutTemplate className="mr-2 h-4 w-4" />
                   Web Editor
@@ -673,7 +695,8 @@ function getMetricIcon(label: string) {
   const l = label.toLowerCase();
   if (l.includes("user")) return Users;
   if (l.includes("job")) return ClipboardList;
-  if (l.includes("revenue") || l.includes("transaction") || l.includes("payment")) return DollarSign;
+  if (l.includes("revenue") || l.includes("transaction") || l.includes("payment"))
+    return DollarSign;
   if (l.includes("dispute")) return AlertTriangle;
   return TrendingUp;
 }
@@ -771,17 +794,23 @@ function JobDisputeManagement({
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-3 p-6 bg-muted/20 border-b border-border">
         <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Work queue</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Work queue
+          </p>
           <p className="mt-2 text-3xl font-bold">{jobs.length}</p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">Matching current filter</p>
         </div>
         <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Open disputes</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Open disputes
+          </p>
           <p className="mt-2 text-3xl font-bold text-rose-600">{openDisputes}</p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">Open or under review</p>
         </div>
         <div className="rounded-2xl border border-border bg-background p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">High priority</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            High priority
+          </p>
           <p className="mt-2 text-3xl font-bold text-rose-700">{highPriorityDisputes}</p>
           <p className="mt-1 text-xs text-muted-foreground font-medium">Needs immediate action</p>
         </div>
@@ -861,7 +890,9 @@ function DisputesTable({
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate font-bold text-lg text-foreground group-hover:text-primary transition-colors">{dispute.jobTitle}</p>
+                  <p className="truncate font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                    {dispute.jobTitle}
+                  </p>
                   <Badge
                     variant={
                       dispute.status === "OPEN"
@@ -874,23 +905,43 @@ function DisputesTable({
                   >
                     {formatEnum(dispute.status)}
                   </Badge>
-                  <Badge variant={dispute.priority === "HIGH" ? "destructive" : "outline"} className="rounded-lg">
+                  <Badge
+                    variant={dispute.priority === "HIGH" ? "destructive" : "outline"}
+                    className="rounded-lg"
+                  >
                     {formatEnum(dispute.priority)}
                   </Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium">
-                  <span className="flex items-center gap-1.5"><UserCog className="h-3.5 w-3.5" />By {formatEnum(dispute.reporterRole)}: {dispute.reporterName}</span>
-                  <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(dispute.createdAt)}</span>
-                  <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" />{formatEnum(dispute.issueType)}</span>
+                  <span className="flex items-center gap-1.5">
+                    <UserCog className="h-3.5 w-3.5" />
+                    By {formatEnum(dispute.reporterRole)}: {dispute.reporterName}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {formatDateTime(dispute.createdAt)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    {formatEnum(dispute.issueType)}
+                  </span>
                 </div>
-                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground bg-muted/40 p-3 rounded-xl italic">"{dispute.message}"</p>
+                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground bg-muted/40 p-3 rounded-xl italic">
+                  "{dispute.message}"
+                </p>
                 <div className="mt-3 flex gap-4 text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
-                  <p>Client: <span className="text-foreground">{dispute.clientName}</span></p>
-                  <p>Provider: <span className="text-foreground">{dispute.professionalName}</span></p>
+                  <p>
+                    Client: <span className="text-foreground">{dispute.clientName}</span>
+                  </p>
+                  <p>
+                    Provider: <span className="text-foreground">{dispute.professionalName}</span>
+                  </p>
                 </div>
               </div>
               <div className="space-y-3 bg-muted/30 p-4 rounded-2xl border border-border/50 shadow-inner">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">Update Status</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-1">
+                  Update Status
+                </p>
                 <Select
                   value={dispute.status}
                   onValueChange={(value) => handleStatusChange(dispute.id, value)}
@@ -906,7 +957,12 @@ function DisputesTable({
                   </SelectContent>
                 </Select>
                 {dispute.jobId ? (
-                  <Button asChild variant="outline" size="sm" className="w-full rounded-xl h-10 font-bold">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full rounded-xl h-10 font-bold"
+                  >
                     <Link to="/job-management">View Full Case</Link>
                   </Button>
                 ) : null}
@@ -916,7 +972,9 @@ function DisputesTable({
         </div>
       ) : (
         <div className="rounded-2xl border-2 border-dashed border-border bg-muted/10 p-12 text-center">
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No disputes found</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            No disputes found
+          </p>
         </div>
       )}
     </div>
@@ -961,19 +1019,35 @@ function JobsTable({
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <p className="truncate font-bold text-lg text-foreground group-hover:text-primary transition-colors">{job.title}</p>
-                  <Badge variant={job.status === "OPEN" ? "default" : "outline"} className="rounded-lg">
+                  <p className="truncate font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                    {job.title}
+                  </p>
+                  <Badge
+                    variant={job.status === "OPEN" ? "default" : "outline"}
+                    className="rounded-lg"
+                  >
                     {formatEnum(job.status)}
                   </Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" />{job.category}</span>
-                  <span className="flex items-center gap-1.5"><CalendarRange className="h-3.5 w-3.5" />Posted {formatDateTime(job.createdAt)}</span>
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5" />
+                    {job.category}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <CalendarRange className="h-3.5 w-3.5" />
+                    Posted {formatDateTime(job.createdAt)}
+                  </span>
                 </div>
                 <div className="mt-3 flex gap-6 text-sm">
-                  <p className="font-medium">Client: <span className="font-bold text-foreground">{job.clientName}</span></p>
+                  <p className="font-medium">
+                    Client: <span className="font-bold text-foreground">{job.clientName}</span>
+                  </p>
                   {job.professionalName && (
-                    <p className="font-medium">Provider: <span className="font-bold text-foreground">{job.professionalName}</span></p>
+                    <p className="font-medium">
+                      Provider:{" "}
+                      <span className="font-bold text-foreground">{job.professionalName}</span>
+                    </p>
                   )}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-2">
@@ -986,7 +1060,12 @@ function JobsTable({
                 <p className="text-xl font-bold text-foreground tracking-tight">
                   {formatBudget(job.budgetMin, job.budgetMax)}
                 </p>
-                <Button asChild variant="ghost" size="sm" className="mt-2 h-8 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 h-8 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary/10 hover:text-primary"
+                >
                   <Link to="/job-management">Open Job Details</Link>
                 </Button>
               </div>
@@ -995,7 +1074,9 @@ function JobsTable({
         </div>
       ) : (
         <div className="rounded-2xl border-2 border-dashed border-border bg-muted/10 p-12 text-center">
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No jobs found</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+            No jobs found
+          </p>
         </div>
       )}
     </div>
@@ -1061,7 +1142,9 @@ function PaymentsTable({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-foreground tracking-tight">{formatMoney(payment.amount)}</p>
+                  <p className="text-lg font-bold text-foreground tracking-tight">
+                    {formatMoney(payment.amount)}
+                  </p>
                   <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Status: <span className="text-emerald-600">COMPLETED</span>
                   </p>
@@ -1071,7 +1154,9 @@ function PaymentsTable({
           </div>
         ) : (
           <div className="rounded-2xl border-2 border-dashed border-border bg-muted/10 p-12 text-center">
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No transactions found</p>
+            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+              No transactions found
+            </p>
           </div>
         )}
       </div>
@@ -1122,7 +1207,10 @@ function AdminLogin() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground" htmlFor="admin-username">
+            <label
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              htmlFor="admin-username"
+            >
               Username / Email
             </label>
             <Input
@@ -1135,7 +1223,10 @@ function AdminLogin() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground" htmlFor="admin-password">
+            <label
+              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+              htmlFor="admin-password"
+            >
               Security Password
             </label>
             <Input
@@ -1156,7 +1247,11 @@ function AdminLogin() {
             </div>
           )}
 
-          <Button type="submit" className="w-full h-12 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="w-full h-12 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "AUTHORIZING..." : "ENTER ADMIN PANEL"}
           </Button>
         </form>
@@ -1226,16 +1321,26 @@ function Overview({
           <div className="divide-y divide-border overflow-auto max-h-[500px] custom-scrollbar">
             {dashboard.recentJobs.length ? (
               dashboard.recentJobs.map((job) => (
-                <div key={job.id} className="group p-6 hover:bg-muted/30 transition-colors flex items-center justify-between gap-6">
+                <div
+                  key={job.id}
+                  className="group p-6 hover:bg-muted/30 transition-colors flex items-center justify-between gap-6"
+                >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{job.title}</p>
-                      <Badge variant={job.status === "OPEN" ? "default" : "outline"} className="rounded-lg text-[9px] uppercase tracking-widest">
+                      <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">
+                        {job.title}
+                      </p>
+                      <Badge
+                        variant={job.status === "OPEN" ? "default" : "outline"}
+                        className="rounded-lg text-[9px] uppercase tracking-widest"
+                      >
                         {formatEnum(job.status)}
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-2">
-                      <span className="text-primary/60 font-bold">{job.clientName || "Unknown Client"}</span>
+                      <span className="text-primary/60 font-bold">
+                        {job.clientName || "Unknown Client"}
+                      </span>
                       <span>\u00b7</span>
                       <span>{job.category}</span>
                       <span>\u00b7</span>
@@ -1246,7 +1351,12 @@ function Overview({
                     <p className="text-base font-bold text-foreground">
                       {formatBudget(job.budgetMin, job.budgetMax)}
                     </p>
-                    <Link to="/job-management" className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline mt-1 block">View Case</Link>
+                    <Link
+                      to="/job-management"
+                      className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline mt-1 block"
+                    >
+                      View Case
+                    </Link>
                   </div>
                 </div>
               ))
@@ -1268,25 +1378,34 @@ function Overview({
               Recent Financial Transactions
             </h2>
             <p className="mt-1 text-sm text-muted-foreground font-medium">
-              Total completed revenue: <span className="font-bold text-emerald-600">{formatMoney(stats.totalRevenue)}</span>
+              Total completed revenue:{" "}
+              <span className="font-bold text-emerald-600">{formatMoney(stats.totalRevenue)}</span>
             </p>
           </div>
           <div className="divide-y divide-border overflow-auto max-h-[500px] custom-scrollbar">
             {dashboard.recentTransactions.length ? (
               dashboard.recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="group p-6 hover:bg-emerald-50/30 transition-colors flex items-center justify-between gap-6">
+                <div
+                  key={transaction.id}
+                  className="group p-6 hover:bg-emerald-50/30 transition-colors flex items-center justify-between gap-6"
+                >
                   <div className="min-w-0 flex items-center gap-4">
                     <div className="grid h-10 w-10 place-items-center rounded-xl bg-muted text-muted-foreground group-hover:bg-emerald-100 group-hover:text-emerald-700 transition-colors">
                       <ReceiptText className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-foreground group-hover:text-emerald-700 transition-colors">{transaction.projectTitle}</p>
+                      <p className="truncate font-bold text-foreground group-hover:text-emerald-700 transition-colors">
+                        {transaction.projectTitle}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                        {formatEnum(transaction.type)} \u00b7 {formatDateTime(transaction.createdAt)}
+                        {formatEnum(transaction.type)} \u00b7{" "}
+                        {formatDateTime(transaction.createdAt)}
                       </p>
                     </div>
                   </div>
-                  <p className="shrink-0 text-lg font-bold text-foreground tracking-tight">{formatMoney(transaction.amount)}</p>
+                  <p className="shrink-0 text-lg font-bold text-foreground tracking-tight">
+                    {formatMoney(transaction.amount)}
+                  </p>
                 </div>
               ))
             ) : (
@@ -1319,7 +1438,13 @@ function ResultNotice({
           FILTER ACTIVE: {label} ({count.toLocaleString()} RESULTS)
         </span>
       </div>
-      <Button type="button" variant="outline" size="sm" className="rounded-xl font-bold uppercase tracking-widest text-[10px]" onClick={onClear}>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-xl font-bold uppercase tracking-widest text-[10px]"
+        onClick={onClear}
+      >
         Clear Selection
       </Button>
     </div>
@@ -1343,7 +1468,9 @@ function EmptyLiveRow({ title, description }: { title: string; description: stri
       <div className="grid h-12 w-12 place-items-center rounded-full bg-muted text-muted-foreground/30 mb-4">
         <Radio className="h-6 w-6" />
       </div>
-      <p className="font-bold text-muted-foreground uppercase tracking-widest text-[11px]">{title}</p>
+      <p className="font-bold text-muted-foreground uppercase tracking-widest text-[11px]">
+        {title}
+      </p>
       <p className="mt-1 text-xs text-muted-foreground max-w-[200px]">{description}</p>
     </div>
   );
@@ -1418,8 +1545,12 @@ function UsersTable({ users, currentUserId }: { users: AdminUserRecord[]; curren
                       alt=""
                     />
                     <div className="min-w-0">
-                      <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">{fullName}</p>
-                      <p className="truncate text-xs text-muted-foreground font-medium">{user.email}</p>
+                      <p className="truncate font-bold text-foreground group-hover:text-primary transition-colors">
+                        {fullName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground font-medium">
+                        {user.email}
+                      </p>
                     </div>
                   </div>
                 </td>
@@ -1453,7 +1584,9 @@ function UsersTable({ users, currentUserId }: { users: AdminUserRecord[]; curren
                     <span
                       className={cn(
                         "rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest",
-                        user.isActive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                        user.isActive
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-rose-100 text-rose-700",
                       )}
                     >
                       {user.isActive ? "Active" : "Blocked"}
@@ -1461,9 +1594,16 @@ function UsersTable({ users, currentUserId }: { users: AdminUserRecord[]; curren
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <Badge variant="outline" className="rounded-lg text-[10px] font-bold uppercase tracking-widest bg-background">{formatEnum(user.authProvider)}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="rounded-lg text-[10px] font-bold uppercase tracking-widest bg-background"
+                  >
+                    {formatEnum(user.authProvider)}
+                  </Badge>
                 </td>
-                <td className="px-6 py-4 text-xs font-medium text-muted-foreground tabular-nums">{formatDate(user.createdAt)}</td>
+                <td className="px-6 py-4 text-xs font-medium text-muted-foreground tabular-nums">
+                  {formatDate(user.createdAt)}
+                </td>
               </tr>
             );
           })}

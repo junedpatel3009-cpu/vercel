@@ -29,11 +29,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ReportExportActions } from "@/components/ReportExportActions";
 
 type ReportPreviewRow = Record<string, unknown>;
@@ -90,7 +86,15 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
       loadPreview(1);
     }, 300);
     return () => clearTimeout(timer);
-  }, [selectedTable, pageSize, filters.from, filters.to, filters.search, filters.status, filters.category]);
+  }, [
+    selectedTable,
+    pageSize,
+    filters.from,
+    filters.to,
+    filters.search,
+    filters.status,
+    filters.category,
+  ]);
 
   useEffect(() => {
     void loadSummary();
@@ -107,7 +111,11 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
     try {
       const res = await fetch("/api/v1/reports/tables");
       if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
-      const result = await parseBackendJson<{ tables: ReportTableOption[]; status: string; error?: string }>(res);
+      const result = await parseBackendJson<{
+        tables: ReportTableOption[];
+        status: string;
+        error?: string;
+      }>(res);
       if (result?.status === "connected") {
         const nextTables = Array.isArray(result.tables) ? result.tables : [];
         setTables(nextTables);
@@ -130,9 +138,14 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
       const params = new URLSearchParams();
       if (filters.from) params.set("from", filters.from);
       if (filters.to) params.set("to", filters.to);
-      const res = await fetch(`/api/v1/reports/summary${params.toString() ? `?${params.toString()}` : ""}`);
+      const res = await fetch(
+        `/api/v1/reports/summary${params.toString() ? `?${params.toString()}` : ""}`,
+      );
       if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
-      const result = await parseBackendJson<{ cards?: Array<{ title: string; value: number; subtitle: string; icon: string }>; charts?: Record<string, Array<{ name: string; value: number }>> }>(res);
+      const result = await parseBackendJson<{
+        cards?: Array<{ title: string; value: number; subtitle: string; icon: string }>;
+        charts?: Record<string, Array<{ name: string; value: number }>>;
+      }>(res);
       setSummary(result);
     } catch (err: any) {
       console.error("Failed to load summary:", err);
@@ -167,7 +180,12 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
       if (!res.ok) {
         throw new Error(await res.text().catch(() => res.statusText));
       }
-      const result = await parseBackendJson<{ columns: string[]; rows: ReportPreviewRow[]; total: number; page: number }>(res);
+      const result = await parseBackendJson<{
+        columns: string[];
+        rows: ReportPreviewRow[];
+        total: number;
+        page: number;
+      }>(res);
       setColumns(result.columns || []);
       setRows(result.rows || []);
       setTotalRows(result.total || 0);
@@ -187,22 +205,36 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
 
     const reportRows = sortedRows.length
       ? sortedRows
-          .map((row) => `<tr>${columns.map((column) => `<td>${String(row[column] ?? "-")}</td>`).join("")}</tr>`)
+          .map(
+            (row) =>
+              `<tr>${columns.map((column) => `<td>${String(row[column] ?? "-")}</td>`).join("")}</tr>`,
+          )
           .join("")
       : `<tr><td colspan="${columns.length || 1}">No records to display.</td></tr>`;
 
-    printWindow.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${selectedTable} report</title><style>body{font-family:Arial,sans-serif;padding:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d1d5db;padding:8px;font-size:12px}th{background:#f3f4f6}</style></head><body><h1>${selectedTable} report</h1><p>Generated on ${new Date().toLocaleString()}</p><table><thead><tr>${columns.map((column) => `<th>${column}</th>`).join("")}</tr></thead><tbody>${reportRows}</tbody></table></body></html>`);
+    printWindow.document.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${selectedTable} report</title><style>body{font-family:Arial,sans-serif;padding:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d1d5db;padding:8px;font-size:12px}th{background:#f3f4f6}</style></head><body><h1>${selectedTable} report</h1><p>Generated on ${new Date().toLocaleString()}</p><table><thead><tr>${columns.map((column) => `<th>${column}</th>`).join("")}</tr></thead><tbody>${reportRows}</tbody></table></body></html>`,
+    );
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
   }
 
   const lineData = useMemo(
-    () => (summary?.charts?.monthlyEarnings ?? summary?.charts?.monthlySpending ?? summary?.charts?.monthlyUsers ?? []).map((item) => ({ name: item.name, value: item.value })),
+    () =>
+      (
+        summary?.charts?.monthlyEarnings ??
+        summary?.charts?.monthlySpending ??
+        summary?.charts?.monthlyUsers ??
+        []
+      ).map((item) => ({ name: item.name, value: item.value })),
     [summary],
   );
   const pieData = useMemo(
-    () => (summary?.charts?.applicationsByStatus ?? summary?.charts?.jobsByStatus ?? []).map((item) => ({ name: item.name, value: item.value })),
+    () =>
+      (summary?.charts?.applicationsByStatus ?? summary?.charts?.jobsByStatus ?? []).map(
+        (item) => ({ name: item.name, value: item.value }),
+      ),
     [summary],
   );
 
@@ -254,14 +286,29 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
       ) : summary?.cards?.length ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {summary.cards.map((card, index) => (
-            <div key={`${card.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div
+              key={`${card.title}-${index}`}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">{card.title}</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900">{card.value.toLocaleString()}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {card.value.toLocaleString()}
+                  </p>
                 </div>
                 <div className="rounded-full bg-slate-100 p-2 text-slate-700">
-                  {card.icon === "DollarSign" ? <DollarSign className="h-4 w-4" /> : card.icon === "BriefcaseBusiness" ? <BriefcaseBusiness className="h-4 w-4" /> : card.icon === "Clock3" ? <Clock3 className="h-4 w-4" /> : card.icon === "Users" ? <Users className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                  {card.icon === "DollarSign" ? (
+                    <DollarSign className="h-4 w-4" />
+                  ) : card.icon === "BriefcaseBusiness" ? (
+                    <BriefcaseBusiness className="h-4 w-4" />
+                  ) : card.icon === "Clock3" ? (
+                    <Clock3 className="h-4 w-4" />
+                  ) : card.icon === "Users" ? (
+                    <Users className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-500">{card.subtitle}</p>
@@ -270,7 +317,7 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
         </div>
       ) : null}
 
-      {(lineData.length > 0 || pieData.length > 0) ? (
+      {lineData.length > 0 || pieData.length > 0 ? (
         <div className="grid gap-4 xl:grid-cols-2">
           {lineData.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -286,7 +333,13 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
                     <YAxis tickLine={false} axisLine={false} fontSize={12} />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} dot={false} />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2563eb"
+                      strokeWidth={2}
+                      dot={false}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -303,9 +356,19 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
                   <PieChart>
                     <Tooltip />
                     <Legend />
-                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={80} paddingAngle={2}>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={2}
+                    >
                       {pieData.map((entry, index) => (
-                        <Cell key={`${entry.name}-${index}`} fill={index % 2 === 0 ? "#2563eb" : "#22c55e"} />
+                        <Cell
+                          key={`${entry.name}-${index}`}
+                          fill={index % 2 === 0 ? "#2563eb" : "#22c55e"}
+                        />
                       ))}
                     </Pie>
                   </PieChart>
@@ -316,182 +379,259 @@ export function UserPersonalReports({ userRole, userId, userName }: UserPersonal
         </div>
       ) : null}
 
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Report builder</p>
+            <p className="text-xs text-slate-500">Choose a category, apply filters, and export.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ReportExportActions
+              table={selectedTable}
+              reportName={`${selectedTable}-report`}
+              filters={{
+                from: filters.from,
+                to: filters.to,
+                search: filters.search,
+                status: filters.status,
+                category: filters.category,
+              }}
+              onPrint={printReport}
+            />
+          </div>
+        </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <p className="text-sm font-semibold text-slate-900">Report builder</p>
-              <p className="text-xs text-slate-500">Choose a category, apply filters, and export.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ReportExportActions
-                table={selectedTable}
-                reportName={`${selectedTable}-report`}
-                filters={{
-                  from: filters.from,
-                  to: filters.to,
-                  search: filters.search,
-                  status: filters.status,
-                  category: filters.category,
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Category
+              </label>
+              <select
+                value={selectedTable}
+                onChange={(event) => {
+                  setSelectedTable(event.target.value);
+                  setPage(1);
                 }}
-                onPrint={printReport}
+                className="w-full h-8 rounded-md border border-slate-300 bg-white px-2 py-0 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {tableLoading ? <option value="">Loading...</option> : null}
+                {tables.map((table) => (
+                  <option key={table.name} value={table.name}>
+                    {table.label || table.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <Input
+                  value={filters.search}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, search: event.target.value }))
+                  }
+                  placeholder="Search..."
+                  className="h-8 pl-8 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Date From
+              </label>
+              <Input
+                type="date"
+                value={filters.from}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, from: event.target.value }))
+                }
+                className="h-8 text-sm px-2"
               />
             </div>
-          </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Date To
+              </label>
+              <Input
+                type="date"
+                value={filters.to}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, to: event.target.value }))
+                }
+                className="h-8 text-sm px-2"
+              />
+            </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category</label>
-                <select
-                  value={selectedTable}
-                  onChange={(event) => {
-                    setSelectedTable(event.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full h-8 rounded-md border border-slate-300 bg-white px-2 py-0 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {tableLoading ? <option value="">Loading...</option> : null}
-                  {tables.map((table) => (
-                    <option key={table.name} value={table.name}>
-                      {table.label || table.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Search</label>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    value={filters.search}
-                    onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
-                    placeholder="Search..."
-                    className="h-8 pl-8 text-sm"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date From</label>
-                <Input
-                  type="date"
-                  value={filters.from}
-                  onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
-                  className="h-8 text-sm px-2"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date To</label>
-                <Input
-                  type="date"
-                  value={filters.to}
-                  onChange={(event) => setFilters((current) => ({ ...current, to: event.target.value }))}
-                  className="h-8 text-sm px-2"
-                />
-              </div>
-
-              <div className="lg:col-start-4 flex justify-end items-end">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-full lg:w-auto">
-                      <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
-                      More Filters
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-4" align="end">
-                    <div className="grid gap-3">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Additional Filters</p>
-                      <div className="grid gap-2">
-                        <div>
-                          <label className="mb-1 block text-[10px] font-semibold text-slate-500">Status</label>
-                          <Input
-                            value={filters.status}
-                            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-                            placeholder="OPEN, COMPLETED..."
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[10px] font-semibold text-slate-500">Extra Category</label>
-                          <Input
-                            value={filters.category}
-                            onChange={(event) => setFilters((current) => ({ ...current, category: event.target.value }))}
-                            placeholder="Category"
-                            className="h-8 text-sm"
-                          />
-                        </div>
+            <div className="lg:col-start-4 flex justify-end items-end">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-full lg:w-auto">
+                    <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
+                    More Filters
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4" align="end">
+                  <div className="grid gap-3">
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Additional Filters
+                    </p>
+                    <div className="grid gap-2">
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold text-slate-500">
+                          Status
+                        </label>
+                        <Input
+                          value={filters.status}
+                          onChange={(event) =>
+                            setFilters((current) => ({ ...current, status: event.target.value }))
+                          }
+                          placeholder="OPEN, COMPLETED..."
+                          className="h-8 text-sm"
+                        />
                       </div>
-                      <Button variant="secondary" size="sm" className="mt-1" onClick={() => setFilters({
-                        from: filters.from,
-                        to: filters.to,
-                        search: filters.search,
-                        status: "",
-                        category: "",
-                      })}>
-                        Clear Extra Filters
-                      </Button>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-semibold text-slate-500">
+                          Extra Category
+                        </label>
+                        <Input
+                          value={filters.category}
+                          onChange={(event) =>
+                            setFilters((current) => ({ ...current, category: event.target.value }))
+                          }
+                          placeholder="Category"
+                          className="h-8 text-sm"
+                        />
+                      </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">{tables.find(t => t.name === selectedTable)?.label || selectedTable || "No category selected"}</p>
-                <p className="text-sm text-slate-500">{totalRows} rows • Page {page} of {pageCount}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700">
-                  {[10, 25, 50].map((size) => (<option key={size} value={size}>{size}/page</option>))}
-                </select>
-                <Button type="button" variant="outline" size="sm" onClick={() => loadPreview(Math.max(1, page - 1))} disabled={loading || page <= 1}>Prev</Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => loadPreview(Math.min(pageCount, page + 1))} disabled={loading || page >= pageCount}>Next</Button>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              {loading && rows.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-sm text-slate-500">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  Loading data...
-                </div>
-              ) : rows.length > 0 ? (
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-slate-700">
-                    <tr>
-                      {columns.map((column) => (
-                        <th key={column} className="cursor-pointer whitespace-nowrap border-b border-slate-200 px-4 py-3 font-semibold" onClick={() => toggleSort(column)}>
-                          <div className="flex items-center gap-1">
-                            {column}
-                            {sortColumn === column ? <TrendingUp className={`h-3.5 w-3.5 ${sortDirection === "desc" ? "rotate-180" : ""}`} /> : null}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedRows.map((row, index) => (
-                      <tr key={`${selectedTable}-${index}`} className="border-b border-slate-100 bg-white hover:bg-slate-50">
-                        {columns.map((column) => (
-                          <td key={`${column}-${index}`} className="max-w-[220px] truncate px-4 py-3 text-slate-700">
-                            {String(row[column] ?? "-")}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-sm text-slate-500">
-                  <Table2 className="h-8 w-8 text-slate-300" />
-                  <p>No records matched the current filters.</p>
-                </div>
-              )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-1"
+                      onClick={() =>
+                        setFilters({
+                          from: filters.from,
+                          to: filters.to,
+                          search: filters.search,
+                          status: "",
+                          category: "",
+                        })
+                      }
+                    >
+                      Clear Extra Filters
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
+
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {tables.find((t) => t.name === selectedTable)?.label ||
+                  selectedTable ||
+                  "No category selected"}
+              </p>
+              <p className="text-sm text-slate-500">
+                {totalRows} rows • Page {page} of {pageCount}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+                className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700"
+              >
+                {[10, 25, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}/page
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => loadPreview(Math.max(1, page - 1))}
+                disabled={loading || page <= 1}
+              >
+                Prev
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => loadPreview(Math.min(pageCount, page + 1))}
+                disabled={loading || page >= pageCount}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            {loading && rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 px-6 py-10 text-sm text-slate-500">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                Loading data...
+              </div>
+            ) : rows.length > 0 ? (
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-left text-slate-700">
+                  <tr>
+                    {columns.map((column) => (
+                      <th
+                        key={column}
+                        className="cursor-pointer whitespace-nowrap border-b border-slate-200 px-4 py-3 font-semibold"
+                        onClick={() => toggleSort(column)}
+                      >
+                        <div className="flex items-center gap-1">
+                          {column}
+                          {sortColumn === column ? (
+                            <TrendingUp
+                              className={`h-3.5 w-3.5 ${sortDirection === "desc" ? "rotate-180" : ""}`}
+                            />
+                          ) : null}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRows.map((row, index) => (
+                    <tr
+                      key={`${selectedTable}-${index}`}
+                      className="border-b border-slate-100 bg-white hover:bg-slate-50"
+                    >
+                      {columns.map((column) => (
+                        <td
+                          key={`${column}-${index}`}
+                          className="max-w-[220px] truncate px-4 py-3 text-slate-700"
+                        >
+                          {String(row[column] ?? "-")}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 px-6 py-10 text-sm text-slate-500">
+                <Table2 className="h-8 w-8 text-slate-300" />
+                <p>No records matched the current filters.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -119,7 +119,10 @@ const submitSignup = createServerFn({ method: "POST" })
 
       setResponseHeader(
         "Set-Cookie",
-        createSessionCookie({ ...createdUser, authProvider: createdUser.authProvider as "LOCAL" | "GOOGLE" }),
+        createSessionCookie({
+          ...createdUser,
+          authProvider: createdUser.authProvider as "LOCAL" | "GOOGLE",
+        }),
       );
 
       return {

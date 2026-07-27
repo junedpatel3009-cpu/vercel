@@ -110,7 +110,12 @@ function now() {
 }
 
 function escapeHtml(value: unknown) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 export async function handleBackendApi(request: Request): Promise<Response | null> {
@@ -446,8 +451,7 @@ async function route(request: Request, url: URL): Promise<Response> {
   if (routeMatch && method === "GET") {
     const user = currentUser(request);
     const file = db.prepare(`SELECT * FROM "StoredFile" WHERE id=?`).get(Number(routeMatch[1])) as
-      | { id: number; ownerId: number; isPublic: number }
-      | undefined;
+      { id: number; ownerId: number; isPublic: number } | undefined;
     if (!file || (!file.isPublic && file.ownerId !== user.id && user.role !== "ADMIN"))
       throw new ApiError(404, "File not found.");
     const expires = Date.now() + 300000;
@@ -461,8 +465,7 @@ async function route(request: Request, url: URL): Promise<Response> {
     const user = currentUser(request);
     const id = Number(routeMatch[1]);
     const row = db.prepare(`SELECT * FROM "StoredFile" WHERE id=?`).get(id) as
-      | { id: number; ownerId: number; storageKey: string }
-      | undefined;
+      { id: number; ownerId: number; storageKey: string } | undefined;
     if (!row) throw new ApiError(404, "File not found.");
     if (row.ownerId !== user.id && user.role !== "ADMIN") throw new ApiError(403, "Not allowed.");
     const root = path.resolve(process.cwd(), process.env.FILE_STORAGE_PATH || "storage");
@@ -621,23 +624,42 @@ async function route(request: Request, url: URL): Promise<Response> {
 
   function countRows(tableName: string, whereClause = "", params: unknown[] = []) {
     try {
-      const result = db.prepare(`SELECT COUNT(*) as cnt FROM "${tableName}"${whereClause ? ` ${whereClause}` : ""}`).get(...params) as { cnt: number } | undefined;
+      const result = db
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM "${tableName}"${whereClause ? ` ${whereClause}` : ""}`,
+        )
+        .get(...params) as { cnt: number } | undefined;
       return Number(result?.cnt ?? 0);
     } catch {
       return 0;
     }
   }
 
-  function sumRows(tableName: string, columnName: string, whereClause = "", params: unknown[] = []) {
+  function sumRows(
+    tableName: string,
+    columnName: string,
+    whereClause = "",
+    params: unknown[] = [],
+  ) {
     try {
-      const result = db.prepare(`SELECT COALESCE(SUM("${columnName}"), 0) as total FROM "${tableName}"${whereClause ? ` ${whereClause}` : ""}`).get(...params) as { total: number } | undefined;
+      const result = db
+        .prepare(
+          `SELECT COALESCE(SUM("${columnName}"), 0) as total FROM "${tableName}"${whereClause ? ` ${whereClause}` : ""}`,
+        )
+        .get(...params) as { total: number } | undefined;
       return Number(result?.total ?? 0);
     } catch {
       return 0;
     }
   }
 
-  function buildScopedWhere(tableName: string, whereClause = "", params: unknown[] = [], from = "", to = "") {
+  function buildScopedWhere(
+    tableName: string,
+    whereClause = "",
+    params: unknown[] = [],
+    from = "",
+    to = "",
+  ) {
     const columns = getTableColumnNames(tableName);
     const clauses: string[] = [];
     const scopeParams = [...params];
@@ -654,7 +676,11 @@ async function route(request: Request, url: URL): Promise<Response> {
     }
 
     const baseClause = whereClause?.trim() ? whereClause.trim() : "";
-    const normalizedClause = baseClause.startsWith("WHERE") ? baseClause : baseClause ? `WHERE ${baseClause}` : "";
+    const normalizedClause = baseClause.startsWith("WHERE")
+      ? baseClause
+      : baseClause
+        ? `WHERE ${baseClause}`
+        : "";
     const combinedClause = clauses.length
       ? `${normalizedClause ? `${normalizedClause} AND ` : "WHERE "}${clauses.join(" AND ")}`
       : normalizedClause;
@@ -674,12 +700,16 @@ async function route(request: Request, url: URL): Promise<Response> {
   // Helper: Get all real database tables from SQLite
   function getRealDatabaseTables() {
     try {
-      const tables = db.prepare(`
+      const tables = db
+        .prepare(
+          `
         SELECT name FROM sqlite_master 
         WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '%_new'
         ORDER BY name ASC
-      `).all() as Array<{ name: string }>;
-      return tables.map(t => t.name);
+      `,
+        )
+        .all() as Array<{ name: string }>;
+      return tables.map((t) => t.name);
     } catch (err) {
       console.error("Failed to query database tables:", err);
       return [];
@@ -689,7 +719,9 @@ async function route(request: Request, url: URL): Promise<Response> {
   // Helper: Get row count for a table
   function getTableRowCount(tableName: string): number {
     try {
-      const result = db.prepare(`SELECT COUNT(*) as cnt FROM "${tableName}"`).get() as { cnt: number };
+      const result = db.prepare(`SELECT COUNT(*) as cnt FROM "${tableName}"`).get() as {
+        cnt: number;
+      };
       return result?.cnt ?? 0;
     } catch {
       return 0;
@@ -699,8 +731,11 @@ async function route(request: Request, url: URL): Promise<Response> {
   // Helper: Get primary key name for a table
   function getTablePrimaryKey(tableName: string): string {
     try {
-      const cols = db.prepare(`PRAGMA table_info("${tableName}")`).all() as Array<{ name: string; pk: number }>;
-      const pkCol = cols.find(c => c.pk === 1);
+      const cols = db.prepare(`PRAGMA table_info("${tableName}")`).all() as Array<{
+        name: string;
+        pk: number;
+      }>;
+      const pkCol = cols.find((c) => c.pk === 1);
       return pkCol?.name ?? "id";
     } catch {
       return "id";
@@ -709,82 +744,151 @@ async function route(request: Request, url: URL): Promise<Response> {
 
   // Report Definitions for joins and virtual tables
   const REPORT_CONFIG: Record<string, { from: string; select: string; columns: string[] }> = {
-    "User": {
+    User: {
       from: `"User"`,
       select: `"id", "role", "firstName", "lastName", "email", "phone", "isActive", "isVerified", "createdAt"`,
-      columns: ["id", "role", "firstName", "lastName", "email", "phone", "isActive", "isVerified", "createdAt"]
+      columns: [
+        "id",
+        "role",
+        "firstName",
+        "lastName",
+        "email",
+        "phone",
+        "isActive",
+        "isVerified",
+        "createdAt",
+      ],
     },
-    "ProfessionalVerification": {
+    ProfessionalVerification: {
       from: `"ProfessionalVerification" v LEFT JOIN "User" u ON v.userId = u.id`,
       select: `v.*, u.firstName as professionalFirstName, u.lastName as professionalLastName, u.email as professionalEmail`,
-      columns: ["id", "userId", "status", "professionalFirstName", "professionalLastName", "professionalEmail", "updatedAt"]
+      columns: [
+        "id",
+        "userId",
+        "status",
+        "professionalFirstName",
+        "professionalLastName",
+        "professionalEmail",
+        "updatedAt",
+      ],
     },
-    "verifications": {
+    verifications: {
       from: `"verifications" v LEFT JOIN "User" u ON v.userId = u.id`,
       select: `v.*, u.firstName as professionalFirstName, u.lastName as professionalLastName, u.email as professionalEmail`,
-      columns: ["id", "userId", "status", "professionalFirstName", "professionalLastName", "professionalEmail", "updatedAt"]
+      columns: [
+        "id",
+        "userId",
+        "status",
+        "professionalFirstName",
+        "professionalLastName",
+        "professionalEmail",
+        "updatedAt",
+      ],
     },
-    "ClientJob": {
+    ClientJob: {
       from: `"ClientJob" j LEFT JOIN "User" u ON j.userId = u.id`,
       select: `j.*, u.firstName as clientFirstName, u.lastName as clientLastName, u.email as clientEmail`,
-      columns: ["id", "userId", "category", "title", "status", "clientFirstName", "clientLastName", "clientEmail", "createdAt"]
+      columns: [
+        "id",
+        "userId",
+        "category",
+        "title",
+        "status",
+        "clientFirstName",
+        "clientLastName",
+        "clientEmail",
+        "createdAt",
+      ],
     },
-    "ProjectDispute": {
+    ProjectDispute: {
       from: `"ProjectDispute" d LEFT JOIN "User" u ON d.clientId = u.id`,
       select: `d.*, u.firstName as clientFirstName, u.lastName as clientLastName`,
-      columns: ["id", "trackingId", "clientId", "status", "priority", "issueType", "clientFirstName", "clientLastName", "createdAt"]
+      columns: [
+        "id",
+        "trackingId",
+        "clientId",
+        "status",
+        "priority",
+        "issueType",
+        "clientFirstName",
+        "clientLastName",
+        "createdAt",
+      ],
     },
-    "ProjectTransaction": {
+    ProjectTransaction: {
       from: `"ProjectTransaction" t LEFT JOIN "User" u ON t.professionalId = u.id`,
       select: `t.*, u.firstName as professionalFirstName, u.lastName as professionalLastName`,
-      columns: ["id", "trackingId", "amount", "currency", "status", "type", "professionalFirstName", "professionalLastName", "createdAt"]
+      columns: [
+        "id",
+        "trackingId",
+        "amount",
+        "currency",
+        "status",
+        "type",
+        "professionalFirstName",
+        "professionalLastName",
+        "createdAt",
+      ],
     },
-    "ProjectWithdrawal": {
+    ProjectWithdrawal: {
       from: `"ProjectWithdrawal" w LEFT JOIN "User" u ON w.professionalId = u.id`,
       select: `w.*, u.firstName as professionalFirstName, u.lastName as professionalLastName`,
-      columns: ["id", "professionalId", "amount", "currency", "status", "destinationType", "professionalFirstName", "professionalLastName", "createdAt"]
+      columns: [
+        "id",
+        "professionalId",
+        "amount",
+        "currency",
+        "status",
+        "destinationType",
+        "professionalFirstName",
+        "professionalLastName",
+        "createdAt",
+      ],
     },
-    "ServiceCategory": {
+    ServiceCategory: {
       from: `"ServiceCategory"`,
       select: `*`,
-      columns: ["id", "name", "slug", "description", "sortOrder", "createdAt"]
-    }
+      columns: ["id", "name", "slug", "description", "sortOrder", "createdAt"],
+    },
   };
 
   // List reportable tables with real data
   if (method === "GET" && pathname === `${API_PREFIX}/reports/tables`) {
     try {
       const user = currentUser(request, ["ADMIN", "PROFESSIONAL", "CLIENT"]);
-      
+
       // Get all real database tables
       const allTables = getRealDatabaseTables();
-      
-    return json({ 
-  tables: [], 
-  status: "disconnected",
-  error: "No database tables found. Database may not be initialized.",
-  totalTables: 0,
-  totalRecords: 0
-}, 503); // 👈 Changed `{ status: 503 }` to just `503`
+
+      return json(
+        {
+          tables: [],
+          status: "disconnected",
+          error: "No database tables found. Database may not be initialized.",
+          totalTables: 0,
+          totalRecords: 0,
+        },
+        503,
+      ); // 👈 Changed `{ status: 503 }` to just `503`
 
       // Friendly mapping for table names
       const tableLabels: Record<string, string> = {
-        "User": "users",
-        "ProfessionalVerification": "verification",
-        "verifications": "verification",
-        "ClientJob": "job",
-        "ProjectDispute": "dispute",
-        "ProjectTransaction": "earnings",
-        "ProjectWithdrawal": "payout",
-        "ServiceCategory": "categories",
-        "ProjectRequest": "Applications",
-        "ProjectReview": "Reviews",
-        "Service": "Services",
-        "Wallet": "Wallet",
-        "WalletTransaction": "Transactions",
-        "Notification": "Notifications",
-        "ContactRequest": "Support Requests",
-        "BrowserSubscription": "Push Subscriptions"
+        User: "users",
+        ProfessionalVerification: "verification",
+        verifications: "verification",
+        ClientJob: "job",
+        ProjectDispute: "dispute",
+        ProjectTransaction: "earnings",
+        ProjectWithdrawal: "payout",
+        ServiceCategory: "categories",
+        ProjectRequest: "Applications",
+        ProjectReview: "Reviews",
+        Service: "Services",
+        Wallet: "Wallet",
+        WalletTransaction: "Transactions",
+        Notification: "Notifications",
+        ContactRequest: "Support Requests",
+        BrowserSubscription: "Push Subscriptions",
       };
 
       // Filter by role
@@ -792,54 +896,85 @@ async function route(request: Request, url: URL): Promise<Response> {
       if (user.role !== "ADMIN") {
         // Professionals see their own core activity tables
         if (user.role === "PROFESSIONAL") {
-          visibleTables = allTables.filter(t =>
-            ["ProjectRequest", "ProjectTransaction", "ProjectReview", "ContactRequest", "Wallet", "WalletTransaction", "Service"].includes(t)
+          visibleTables = allTables.filter((t) =>
+            [
+              "ProjectRequest",
+              "ProjectTransaction",
+              "ProjectReview",
+              "ContactRequest",
+              "Wallet",
+              "WalletTransaction",
+              "Service",
+            ].includes(t),
           );
         }
         // Clients see their own activity and platform data
         else if (user.role === "CLIENT") {
-          visibleTables = allTables.filter(t =>
-            ["ClientJob", "ProjectRequest", "ProjectTransaction", "ProjectReview", "ContactRequest", "ServiceCategory", "Service"].includes(t)
+          visibleTables = allTables.filter((t) =>
+            [
+              "ClientJob",
+              "ProjectRequest",
+              "ProjectTransaction",
+              "ProjectReview",
+              "ContactRequest",
+              "ServiceCategory",
+              "Service",
+            ].includes(t),
           );
         }
       } else {
         // Admin - only show requested tables as per user instruction
-        const requestedTables = ["User", "ProfessionalVerification", "verifications", "ClientJob", "ProjectDispute", "ProjectTransaction", "ProjectWithdrawal", "ServiceCategory"];
-        visibleTables = allTables.filter(t => requestedTables.includes(t));
+        const requestedTables = [
+          "User",
+          "ProfessionalVerification",
+          "verifications",
+          "ClientJob",
+          "ProjectDispute",
+          "ProjectTransaction",
+          "ProjectWithdrawal",
+          "ServiceCategory",
+        ];
+        visibleTables = allTables.filter((t) => requestedTables.includes(t));
 
         // Ensure we don't show both ProfessionalVerification and verifications if both exist
-        if (visibleTables.includes("ProfessionalVerification") && visibleTables.includes("verifications")) {
-           visibleTables = visibleTables.filter(t => t !== "verifications");
+        if (
+          visibleTables.includes("ProfessionalVerification") &&
+          visibleTables.includes("verifications")
+        ) {
+          visibleTables = visibleTables.filter((t) => t !== "verifications");
         }
       }
 
       // Build response with row counts and primary keys
-      const tableData = visibleTables.map(t => ({
+      const tableData = visibleTables.map((t) => ({
         name: t,
         label: tableLabels[t] || t,
         rows: getTableRowCount(t),
-        primaryKey: getTablePrimaryKey(t)
+        primaryKey: getTablePrimaryKey(t),
       }));
 
       const totalRecords = tableData.reduce((sum, t) => sum + t.rows, 0);
 
-      return json({ 
+      return json({
         tables: tableData,
         status: "connected",
         totalTables: tableData.length,
         totalRecords,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Reports/tables error:", msg);
-      return json({ 
-        tables: [],
-        status: "error",
-        error: msg,
-        totalTables: 0,
-        totalRecords: 0
-      }, 500);
+      return json(
+        {
+          tables: [],
+          status: "error",
+          error: msg,
+          totalTables: 0,
+          totalRecords: 0,
+        },
+        500,
+      );
     }
   }
 
@@ -855,7 +990,13 @@ async function route(request: Request, url: URL): Promise<Response> {
         const dashboard = getAdminDashboardSnapshot();
         const userScope = buildScopedWhere("User", "", [], from, to);
         const clientsScope = buildScopedWhere("User", `"role" = 'CLIENT'`, [], from, to);
-        const professionalsScope = buildScopedWhere("User", `"role" = 'PROFESSIONAL'`, [], from, to);
+        const professionalsScope = buildScopedWhere(
+          "User",
+          `"role" = 'PROFESSIONAL'`,
+          [],
+          from,
+          to,
+        );
         const jobsScope = buildScopedWhere("ClientJob", "", [], from, to);
         const applicationsScope = buildScopedWhere("ProjectRequest", "", [], from, to);
         const paymentsScope = buildScopedWhere("ProjectTransaction", "", [], from, to);
@@ -863,39 +1004,169 @@ async function route(request: Request, url: URL): Promise<Response> {
         const disputesScope = buildScopedWhere("ProjectDispute", "", [], from, to);
         const categoriesScope = buildScopedWhere("ServiceCategory", "", [], from, to);
         const cards = [
-          { title: "Total Users", value: countRows("User", userScope.whereClause, userScope.params), subtitle: "All active and inactive accounts", icon: "Users" },
-          { title: "Total Clients", value: countRows("User", clientsScope.whereClause, clientsScope.params), subtitle: "Users with client access", icon: "Building2" },
-          { title: "Total Professionals", value: countRows("User", professionalsScope.whereClause, professionalsScope.params), subtitle: "Verified service providers", icon: "BriefcaseBusiness" },
-          { title: "Total Jobs", value: countRows("ClientJob", jobsScope.whereClause, jobsScope.params), subtitle: "Current job pool", icon: "BriefcaseBusiness" },
-          { title: "Total Applications", value: countRows("ProjectRequest", applicationsScope.whereClause, applicationsScope.params), subtitle: "Received proposals", icon: "FileText" },
-          { title: "Total Payments", value: countRows("ProjectTransaction", paymentsScope.whereClause, paymentsScope.params), subtitle: "Recorded payments", icon: "ReceiptText" },
-          { title: "Total Earnings", value: sumRows("ProjectTransaction", "amount", paymentsScope.whereClause, paymentsScope.params), subtitle: "Gross payment volume", icon: "DollarSign" },
-          { title: "Total Disputes", value: countRows("ProjectDispute", disputesScope.whereClause, disputesScope.params), subtitle: "Open and resolved cases", icon: "AlertTriangle" },
-          { title: "Total Reviews", value: countRows("ProjectReview", reviewsScope.whereClause, reviewsScope.params), subtitle: "Client and professional feedback", icon: "Star" },
-          { title: "Total Categories", value: countRows("ServiceCategory", categoriesScope.whereClause, categoriesScope.params), subtitle: "Service categories", icon: "Tag" },
+          {
+            title: "Total Users",
+            value: countRows("User", userScope.whereClause, userScope.params),
+            subtitle: "All active and inactive accounts",
+            icon: "Users",
+          },
+          {
+            title: "Total Clients",
+            value: countRows("User", clientsScope.whereClause, clientsScope.params),
+            subtitle: "Users with client access",
+            icon: "Building2",
+          },
+          {
+            title: "Total Professionals",
+            value: countRows("User", professionalsScope.whereClause, professionalsScope.params),
+            subtitle: "Verified service providers",
+            icon: "BriefcaseBusiness",
+          },
+          {
+            title: "Total Jobs",
+            value: countRows("ClientJob", jobsScope.whereClause, jobsScope.params),
+            subtitle: "Current job pool",
+            icon: "BriefcaseBusiness",
+          },
+          {
+            title: "Total Applications",
+            value: countRows(
+              "ProjectRequest",
+              applicationsScope.whereClause,
+              applicationsScope.params,
+            ),
+            subtitle: "Received proposals",
+            icon: "FileText",
+          },
+          {
+            title: "Total Payments",
+            value: countRows("ProjectTransaction", paymentsScope.whereClause, paymentsScope.params),
+            subtitle: "Recorded payments",
+            icon: "ReceiptText",
+          },
+          {
+            title: "Total Earnings",
+            value: sumRows(
+              "ProjectTransaction",
+              "amount",
+              paymentsScope.whereClause,
+              paymentsScope.params,
+            ),
+            subtitle: "Gross payment volume",
+            icon: "DollarSign",
+          },
+          {
+            title: "Total Disputes",
+            value: countRows("ProjectDispute", disputesScope.whereClause, disputesScope.params),
+            subtitle: "Open and resolved cases",
+            icon: "AlertTriangle",
+          },
+          {
+            title: "Total Reviews",
+            value: countRows("ProjectReview", reviewsScope.whereClause, reviewsScope.params),
+            subtitle: "Client and professional feedback",
+            icon: "Star",
+          },
+          {
+            title: "Total Categories",
+            value: countRows(
+              "ServiceCategory",
+              categoriesScope.whereClause,
+              categoriesScope.params,
+            ),
+            subtitle: "Service categories",
+            icon: "Tag",
+          },
         ];
-        const monthlyUsersSeries = db.prepare(`SELECT strftime('%Y-%m', datetime(createdAt)) as month, COUNT(*) as count FROM "User"${userScope.whereClause ? ` ${userScope.whereClause}` : ""} GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`).all(...userScope.params) as Array<{ month: string; count: number }>;
-        const monthlyEarningsSeries = db.prepare(`SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount),0) as total FROM "ProjectTransaction"${paymentsScope.whereClause ? ` ${paymentsScope.whereClause}` : ""} GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`).all(...paymentsScope.params) as Array<{ month: string; total: number }>;
+        const monthlyUsersSeries = db
+          .prepare(
+            `SELECT strftime('%Y-%m', datetime(createdAt)) as month, COUNT(*) as count FROM "User"${userScope.whereClause ? ` ${userScope.whereClause}` : ""} GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`,
+          )
+          .all(...userScope.params) as Array<{ month: string; count: number }>;
+        const monthlyEarningsSeries = db
+          .prepare(
+            `SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount),0) as total FROM "ProjectTransaction"${paymentsScope.whereClause ? ` ${paymentsScope.whereClause}` : ""} GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`,
+          )
+          .all(...paymentsScope.params) as Array<{ month: string; total: number }>;
         const jobsByStatusSeries = [
-          { name: "Open", value: countRows("ClientJob", buildScopedWhere("ClientJob", `WHERE "status" = 'OPEN'`, [], from, to).whereClause, buildScopedWhere("ClientJob", `WHERE "status" = 'OPEN'`, [], from, to).params) },
-          { name: "Draft", value: countRows("ClientJob", buildScopedWhere("ClientJob", `WHERE "status" = 'DRAFT'`, [], from, to).whereClause, buildScopedWhere("ClientJob", `WHERE "status" = 'DRAFT'`, [], from, to).params) },
-          { name: "Closed", value: countRows("ClientJob", buildScopedWhere("ClientJob", `WHERE "status" = 'CLOSED'`, [], from, to).whereClause, buildScopedWhere("ClientJob", `WHERE "status" = 'CLOSED'`, [], from, to).params) },
+          {
+            name: "Open",
+            value: countRows(
+              "ClientJob",
+              buildScopedWhere("ClientJob", `WHERE "status" = 'OPEN'`, [], from, to).whereClause,
+              buildScopedWhere("ClientJob", `WHERE "status" = 'OPEN'`, [], from, to).params,
+            ),
+          },
+          {
+            name: "Draft",
+            value: countRows(
+              "ClientJob",
+              buildScopedWhere("ClientJob", `WHERE "status" = 'DRAFT'`, [], from, to).whereClause,
+              buildScopedWhere("ClientJob", `WHERE "status" = 'DRAFT'`, [], from, to).params,
+            ),
+          },
+          {
+            name: "Closed",
+            value: countRows(
+              "ClientJob",
+              buildScopedWhere("ClientJob", `WHERE "status" = 'CLOSED'`, [], from, to).whereClause,
+              buildScopedWhere("ClientJob", `WHERE "status" = 'CLOSED'`, [], from, to).params,
+            ),
+          },
         ];
         const paymentsByStatusSeries = [
-          { name: "Completed", value: countRows("ProjectTransaction", buildScopedWhere("ProjectTransaction", `WHERE "status" = 'COMPLETED'`, [], from, to).whereClause, buildScopedWhere("ProjectTransaction", `WHERE "status" = 'COMPLETED'`, [], from, to).params) },
-          { name: "Pending", value: countRows("ProjectTransaction", buildScopedWhere("ProjectTransaction", `WHERE "status" = 'PENDING'`, [], from, to).whereClause, buildScopedWhere("ProjectTransaction", `WHERE "status" = 'PENDING'`, [], from, to).params) },
-          { name: "Refunded", value: countRows("ProjectTransaction", buildScopedWhere("ProjectTransaction", `WHERE "status" = 'REFUNDED'`, [], from, to).whereClause, buildScopedWhere("ProjectTransaction", `WHERE "status" = 'REFUNDED'`, [], from, to).params) },
+          {
+            name: "Completed",
+            value: countRows(
+              "ProjectTransaction",
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'COMPLETED'`, [], from, to)
+                .whereClause,
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'COMPLETED'`, [], from, to)
+                .params,
+            ),
+          },
+          {
+            name: "Pending",
+            value: countRows(
+              "ProjectTransaction",
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'PENDING'`, [], from, to)
+                .whereClause,
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'PENDING'`, [], from, to)
+                .params,
+            ),
+          },
+          {
+            name: "Refunded",
+            value: countRows(
+              "ProjectTransaction",
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'REFUNDED'`, [], from, to)
+                .whereClause,
+              buildScopedWhere("ProjectTransaction", `WHERE "status" = 'REFUNDED'`, [], from, to)
+                .params,
+            ),
+          },
         ];
-        const categorySeries = db.prepare(`SELECT "name" as name, COUNT(*) as count FROM "ServiceCategory"${categoriesScope.whereClause ? ` ${categoriesScope.whereClause}` : ""} GROUP BY "name" ORDER BY count DESC LIMIT 6`).all(...categoriesScope.params) as Array<{ name: string; count: number }>;
+        const categorySeries = db
+          .prepare(
+            `SELECT "name" as name, COUNT(*) as count FROM "ServiceCategory"${categoriesScope.whereClause ? ` ${categoriesScope.whereClause}` : ""} GROUP BY "name" ORDER BY count DESC LIMIT 6`,
+          )
+          .all(...categoriesScope.params) as Array<{ name: string; count: number }>;
         return json({
           role: user.role,
           cards,
           charts: {
-            monthlyUsers: monthlyUsersSeries.reverse().map((entry) => ({ name: entry.month, value: entry.count })),
-            monthlyEarnings: monthlyEarningsSeries.reverse().map((entry) => ({ name: entry.month, value: entry.total })),
+            monthlyUsers: monthlyUsersSeries
+              .reverse()
+              .map((entry) => ({ name: entry.month, value: entry.count })),
+            monthlyEarnings: monthlyEarningsSeries
+              .reverse()
+              .map((entry) => ({ name: entry.month, value: entry.total })),
             jobsByStatus: jobsByStatusSeries,
             paymentsByStatus: paymentsByStatusSeries,
-            categoryDistribution: categorySeries.map((entry) => ({ name: entry.name, value: entry.count })),
+            categoryDistribution: categorySeries.map((entry) => ({
+              name: entry.name,
+              value: entry.count,
+            })),
           },
           scope,
           generatedAt: new Date().toISOString(),
@@ -904,33 +1175,109 @@ async function route(request: Request, url: URL): Promise<Response> {
 
       if (user.role === "PROFESSIONAL") {
         const professionalId = user.id;
-        const applications = countRows("ProjectRequest", `WHERE "professionalId" = ?`, [professionalId]);
-        const activeJobs = countRows("ProjectTracking", `WHERE "professionalId" = ? AND "status" = 'ACTIVE'`, [professionalId]);
-        const completedJobs = countRows("ProjectTracking", `WHERE "professionalId" = ? AND "status" = 'COMPLETED'`, [professionalId]);
-        const pendingApplications = countRows("ProjectRequest", `WHERE "professionalId" = ? AND "status" = 'PENDING'`, [professionalId]);
+        const applications = countRows("ProjectRequest", `WHERE "professionalId" = ?`, [
+          professionalId,
+        ]);
+        const activeJobs = countRows(
+          "ProjectTracking",
+          `WHERE "professionalId" = ? AND "status" = 'ACTIVE'`,
+          [professionalId],
+        );
+        const completedJobs = countRows(
+          "ProjectTracking",
+          `WHERE "professionalId" = ? AND "status" = 'COMPLETED'`,
+          [professionalId],
+        );
+        const pendingApplications = countRows(
+          "ProjectRequest",
+          `WHERE "professionalId" = ? AND "status" = 'PENDING'`,
+          [professionalId],
+        );
         const reviews = countRows("ProjectReview", `WHERE "professionalId" = ?`, [professionalId]);
-        const withdrawals = countRows("ProjectWithdrawal", `WHERE "professionalId" = ?`, [professionalId]);
-        const earnings = sumRows("ProjectTransaction", "amount", `WHERE "professionalId" = ? AND "status" = 'COMPLETED'`, [professionalId]);
-        const monthlySeries = db.prepare(`SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount), 0) as total FROM "ProjectTransaction" WHERE "professionalId" = ? AND "status" = 'COMPLETED' GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`).all(professionalId) as Array<{ month: string; total: number }>;
+        const withdrawals = countRows("ProjectWithdrawal", `WHERE "professionalId" = ?`, [
+          professionalId,
+        ]);
+        const earnings = sumRows(
+          "ProjectTransaction",
+          "amount",
+          `WHERE "professionalId" = ? AND "status" = 'COMPLETED'`,
+          [professionalId],
+        );
+        const monthlySeries = db
+          .prepare(
+            `SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount), 0) as total FROM "ProjectTransaction" WHERE "professionalId" = ? AND "status" = 'COMPLETED' GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`,
+          )
+          .all(professionalId) as Array<{ month: string; total: number }>;
         const cards = [
-          { title: "My Earnings", value: earnings, subtitle: "Completed payments", icon: "DollarSign" },
-          { title: "Completed Jobs", value: completedJobs, subtitle: "Finished projects", icon: "CheckCircle2" },
-          { title: "Active Jobs", value: activeJobs, subtitle: "In progress", icon: "BriefcaseBusiness" },
-          { title: "Pending Jobs", value: pendingApplications, subtitle: "Open applications", icon: "Clock3" },
-          { title: "Applications", value: applications, subtitle: "Sent proposals", icon: "FileText" },
+          {
+            title: "My Earnings",
+            value: earnings,
+            subtitle: "Completed payments",
+            icon: "DollarSign",
+          },
+          {
+            title: "Completed Jobs",
+            value: completedJobs,
+            subtitle: "Finished projects",
+            icon: "CheckCircle2",
+          },
+          {
+            title: "Active Jobs",
+            value: activeJobs,
+            subtitle: "In progress",
+            icon: "BriefcaseBusiness",
+          },
+          {
+            title: "Pending Jobs",
+            value: pendingApplications,
+            subtitle: "Open applications",
+            icon: "Clock3",
+          },
+          {
+            title: "Applications",
+            value: applications,
+            subtitle: "Sent proposals",
+            icon: "FileText",
+          },
           { title: "Reviews", value: reviews, subtitle: "Feedback received", icon: "Star" },
-          { title: "Wallet History", value: withdrawals, subtitle: "Withdrawals recorded", icon: "Wallet" },
-          { title: "Withdraw History", value: withdrawals, subtitle: "Past payout requests", icon: "Wallet" },
+          {
+            title: "Wallet History",
+            value: withdrawals,
+            subtitle: "Withdrawals recorded",
+            icon: "Wallet",
+          },
+          {
+            title: "Withdraw History",
+            value: withdrawals,
+            subtitle: "Past payout requests",
+            icon: "Wallet",
+          },
         ];
         return json({
           role: user.role,
           cards,
           charts: {
-            monthlyEarnings: monthlySeries.reverse().map((entry) => ({ name: entry.month, value: entry.total })),
+            monthlyEarnings: monthlySeries
+              .reverse()
+              .map((entry) => ({ name: entry.month, value: entry.total })),
             applicationsByStatus: [
               { name: "Pending", value: pendingApplications },
-              { name: "Accepted", value: countRows("ProjectRequest", `WHERE "professionalId" = ? AND "status" = 'ACCEPTED'`, [professionalId]) },
-              { name: "Declined", value: countRows("ProjectRequest", `WHERE "professionalId" = ? AND "status" = 'DECLINED'`, [professionalId]) },
+              {
+                name: "Accepted",
+                value: countRows(
+                  "ProjectRequest",
+                  `WHERE "professionalId" = ? AND "status" = 'ACCEPTED'`,
+                  [professionalId],
+                ),
+              },
+              {
+                name: "Declined",
+                value: countRows(
+                  "ProjectRequest",
+                  `WHERE "professionalId" = ? AND "status" = 'DECLINED'`,
+                  [professionalId],
+                ),
+              },
             ],
           },
           scope,
@@ -940,29 +1287,78 @@ async function route(request: Request, url: URL): Promise<Response> {
 
       const clientId = user.id;
       const jobsPosted = countRows("ClientJob", `WHERE "userId" = ?`, [clientId]);
-      const activeJobs = countRows("ClientJob", `WHERE "userId" = ? AND "status" = 'OPEN'`, [clientId]);
-      const completedJobs = countRows("ClientJob", `WHERE "userId" = ? AND "status" = 'CLOSED'`, [clientId]);
-      const cancelledJobs = countRows("ClientJob", `WHERE "userId" = ? AND "status" = 'CANCELLED'`, [clientId]);
-      const totalSpending = sumRows("ProjectTransaction", "amount", `WHERE "clientId" = ? AND "status" = 'COMPLETED'`, [clientId]);
+      const activeJobs = countRows("ClientJob", `WHERE "userId" = ? AND "status" = 'OPEN'`, [
+        clientId,
+      ]);
+      const completedJobs = countRows("ClientJob", `WHERE "userId" = ? AND "status" = 'CLOSED'`, [
+        clientId,
+      ]);
+      const cancelledJobs = countRows(
+        "ClientJob",
+        `WHERE "userId" = ? AND "status" = 'CANCELLED'`,
+        [clientId],
+      );
+      const totalSpending = sumRows(
+        "ProjectTransaction",
+        "amount",
+        `WHERE "clientId" = ? AND "status" = 'COMPLETED'`,
+        [clientId],
+      );
       const payments = countRows("ProjectTransaction", `WHERE "clientId" = ?`, [clientId]);
       const hiredProfessionals = countRows("ProjectTracking", `WHERE "clientId" = ?`, [clientId]);
       const reviews = countRows("ProjectReview", `WHERE "clientId" = ?`, [clientId]);
-      const monthlySeries = db.prepare(`SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount), 0) as total FROM "ProjectTransaction" WHERE "clientId" = ? AND "status" = 'COMPLETED' GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`).all(clientId) as Array<{ month: string; total: number }>;
+      const monthlySeries = db
+        .prepare(
+          `SELECT strftime('%Y-%m', datetime(createdAt)) as month, COALESCE(SUM(amount), 0) as total FROM "ProjectTransaction" WHERE "clientId" = ? AND "status" = 'COMPLETED' GROUP BY strftime('%Y-%m', datetime(createdAt)) ORDER BY month DESC LIMIT 6`,
+        )
+        .all(clientId) as Array<{ month: string; total: number }>;
       const cards = [
-        { title: "Jobs Posted", value: jobsPosted, subtitle: "Your posted work", icon: "BriefcaseBusiness" },
+        {
+          title: "Jobs Posted",
+          value: jobsPosted,
+          subtitle: "Your posted work",
+          icon: "BriefcaseBusiness",
+        },
         { title: "Active Jobs", value: activeJobs, subtitle: "Currently open", icon: "Clock3" },
-        { title: "Completed Jobs", value: completedJobs, subtitle: "Finished work", icon: "CheckCircle2" },
-        { title: "Cancelled Jobs", value: cancelledJobs, subtitle: "Closed without completion", icon: "AlertTriangle" },
-        { title: "Total Spending", value: totalSpending, subtitle: "Committed payment volume", icon: "DollarSign" },
-        { title: "Payments", value: payments, subtitle: "Transactions recorded", icon: "ReceiptText" },
-        { title: "Hired Professionals", value: hiredProfessionals, subtitle: "Engaged service providers", icon: "Users" },
+        {
+          title: "Completed Jobs",
+          value: completedJobs,
+          subtitle: "Finished work",
+          icon: "CheckCircle2",
+        },
+        {
+          title: "Cancelled Jobs",
+          value: cancelledJobs,
+          subtitle: "Closed without completion",
+          icon: "AlertTriangle",
+        },
+        {
+          title: "Total Spending",
+          value: totalSpending,
+          subtitle: "Committed payment volume",
+          icon: "DollarSign",
+        },
+        {
+          title: "Payments",
+          value: payments,
+          subtitle: "Transactions recorded",
+          icon: "ReceiptText",
+        },
+        {
+          title: "Hired Professionals",
+          value: hiredProfessionals,
+          subtitle: "Engaged service providers",
+          icon: "Users",
+        },
         { title: "Reviews Given", value: reviews, subtitle: "Feedback posted", icon: "Star" },
       ];
       return json({
         role: user.role,
         cards,
         charts: {
-          monthlySpending: monthlySeries.reverse().map((entry) => ({ name: entry.month, value: entry.total })),
+          monthlySpending: monthlySeries
+            .reverse()
+            .map((entry) => ({ name: entry.month, value: entry.total })),
           jobsByStatus: [
             { name: "Open", value: activeJobs },
             { name: "Closed", value: completedJobs },
@@ -975,7 +1371,18 @@ async function route(request: Request, url: URL): Promise<Response> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Reports/summary error:", msg);
-     return json({ role: "ADMIN", cards: [], charts: { monthlyUsers: [], jobsByStatus: [] }, scope: null, generatedAt: new Date().toISOString(), error: msg }, 500);    }
+      return json(
+        {
+          role: "ADMIN",
+          cards: [],
+          charts: { monthlyUsers: [], jobsByStatus: [] },
+          scope: null,
+          generatedAt: new Date().toISOString(),
+          error: msg,
+        },
+        500,
+      );
+    }
   }
 
   // Helper: Build standardized WHERE clause for reports
@@ -991,7 +1398,7 @@ async function route(request: Request, url: URL): Promise<Response> {
       } else if (colNames.includes("professionalId")) {
         where.push(`"professionalId" = ?`);
         params.push(user.id);
-      } else if (colNames.includes("reviewedBy") && (table.toLowerCase().includes("review"))) {
+      } else if (colNames.includes("reviewedBy") && table.toLowerCase().includes("review")) {
         where.push(`("createdBy" = ? OR "reviewedBy" = ?)`);
         params.push(user.id, user.id);
       } else if (colNames.includes("userId")) {
@@ -1013,18 +1420,22 @@ async function route(request: Request, url: URL): Promise<Response> {
 
     // Generic PO/Reference search
     if (filters.po) {
-      const poCols = colNames.filter(c =>
-        ["trackingId", "requestId", "orderId", "reference", "poNumber", "tracking_id"].includes(c)
+      const poCols = colNames.filter((c) =>
+        ["trackingId", "requestId", "orderId", "reference", "poNumber", "tracking_id"].includes(c),
       );
       if (poCols.length > 0) {
-        const poClause = poCols.map(c => `"${c}" = ?`).join(" OR ");
+        const poClause = poCols.map((c) => `"${c}" = ?`).join(" OR ");
         where.push(`(${poClause})`);
         for (let i = 0; i < poCols.length; i++) params.push(filters.po);
       }
     }
 
     // Date filtering - check common date columns
-    const dateCol = colNames.includes("createdAt") ? "createdAt" : colNames.includes("updatedAt") ? "updatedAt" : null;
+    const dateCol = colNames.includes("createdAt")
+      ? "createdAt"
+      : colNames.includes("updatedAt")
+        ? "updatedAt"
+        : null;
     if (dateCol) {
       if (filters.from && String(filters.from).trim()) {
         where.push(`datetime("${dateCol}") >= datetime(?)`);
@@ -1037,9 +1448,17 @@ async function route(request: Request, url: URL): Promise<Response> {
     }
 
     // Generic status filtering
-    const statusVal = String(filters.status || filters.jobStatus || filters.paymentStatus || "").trim();
+    const statusVal = String(
+      filters.status || filters.jobStatus || filters.paymentStatus || "",
+    ).trim();
     if (statusVal) {
-      const statusCol = colNames.includes("status") ? "status" : colNames.includes("jobStatus") ? "jobStatus" : colNames.includes("paymentStatus") ? "paymentStatus" : null;
+      const statusCol = colNames.includes("status")
+        ? "status"
+        : colNames.includes("jobStatus")
+          ? "jobStatus"
+          : colNames.includes("paymentStatus")
+            ? "paymentStatus"
+            : null;
       if (statusCol) {
         where.push(`"${statusCol}" = ?`);
         params.push(statusVal);
@@ -1064,8 +1483,11 @@ async function route(request: Request, url: URL): Promise<Response> {
 
     // Full text search
     if (filters.search && String(filters.search).trim()) {
-      const searchCols = colNames.filter((c) =>
-        !["id", "createdAt", "updatedAt", "passwordHash", "googleId", "password_hash"].includes(c)
+      const searchCols = colNames.filter(
+        (c) =>
+          !["id", "createdAt", "updatedAt", "passwordHash", "googleId", "password_hash"].includes(
+            c,
+          ),
       );
       if (searchCols.length > 0) {
         const likeClause = searchCols.map((c) => `"${c}" LIKE ?`).join(" OR ");
@@ -1077,7 +1499,7 @@ async function route(request: Request, url: URL): Promise<Response> {
 
     return {
       whereSql: where.length ? `WHERE ${where.join(" AND ")}` : "",
-      params
+      params,
     };
   }
 
@@ -1086,11 +1508,11 @@ async function route(request: Request, url: URL): Promise<Response> {
     try {
       const user = currentUser(request, ["ADMIN", "PROFESSIONAL", "CLIENT"]);
       const payload = parse(
-        z.object({ 
-          table: z.string(), 
-          page: z.number().int().min(1).default(1), 
-          pageSize: z.number().int().min(1).max(1000).default(50), 
-          filters: z.record(z.any()).optional() 
+        z.object({
+          table: z.string(),
+          page: z.number().int().min(1).default(1),
+          pageSize: z.number().int().min(1).max(1000).default(50),
+          filters: z.record(z.any()).optional(),
         }),
         await body(request),
       );
@@ -1104,13 +1526,26 @@ async function route(request: Request, url: URL): Promise<Response> {
 
       const config = user.role === "ADMIN" ? REPORT_CONFIG[table] : null;
 
-      if (config && (allTables.includes(table) || (table === "ProfessionalVerification" && allTables.includes("verifications")) || (table === "verifications" && allTables.includes("ProfessionalVerification")))) {
+      if (
+        config &&
+        (allTables.includes(table) ||
+          (table === "ProfessionalVerification" && allTables.includes("verifications")) ||
+          (table === "verifications" && allTables.includes("ProfessionalVerification")))
+      ) {
         // Use joined/virtual config
         let actualTable = table;
-        if (table === "ProfessionalVerification" && !allTables.includes(table) && allTables.includes("verifications")) {
-           actualTable = "verifications";
-        } else if (table === "verifications" && !allTables.includes(table) && allTables.includes("ProfessionalVerification")) {
-           actualTable = "ProfessionalVerification";
+        if (
+          table === "ProfessionalVerification" &&
+          !allTables.includes(table) &&
+          allTables.includes("verifications")
+        ) {
+          actualTable = "verifications";
+        } else if (
+          table === "verifications" &&
+          !allTables.includes(table) &&
+          allTables.includes("ProfessionalVerification")
+        ) {
+          actualTable = "ProfessionalVerification";
         }
 
         const actualConfig = REPORT_CONFIG[actualTable] || config;
@@ -1126,10 +1561,17 @@ async function route(request: Request, url: URL): Promise<Response> {
         querySource = `"${table}"`;
       }
 
-      const { whereSql, params } = buildReportWhereClause(user, table, colNames, payload.filters || {});
+      const { whereSql, params } = buildReportWhereClause(
+        user,
+        table,
+        colNames,
+        payload.filters || {},
+      );
 
       // Get total count
-      const totalRow = db.prepare(`SELECT COUNT(*) as cnt FROM ${querySource} ${whereSql}`).get(...params) as { cnt: number };
+      const totalRow = db
+        .prepare(`SELECT COUNT(*) as cnt FROM ${querySource} ${whereSql}`)
+        .get(...params) as { cnt: number };
       const total = Number(totalRow?.cnt ?? 0);
 
       const page = Number(payload.page || 1);
@@ -1137,17 +1579,20 @@ async function route(request: Request, url: URL): Promise<Response> {
       const offset = (page - 1) * pageSize;
 
       // Get paginated rows
-      const orderByCol = colNames.includes('id') ? 'id' : colNames[0];
-      const rows = db.prepare(`SELECT ${selectClause} FROM ${querySource} ${whereSql} ORDER BY "${orderByCol}" DESC LIMIT ? OFFSET ?`)
+      const orderByCol = colNames.includes("id") ? "id" : colNames[0];
+      const rows = db
+        .prepare(
+          `SELECT ${selectClause} FROM ${querySource} ${whereSql} ORDER BY "${orderByCol}" DESC LIMIT ? OFFSET ?`,
+        )
         .all(...params, pageSize, offset) as Array<Record<string, unknown>>;
 
-      return json({ 
-        columns: colNames, 
-        rows, 
-        total, 
-        page, 
+      return json({
+        columns: colNames,
+        rows,
+        total,
+        page,
         pageSize,
-        status: "success"
+        status: "success",
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -1162,11 +1607,11 @@ async function route(request: Request, url: URL): Promise<Response> {
     try {
       const user = currentUser(request, ["ADMIN", "PROFESSIONAL", "CLIENT"]);
       const payload = parse(
-        z.object({ 
-          table: z.string(), 
-          format: z.enum(["CSV", "JSON", "PDF", "EXCEL"]).default("PDF"), 
-          filters: z.record(z.any()).optional(), 
-          reportName: z.string().optional() 
+        z.object({
+          table: z.string(),
+          format: z.enum(["CSV", "JSON", "PDF", "EXCEL"]).default("PDF"),
+          filters: z.record(z.any()).optional(),
+          reportName: z.string().optional(),
         }),
         await body(request),
       );
@@ -1180,12 +1625,25 @@ async function route(request: Request, url: URL): Promise<Response> {
 
       const config = user.role === "ADMIN" ? REPORT_CONFIG[table] : null;
 
-      if (config && (allTables.includes(table) || (table === "ProfessionalVerification" && allTables.includes("verifications")) || (table === "verifications" && allTables.includes("ProfessionalVerification")))) {
+      if (
+        config &&
+        (allTables.includes(table) ||
+          (table === "ProfessionalVerification" && allTables.includes("verifications")) ||
+          (table === "verifications" && allTables.includes("ProfessionalVerification")))
+      ) {
         let actualTable = table;
-        if (table === "ProfessionalVerification" && !allTables.includes(table) && allTables.includes("verifications")) {
-           actualTable = "verifications";
-        } else if (table === "verifications" && !allTables.includes(table) && allTables.includes("ProfessionalVerification")) {
-           actualTable = "ProfessionalVerification";
+        if (
+          table === "ProfessionalVerification" &&
+          !allTables.includes(table) &&
+          allTables.includes("verifications")
+        ) {
+          actualTable = "verifications";
+        } else if (
+          table === "verifications" &&
+          !allTables.includes(table) &&
+          allTables.includes("ProfessionalVerification")
+        ) {
+          actualTable = "ProfessionalVerification";
         }
 
         const actualConfig = REPORT_CONFIG[actualTable] || config;
@@ -1204,21 +1662,30 @@ async function route(request: Request, url: URL): Promise<Response> {
       const filters = payload.filters || {};
       const { whereSql, params } = buildReportWhereClause(user, table, colNames, filters);
 
-      const orderByCol = colNames.includes('id') ? 'id' : colNames[0];
+      const orderByCol = colNames.includes("id") ? "id" : colNames[0];
 
       // Fetch all matching records for download (no pagination, no limit as per requirements)
-      const rows = db.prepare(`SELECT ${selectClause} FROM ${querySource} ${whereSql} ORDER BY "${orderByCol}" DESC`)
+      const rows = db
+        .prepare(
+          `SELECT ${selectClause} FROM ${querySource} ${whereSql} ORDER BY "${orderByCol}" DESC`,
+        )
         .all(...params) as Array<Record<string, unknown>>;
 
       if (payload.format === "JSON") {
         const bodyOut = JSON.stringify({ columns: colNames, rows });
-        return new Response(bodyOut, { headers: { "content-type": "application/json", "content-disposition": `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.json"` } });
+        return new Response(bodyOut, {
+          headers: {
+            "content-type": "application/json",
+            "content-disposition": `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.json"`,
+          },
+        });
       }
 
       if (payload.format === "CSV" || payload.format === "EXCEL") {
         const escape = (v: unknown) => {
           const s = String(v ?? "");
-          if (s.includes('"') || s.includes(',') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`;
+          if (s.includes('"') || s.includes(",") || s.includes("\n"))
+            return `"${s.replace(/"/g, '""')}"`;
           return s;
         };
         const header = colNames.join(",");
@@ -1227,7 +1694,12 @@ async function route(request: Request, url: URL): Promise<Response> {
         const csv = lines.join("\n");
         const contentType = payload.format === "EXCEL" ? "application/vnd.ms-excel" : "text/csv";
         const extension = payload.format === "EXCEL" ? "xls" : "csv";
-        return new Response(csv, { headers: { "content-type": contentType, "content-disposition": `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.${extension}"` } });
+        return new Response(csv, {
+          headers: {
+            "content-type": contentType,
+            "content-disposition": `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.${extension}"`,
+          },
+        });
       }
 
       // PDF generation
@@ -1285,33 +1757,37 @@ async function route(request: Request, url: URL): Promise<Response> {
     <div class="report-info">
       <h1>${escapeHtml(title)} Report</h1>
       <p>Generated on ${generationDate}</p>
-      <p>Generated by: ${escapeHtml(String(user.firstName || user.email || 'Admin'))}</p>
+      <p>Generated by: ${escapeHtml(String(user.firstName || user.email || "Admin"))}</p>
     </div>
   </div>
 
-  ${isTruncated ? '<div class="warning"><strong>Notice:</strong> This PDF contains the first 5,000 records. For the full dataset, please use CSV or Excel export.</div>' : ''}
+  ${isTruncated ? '<div class="warning"><strong>Notice:</strong> This PDF contains the first 5,000 records. For the full dataset, please use CSV or Excel export.</div>' : ""}
 
   <div class="summary-section">
     <h2>Report Details</h2>
     <ul class="filter-list">
       <li><strong>Total Records:</strong> ${rows.length}</li>
       <li><strong>Status:</strong> All Data</li>
-      ${filtersUsed || '<li><strong>Filters:</strong> None applied</li>'}
+      ${filtersUsed || "<li><strong>Filters:</strong> None applied</li>"}
     </ul>
   </div>
 
   <table>
     <thead>
       <tr>
-        ${colNames.map((c) => `<th>${escapeHtml(c)}</th>`).join('')}
+        ${colNames.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}
       </tr>
     </thead>
     <tbody>
-      ${pdfRows.map((r) => `
+      ${pdfRows
+        .map(
+          (r) => `
         <tr>
-          ${colNames.map((c) => `<td>${escapeHtml(String(r[c] ?? '-'))}</td>`).join('')}
+          ${colNames.map((c) => `<td>${escapeHtml(String(r[c] ?? "-"))}</td>`).join("")}
         </tr>
-      `).join('')}
+      `,
+        )
+        .join("")}
     </tbody>
   </table>
 
@@ -1321,21 +1797,30 @@ async function route(request: Request, url: URL): Promise<Response> {
 </body>
 </html>`;
 
-        const puppeteer = await import('puppeteer-core');
-        const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
+        const puppeteer = await import("puppeteer-core");
+        const browser = await puppeteer.launch({
+          args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        });
         const pageP = await browser.newPage();
-       await pageP.setContent(html, { waitUntil: 'domcontentloaded' });
+        await pageP.setContent(html, { waitUntil: "domcontentloaded" });
         const pdfBuffer = await pageP.pdf({
-          format: 'A4',
+          format: "A4",
           printBackground: true,
-          margin: { top: '20px', bottom: '60px', left: '20px', right: '20px' },
+          margin: { top: "20px", bottom: "60px", left: "20px", right: "20px" },
           displayHeaderFooter: true,
-          headerTemplate: '<div></div>',
-          footerTemplate: '<div style="font-size: 10px; width: 100%; text-align: center; color: #94a3b8;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>'
+          headerTemplate: "<div></div>",
+          footerTemplate:
+            '<div style="font-size: 10px; width: 100%; text-align: center; color: #94a3b8;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
         });
         await browser.close();
-        if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0) throw new ApiError(500, 'PDF generation failed (empty)');
-        return new Response(new Uint8Array(pdfBuffer), { headers: { 'content-type': 'application/pdf', 'content-disposition': `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.pdf"` } });
+        if (!Buffer.isBuffer(pdfBuffer) || pdfBuffer.length === 0)
+          throw new ApiError(500, "PDF generation failed (empty)");
+        return new Response(new Uint8Array(pdfBuffer), {
+          headers: {
+            "content-type": "application/pdf",
+            "content-disposition": `attachment; filename="${(payload.reportName || table).replace(/[^a-z0-9.-]/gi, "_")}.pdf"`,
+          },
+        });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         throw new ApiError(500, `Failed to generate PDF. ${msg}`);
@@ -1351,8 +1836,21 @@ async function route(request: Request, url: URL): Promise<Response> {
   // Report history listing (stored files)
   if (method === "GET" && pathname === `${API_PREFIX}/reports/history`) {
     const user = currentUser(request, ["ADMIN"]);
-    const rows = db.prepare(`SELECT id,fileName,mimeType,sizeBytes,createdAt,ownerId FROM "StoredFile" WHERE purpose='report' ORDER BY createdAt DESC LIMIT 200`).all();
-    return json(rows.map((r: any) => ({ id: r.id, fileName: r.fileName, mimeType: r.mimeType, fileSize: r.sizeBytes, generatedAt: r.createdAt, ownerId: r.ownerId })));
+    const rows = db
+      .prepare(
+        `SELECT id,fileName,mimeType,sizeBytes,createdAt,ownerId FROM "StoredFile" WHERE purpose='report' ORDER BY createdAt DESC LIMIT 200`,
+      )
+      .all();
+    return json(
+      rows.map((r: any) => ({
+        id: r.id,
+        fileName: r.fileName,
+        mimeType: r.mimeType,
+        fileSize: r.sizeBytes,
+        generatedAt: r.createdAt,
+        ownerId: r.ownerId,
+      })),
+    );
   }
 
   // Delete stored report
@@ -1360,12 +1858,15 @@ async function route(request: Request, url: URL): Promise<Response> {
   if (routeMatch && method === "DELETE") {
     const user = currentUser(request, ["ADMIN"]);
     const id = Number(routeMatch[1]);
-    const row = db.prepare(`SELECT * FROM "StoredFile" WHERE id=? AND purpose='report'`).get(id) as { id: number; storageKey: string; ownerId: number } | undefined;
-    if (!row) throw new ApiError(404, 'Report not found');
-    if (row.ownerId !== user.id && user.role !== 'ADMIN') throw new ApiError(403, 'Not allowed');
-    const root = path.resolve(process.cwd(), process.env.FILE_STORAGE_PATH || 'storage');
+    const row = db.prepare(`SELECT * FROM "StoredFile" WHERE id=? AND purpose='report'`).get(id) as
+      { id: number; storageKey: string; ownerId: number } | undefined;
+    if (!row) throw new ApiError(404, "Report not found");
+    if (row.ownerId !== user.id && user.role !== "ADMIN") throw new ApiError(403, "Not allowed");
+    const root = path.resolve(process.cwd(), process.env.FILE_STORAGE_PATH || "storage");
     const target = path.resolve(root, row.storageKey);
-    try { await import('node:fs').then(m=>m.unlinkSync(target)); } catch {}
+    try {
+      await import("node:fs").then((m) => m.unlinkSync(target));
+    } catch {}
     db.prepare(`DELETE FROM "StoredFile" WHERE id=?`).run(id);
     return json({ ok: true });
   }
@@ -1462,8 +1963,7 @@ function fileSignature(id: number, expires: number) {
 async function downloadFile(id: number, url: URL) {
   const db = getApiDatabase();
   const file = db.prepare(`SELECT * FROM "StoredFile" WHERE id=?`).get(id) as
-    | { isPublic: number; storageKey: string; mimeType: string; fileName: string }
-    | undefined;
+    { isPublic: number; storageKey: string; mimeType: string; fileName: string } | undefined;
   if (!file) throw new ApiError(404, "File not found.");
   if (!file.isPublic) {
     const expires = Number(url.searchParams.get("expires")),

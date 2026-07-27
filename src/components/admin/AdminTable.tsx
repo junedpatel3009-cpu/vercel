@@ -10,10 +10,12 @@ interface AdminTableProps {
 
 export function AdminTable({ headers, children, className, emptyState }: AdminTableProps) {
   if (!children || (Array.isArray(children) && children.length === 0)) {
-    return emptyState || (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-sm font-medium text-muted-foreground">No records found</p>
-      </div>
+    return (
+      emptyState || (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-sm font-medium text-muted-foreground">No records found</p>
+        </div>
+      )
     );
   }
 
@@ -27,7 +29,7 @@ export function AdminTable({ headers, children, className, emptyState }: AdminTa
                 key={header}
                 className={cn(
                   "px-6 py-4 text-left font-bold uppercase tracking-wider text-muted-foreground text-[10px]",
-                  index === headers.length - 1 && "text-right"
+                  index === headers.length - 1 && "text-right",
                 )}
               >
                 {header}
@@ -35,9 +37,7 @@ export function AdminTable({ headers, children, className, emptyState }: AdminTa
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
-          {children}
-        </tbody>
+        <tbody className="divide-y divide-border">{children}</tbody>
       </table>
     </div>
   );
@@ -56,7 +56,7 @@ export function AdminTableRow({ children, onClick, className }: AdminTableRowPro
       className={cn(
         "group transition-all duration-200 hover:bg-muted/50",
         onClick && "cursor-pointer",
-        className
+        className,
       )}
     >
       {children}
@@ -72,12 +72,14 @@ interface AdminTableCellProps {
 
 export function AdminTableCell({ children, className, align = "left" }: AdminTableCellProps) {
   return (
-    <td className={cn(
-      "px-6 py-4 align-top",
-      align === "right" && "text-right",
-      align === "center" && "text-center",
-      className
-    )}>
+    <td
+      className={cn(
+        "px-6 py-4 align-top",
+        align === "right" && "text-right",
+        align === "center" && "text-center",
+        className,
+      )}
+    >
       {children}
     </td>
   );

@@ -137,7 +137,11 @@ function Dashboard() {
 
   if (viewer.role === "PROFESSIONAL") {
     return (
-      <ProfessionalDashboard displayName={displayName} viewer={viewer} openJobs={access.openJobs ?? []} />
+      <ProfessionalDashboard
+        displayName={displayName}
+        viewer={viewer}
+        openJobs={access.openJobs ?? []}
+      />
     );
   }
 

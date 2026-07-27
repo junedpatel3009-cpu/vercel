@@ -7,7 +7,7 @@ const port = Number(process.env.PORT || 3000);
 const server = http.createServer(async (incoming, outgoing) => {
   const start = Date.now();
   try {
-    const origin = 'http://' + (incoming.headers.host || ('localhost:' + port));
+    const origin = "http://" + (incoming.headers.host || "localhost:" + port);
     const init = {
       method: incoming.method,
       headers: new Headers(

@@ -20,9 +20,17 @@ export default function StaticMap({
 
   useEffect(() => {
     if (!ref.current) return;
-    mapRef.current = L.map(ref.current, { center: [lat, lng], zoom, dragging: false, zoomControl: false, doubleClickZoom: false, scrollWheelZoom: false, touchZoom: false });
+    mapRef.current = L.map(ref.current, {
+      center: [lat, lng],
+      zoom,
+      dragging: false,
+      zoomControl: false,
+      doubleClickZoom: false,
+      scrollWheelZoom: false,
+      touchZoom: false,
+    });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: "&copy; OpenStreetMap contributors",
     }).addTo(mapRef.current);
 
     L.marker([lat, lng]).addTo(mapRef.current);

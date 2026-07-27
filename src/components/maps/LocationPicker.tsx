@@ -12,7 +12,7 @@ type LocationData = {
 };
 
 export default function LocationPicker({
-  initial, 
+  initial,
   onChange,
 }: {
   initial?: { lat: number; lng: number };
@@ -38,7 +38,7 @@ export default function LocationPicker({
         leafletRef.current = L;
         mapRef.current = L.map(containerRef.current, { center: [21.1702, 72.8311], zoom: 5 });
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; OpenStreetMap contributors',
+          attribution: "&copy; OpenStreetMap contributors",
           maxZoom: 19,
         }).addTo(mapRef.current);
 

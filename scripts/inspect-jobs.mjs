@@ -1,7 +1,7 @@
-import Database from 'better-sqlite3';
-import path from 'node:path';
+import Database from "better-sqlite3";
+import path from "node:path";
 
-const dbPath = path.resolve(process.cwd(), 'prisma', 'app.db');
+const dbPath = path.resolve(process.cwd(), "prisma", "app.db");
 const db = new Database(dbPath, { readonly: true });
 
 function run() {
@@ -15,16 +15,17 @@ function run() {
     )
     .all();
 
-  console.log('DB:', dbPath);
-  console.log('Total ClientJob rows:', total);
-  console.log('By timing type:');
-  for (const row of byTiming) console.log(' ', row.timingType, row.c);
-  console.log('\nRecent jobs:');
-  for (const r of recent) console.log(' ', r.id, r.title, r.timingType, r.hourlyRate, r.status, r.createdAt);
+  console.log("DB:", dbPath);
+  console.log("Total ClientJob rows:", total);
+  console.log("By timing type:");
+  for (const row of byTiming) console.log(" ", row.timingType, row.c);
+  console.log("\nRecent jobs:");
+  for (const r of recent)
+    console.log(" ", r.id, r.title, r.timingType, r.hourlyRate, r.status, r.createdAt);
 }
 
 try {
   run();
 } catch (e) {
-  console.error('Error reading DB', e);
+  console.error("Error reading DB", e);
 }

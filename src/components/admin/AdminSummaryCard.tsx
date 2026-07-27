@@ -41,13 +41,15 @@ export function AdminSummaryCard({
         active
           ? "border-primary bg-primary/[0.03] shadow-sm ring-1 ring-primary/20"
           : "border-border hover:border-primary/30",
-        className
+        className,
       )}
     >
-      <div className={cn(
-        "grid h-12 w-12 place-items-center rounded-xl transition-colors",
-        variants[variant]
-      )}>
+      <div
+        className={cn(
+          "grid h-12 w-12 place-items-center rounded-xl transition-colors",
+          variants[variant],
+        )}
+      >
         <Icon className="h-6 w-6" />
       </div>
       <div className="mt-4 space-y-1">
@@ -57,15 +59,9 @@ export function AdminSummaryCard({
         <p className="text-3xl font-bold tracking-tight text-foreground">
           {typeof value === "number" ? value.toLocaleString() : value}
         </p>
-        {caption && (
-          <p className="text-xs text-muted-foreground font-medium">
-            {caption}
-          </p>
-        )}
+        {caption && <p className="text-xs text-muted-foreground font-medium">{caption}</p>}
       </div>
-      {active && (
-        <div className="absolute right-0 top-0 h-1.5 w-full bg-primary" />
-      )}
+      {active && <div className="absolute right-0 top-0 h-1.5 w-full bg-primary" />}
     </button>
   );
 }

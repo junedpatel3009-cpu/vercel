@@ -1,7 +1,7 @@
-const { createMultibyteDecoder } = require('@exodus/bytes/multi-byte.js')
-const { setMultibyteDecoder } = require('@exodus/bytes/fallback/encoding.js')
+const { createMultibyteDecoder } = require("@exodus/bytes/multi-byte.js");
+const { setMultibyteDecoder } = require("@exodus/bytes/fallback/encoding.js");
 
-setMultibyteDecoder(createMultibyteDecoder)
+setMultibyteDecoder(createMultibyteDecoder);
 
 const {
   TextDecoder,
@@ -10,7 +10,7 @@ const {
   getBOMEncoding,
   labelToName,
   legacyHookDecode,
-} = require('@exodus/bytes/fallback/encoding.js')
+} = require("@exodus/bytes/fallback/encoding.js");
 
 module.exports = {
   TextDecoder,
@@ -19,4 +19,4 @@ module.exports = {
   getBOMEncoding,
   labelToName,
   legacyHookDecode,
-}
+};

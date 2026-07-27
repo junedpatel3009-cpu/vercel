@@ -44,21 +44,25 @@ async function ensureServiceCategories() {
       prisma.serviceCategory.create({
         data: {
           name,
-          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""),
-          iconName: {
-            "Home Services": "Wrench",
-            Development: "Code",
-            Design: "Paintbrush",
-            Photography: "Camera",
-            Marketing: "Megaphone",
-            Tutoring: "GraduationCap",
-            Repair: "Hammer",
-            Cleaning: "Sparkles",
-            Moving: "Truck",
-            Events: "Music",
-            Business: "Briefcase",
-            Wellness: "HeartPulse",
-          }[name] ?? "",
+          slug: name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
+          iconName:
+            {
+              "Home Services": "Wrench",
+              Development: "Code",
+              Design: "Paintbrush",
+              Photography: "Camera",
+              Marketing: "Megaphone",
+              Tutoring: "GraduationCap",
+              Repair: "Hammer",
+              Cleaning: "Sparkles",
+              Moving: "Truck",
+              Events: "Music",
+              Business: "Briefcase",
+              Wellness: "HeartPulse",
+            }[name] ?? "",
           sortOrder: index + 1,
           createdAt: now,
           updatedAt: now,

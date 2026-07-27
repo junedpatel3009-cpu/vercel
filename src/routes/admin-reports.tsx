@@ -17,11 +17,7 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ReportExportActions } from "@/components/ReportExportActions";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSummaryCard } from "@/components/admin/AdminSummaryCard";
@@ -120,7 +116,18 @@ function AdminReportsPage() {
       void loadRows(1);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [selectedTable, pageSize, filters.from, filters.to, filters.search, filters.status, filters.category, filters.userType, filters.paymentStatus, filters.jobStatus]);
+  }, [
+    selectedTable,
+    pageSize,
+    filters.from,
+    filters.to,
+    filters.search,
+    filters.status,
+    filters.category,
+    filters.userType,
+    filters.paymentStatus,
+    filters.jobStatus,
+  ]);
 
   async function loadTables() {
     setTableLoading(true);
@@ -128,7 +135,11 @@ function AdminReportsPage() {
     try {
       const res = await fetch("/api/v1/reports/tables");
       if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
-      const result = await parseBackendJson<{ tables: ReportTableOption[]; status: string; error?: string }>(res);
+      const result = await parseBackendJson<{
+        tables: ReportTableOption[];
+        status: string;
+        error?: string;
+      }>(res);
       if (result?.status === "connected") {
         const nextTables = Array.isArray(result.tables) ? result.tables : [];
         setTables(nextTables);
@@ -151,7 +162,9 @@ function AdminReportsPage() {
       const params = new URLSearchParams();
       if (filters.from) params.set("from", filters.from);
       if (filters.to) params.set("to", filters.to);
-      const res = await fetch(`/api/v1/reports/summary${params.toString() ? `?${params.toString()}` : ""}`);
+      const res = await fetch(
+        `/api/v1/reports/summary${params.toString() ? `?${params.toString()}` : ""}`,
+      );
       if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
       const result = await parseBackendJson<SummaryPayload>(res);
       setSummary(result);
@@ -187,7 +200,12 @@ function AdminReportsPage() {
         }),
       });
       if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
-      const result = await parseBackendJson<{ columns: string[]; rows: ReportRow[]; total: number; page: number }>(res);
+      const result = await parseBackendJson<{
+        columns: string[];
+        rows: ReportRow[];
+        total: number;
+        page: number;
+      }>(res);
       setColumns(result.columns || []);
       setRows(result.rows || []);
       setTotalRows(result.total || 0);
@@ -206,7 +224,9 @@ function AdminReportsPage() {
     });
     const printWindow = window.open("", "_blank", "noopener,noreferrer");
     if (!printWindow) return;
-    printWindow.document.write(`<!doctype html><html><head><title>${selectedTable} report</title><style>body{font-family:Arial,sans-serif;padding:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f8fafc}</style></head><body><h1>${selectedTable} report</h1><p>Generated on ${new Date().toLocaleString()}</p><table><thead><tr>${columns.map((column) => `<th>${column}</th>`).join("")}</tr></thead><tbody>${reportRows.map((row) => `<tr><td>${row.replace(/\|/g, "</td><td>")}</td></tr>`).join("")}</tbody></table></body></html>`);
+    printWindow.document.write(
+      `<!doctype html><html><head><title>${selectedTable} report</title><style>body{font-family:Arial,sans-serif;padding:24px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;font-size:12px}th{background:#f8fafc}</style></head><body><h1>${selectedTable} report</h1><p>Generated on ${new Date().toLocaleString()}</p><table><thead><tr>${columns.map((column) => `<th>${column}</th>`).join("")}</tr></thead><tbody>${reportRows.map((row) => `<tr><td>${row.replace(/\|/g, "</td><td>")}</td></tr>`).join("")}</tbody></table></body></html>`,
+    );
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
@@ -242,17 +262,26 @@ function AdminReportsPage() {
 
   function getIcon(iconName: string) {
     switch (iconName) {
-      case "Users": return Users;
-      case "Building2": return Building2;
-      case "BriefcaseBusiness": return BriefcaseBusiness;
-      case "ReceiptText": return ReceiptText;
-      case "Wallet": return Wallet;
-      case "Clock3": return Clock3;
-      default: return TrendingUp;
+      case "Users":
+        return Users;
+      case "Building2":
+        return Building2;
+      case "BriefcaseBusiness":
+        return BriefcaseBusiness;
+      case "ReceiptText":
+        return ReceiptText;
+      case "Wallet":
+        return Wallet;
+      case "Clock3":
+        return Clock3;
+      default:
+        return TrendingUp;
     }
   }
 
-  const userAvatarUrl = data.viewer?.email ? "https://i.pravatar.cc/100?u=" + data.viewer.email : undefined;
+  const userAvatarUrl = data.viewer?.email
+    ? "https://i.pravatar.cc/100?u=" + data.viewer.email
+    : undefined;
 
   return (
     <AppShell userName={displayName} userRole="Admin" userAvatarUrl={userAvatarUrl}>
@@ -277,7 +306,10 @@ function AdminReportsPage() {
       {summaryLoading ? (
         <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-32 rounded-2xl border border-border bg-card animate-pulse" />
+            <div
+              key={index}
+              className="h-32 rounded-2xl border border-border bg-card animate-pulse"
+            />
           ))}
         </div>
       ) : summary?.cards?.length ? (
@@ -310,7 +342,9 @@ function AdminReportsPage() {
         <div className="p-6 bg-muted/20 border-b border-border">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Database Table</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                Database Table
+              </label>
               <select
                 value={selectedTable}
                 onChange={(event) => {
@@ -328,77 +362,113 @@ function AdminReportsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Quick Search</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                Quick Search
+              </label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={filters.search}
-                  onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, search: event.target.value }))
+                  }
                   placeholder="Filter records..."
                   className="h-11 pl-9 rounded-xl bg-background border-border shadow-sm"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Date Range (Start)</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                Date Range (Start)
+              </label>
               <Input
                 type="date"
                 value={filters.from}
-                onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, from: event.target.value }))
+                }
                 className="h-11 rounded-xl bg-background border-border shadow-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">More Filters</label>
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
+                More Filters
+              </label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-11 w-full rounded-xl font-bold bg-background border-border shadow-sm">
+                  <Button
+                    variant="outline"
+                    className="h-11 w-full rounded-xl font-bold bg-background border-border shadow-sm"
+                  >
                     <SlidersHorizontal className="mr-2 h-4 w-4" />
                     Advanced Filters
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-6 rounded-2xl shadow-2xl border-border" align="end">
+                <PopoverContent
+                  className="w-80 p-6 rounded-2xl shadow-2xl border-border"
+                  align="end"
+                >
                   <div className="space-y-4">
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Additional Query Filters</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      Additional Query Filters
+                    </p>
                     <div className="space-y-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Status
+                        </label>
                         <Input
                           value={filters.status}
-                          onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+                          onChange={(event) =>
+                            setFilters((current) => ({ ...current, status: event.target.value }))
+                          }
                           placeholder="e.g. OPEN, DRAFT"
                           className="h-9 rounded-lg text-sm"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Category</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          Category
+                        </label>
                         <Input
                           value={filters.category}
-                          onChange={(event) => setFilters((current) => ({ ...current, category: event.target.value }))}
+                          onChange={(event) =>
+                            setFilters((current) => ({ ...current, category: event.target.value }))
+                          }
                           placeholder="e.g. Design, Dev"
                           className="h-9 rounded-lg text-sm"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User Type</label>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          User Type
+                        </label>
                         <Input
                           value={filters.userType}
-                          onChange={(event) => setFilters((current) => ({ ...current, userType: event.target.value }))}
+                          onChange={(event) =>
+                            setFilters((current) => ({ ...current, userType: event.target.value }))
+                          }
                           placeholder="CLIENT / PROFESSIONAL"
                           className="h-9 rounded-lg text-sm"
                         />
                       </div>
                     </div>
-                    <Button variant="secondary" className="w-full rounded-xl font-bold h-10 mt-2" onClick={() => setFilters({
-                      from: filters.from,
-                      to: filters.to,
-                      search: filters.search,
-                      status: "",
-                      category: "",
-                      userType: "",
-                      paymentStatus: "",
-                      jobStatus: "",
-                    })}>
+                    <Button
+                      variant="secondary"
+                      className="w-full rounded-xl font-bold h-10 mt-2"
+                      onClick={() =>
+                        setFilters({
+                          from: filters.from,
+                          to: filters.to,
+                          search: filters.search,
+                          status: "",
+                          category: "",
+                          userType: "",
+                          paymentStatus: "",
+                          jobStatus: "",
+                        })
+                      }
+                    >
                       Clear All Extra Filters
                     </Button>
                   </div>
@@ -415,22 +485,49 @@ function AdminReportsPage() {
                 <div className="h-2 w-2 rounded-full bg-emerald-500" />
                 {selectedTable ? `Table: ${selectedTable}` : "Choose a table to begin"}
               </p>
-              <p className="text-xs text-muted-foreground font-medium mt-0.5">{totalRows.toLocaleString()} total records found</p>
+              <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                {totalRows.toLocaleString()} total records found
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <select
                 value={pageSize}
-                onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
                 className="rounded-xl border border-border bg-background px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                {[10, 25, 50, 100].map((size) => (<option key={size} value={size}>{size} per page</option>))}
+                {[10, 25, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size} per page
+                  </option>
+                ))}
               </select>
               <div className="flex gap-1">
-                <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl font-bold" onClick={() => loadRows(Math.max(1, page - 1))} disabled={rowLoading || page <= 1}>Prev</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl font-bold"
+                  onClick={() => loadRows(Math.max(1, page - 1))}
+                  disabled={rowLoading || page <= 1}
+                >
+                  Prev
+                </Button>
                 <div className="flex items-center justify-center px-4 bg-muted/30 rounded-xl text-xs font-bold tabular-nums">
                   {page} / {pageCount}
                 </div>
-                <Button type="button" variant="outline" size="sm" className="h-9 rounded-xl font-bold" onClick={() => loadRows(Math.min(pageCount, page + 1))} disabled={rowLoading || page >= pageCount}>Next</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl font-bold"
+                  onClick={() => loadRows(Math.min(pageCount, page + 1))}
+                  disabled={rowLoading || page >= pageCount}
+                >
+                  Next
+                </Button>
               </div>
             </div>
           </div>
@@ -439,18 +536,29 @@ function AdminReportsPage() {
             {rowLoading && rows.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-4 py-24">
                 <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Fetching Dataset...</p>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                  Fetching Dataset...
+                </p>
               </div>
             ) : rows.length > 0 ? (
               <table className="w-full text-sm border-collapse">
                 <thead className="bg-muted/50 text-left border-b border-border">
                   <tr>
                     {columns.map((column) => (
-                      <th key={column} className="group cursor-pointer whitespace-nowrap px-6 py-4 font-bold text-[10px] uppercase tracking-[0.15em] text-muted-foreground hover:text-primary transition-colors" onClick={() => toggleSort(column)}>
+                      <th
+                        key={column}
+                        className="group cursor-pointer whitespace-nowrap px-6 py-4 font-bold text-[10px] uppercase tracking-[0.15em] text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() => toggleSort(column)}
+                      >
                         <div className="flex items-center gap-2">
                           {column}
                           {sortColumn === column ? (
-                            <TrendingUp className={cn("h-3 w-3 transition-transform", sortDirection === "desc" && "rotate-180")} />
+                            <TrendingUp
+                              className={cn(
+                                "h-3 w-3 transition-transform",
+                                sortDirection === "desc" && "rotate-180",
+                              )}
+                            />
                           ) : (
                             <TrendingUp className="h-3 w-3 opacity-0 group-hover:opacity-30 transition-opacity" />
                           )}
@@ -461,9 +569,15 @@ function AdminReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {sortedRows.map((row, index) => (
-                    <tr key={`${selectedTable}-${index}`} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={`${selectedTable}-${index}`}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       {columns.map((column) => (
-                        <td key={`${column}-${index}`} className="max-w-[300px] truncate px-6 py-4 text-foreground font-medium">
+                        <td
+                          key={`${column}-${index}`}
+                          className="max-w-[300px] truncate px-6 py-4 text-foreground font-medium"
+                        >
                           {String(row[column] ?? "-")}
                         </td>
                       ))}

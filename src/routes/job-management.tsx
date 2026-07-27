@@ -434,7 +434,9 @@ function JobManagement() {
                     <p className="font-medium text-foreground">{job.clientName}</p>
                   </AdminTableCell>
                   <AdminTableCell>
-                    <p className="font-medium text-foreground">{job.professionalName || "Not assigned"}</p>
+                    <p className="font-medium text-foreground">
+                      {job.professionalName || "Not assigned"}
+                    </p>
                   </AdminTableCell>
                   <AdminTableCell>
                     <div className="flex flex-wrap gap-1.5">
@@ -503,7 +505,9 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
               <span className="text-border">|</span>
               <span>{job.category}</span>
               <span className="text-border">|</span>
-              <span>Uploaded by {job.clientName} on {formatDateTime(job.createdAt)}</span>
+              <span>
+                Uploaded by {job.clientName} on {formatDateTime(job.createdAt)}
+              </span>
             </p>
           </div>
           <button
@@ -630,7 +634,9 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
                 ) : (
                   <div className="flex flex-col items-center justify-center py-6 text-center rounded-xl border-2 border-dashed border-border">
                     <Paperclip className="h-8 w-8 text-muted-foreground/40" />
-                    <p className="mt-2 text-sm text-muted-foreground font-medium">No client files uploaded.</p>
+                    <p className="mt-2 text-sm text-muted-foreground font-medium">
+                      No client files uploaded.
+                    </p>
                   </div>
                 )}
               </InfoPanel>
@@ -642,7 +648,10 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
               {job.requests.length ? (
                 <div className="space-y-4">
                   {job.requests.map((request) => (
-                    <div key={request.id} className="rounded-2xl border border-border bg-muted/20 p-5 hover:bg-muted/40 transition-colors">
+                    <div
+                      key={request.id}
+                      className="rounded-2xl border border-border bg-muted/20 p-5 hover:bg-muted/40 transition-colors"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
                           <p className="font-bold text-foreground">{request.professionalName}</p>
@@ -650,22 +659,37 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
                             {request.professionalEmail}
                           </p>
                         </div>
-                        <Badge variant={request.status === "ACCEPTED" ? "default" : "outline"} className="rounded-lg">
+                        <Badge
+                          variant={request.status === "ACCEPTED" ? "default" : "outline"}
+                          className="rounded-lg"
+                        >
                           {formatEnum(request.status)}
                         </Badge>
                       </div>
                       <div className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-primary/60" />
-                          <span>Bid: <span className="font-bold text-foreground">{request.bidAmount ? formatMoney(request.bidAmount) : "Not set"}</span></span>
+                          <span>
+                            Bid:{" "}
+                            <span className="font-bold text-foreground">
+                              {request.bidAmount ? formatMoney(request.bidAmount) : "Not set"}
+                            </span>
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock3 className="h-4 w-4 text-primary/60" />
-                          <span>Duration: <span className="font-bold text-foreground">{request.duration || "Not set"}</span></span>
+                          <span>
+                            Duration:{" "}
+                            <span className="font-bold text-foreground">
+                              {request.duration || "Not set"}
+                            </span>
+                          </span>
                         </div>
                       </div>
                       <div className="mt-4 p-4 rounded-xl border border-border bg-background">
-                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Cover Letter</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                          Cover Letter
+                        </p>
                         <p className="whitespace-pre-wrap text-sm leading-relaxed italic">
                           "{request.coverLetter || "No cover letter."}"
                         </p>
@@ -680,7 +704,9 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center rounded-xl border-2 border-dashed border-border">
                   <Mail className="h-10 w-10 text-muted-foreground/40" />
-                  <p className="mt-3 text-sm text-muted-foreground font-medium">No proposals submitted for this job.</p>
+                  <p className="mt-3 text-sm text-muted-foreground font-medium">
+                    No proposals submitted for this job.
+                  </p>
                 </div>
               )}
             </InfoPanel>
@@ -689,18 +715,24 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
               {job.workUploads.length ? (
                 <div className="space-y-4">
                   {job.workUploads.map((upload) => (
-                    <div key={upload.id} className="rounded-2xl border border-border bg-muted/20 p-5 hover:bg-muted/40 transition-colors">
+                    <div
+                      key={upload.id}
+                      className="rounded-2xl border border-border bg-muted/20 p-5 hover:bg-muted/40 transition-colors"
+                    >
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
                           <p className="font-bold text-foreground">
                             Round {upload.roundNumber}: {upload.title}
                           </p>
                           <p className="text-xs text-muted-foreground font-medium">
-                            Uploaded by {upload.professionalName} · {formatDateTime(upload.createdAt)}
+                            Uploaded by {upload.professionalName} ·{" "}
+                            {formatDateTime(upload.createdAt)}
                           </p>
                         </div>
                       </div>
-                      <p className="mt-3 text-sm text-muted-foreground leading-relaxed italic">"{upload.note}"</p>
+                      <p className="mt-3 text-sm text-muted-foreground leading-relaxed italic">
+                        "{upload.note}"
+                      </p>
                       <div className="mt-4 space-y-3">
                         {upload.fileName ? (
                           <FileRow
@@ -720,7 +752,9 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center rounded-xl border-2 border-dashed border-border">
                   <Upload className="h-10 w-10 text-muted-foreground/40" />
-                  <p className="mt-3 text-sm text-muted-foreground font-medium">No professional work uploads yet.</p>
+                  <p className="mt-3 text-sm text-muted-foreground font-medium">
+                    No professional work uploads yet.
+                  </p>
                 </div>
               )}
             </InfoPanel>
@@ -875,11 +909,14 @@ function DisputeDetailModal({
                 <Paperclip className="h-12 w-12 text-muted-foreground/40" />
                 <h4 className="mt-4 font-bold text-foreground">No evidence files attached</h4>
                 <p className="mt-2 max-w-xs text-sm text-muted-foreground leading-relaxed">
-                  Images, videos, PDFs, screenshots, and admin notes will appear here when the evidence table is connected.
+                  Images, videos, PDFs, screenshots, and admin notes will appear here when the
+                  evidence table is connected.
                 </p>
               </div>
               <div className="mt-6 rounded-2xl border border-border bg-primary/5 p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">Conversation Timeline</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
+                  Conversation Timeline
+                </p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Customer/provider messages and admin notes are ready to display once message
                   history is exposed to this admin loader.
@@ -925,7 +962,8 @@ function DisputeDetailModal({
                   Admin Note
                 </p>
                 <p className="text-sm text-amber-900/70 leading-relaxed">
-                  Carefully review all evidence and party statements before finalizing the resolution status. Status changes are logged for auditing.
+                  Carefully review all evidence and party statements before finalizing the
+                  resolution status. Status changes are logged for auditing.
                 </p>
               </div>
             </InfoPanel>
@@ -994,7 +1032,10 @@ function FilterSelect({
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className="h-10 rounded-xl shadow-sm bg-background w-full sm:w-44">
+      <SelectTrigger
+        aria-label={label}
+        className="h-10 rounded-xl shadow-sm bg-background w-full sm:w-44"
+      >
         <SelectValue placeholder={label} />
       </SelectTrigger>
       <SelectContent>
@@ -1051,13 +1092,22 @@ function ActivityLogRows({
         <tbody className="divide-y divide-border">
           {rows.map((row, index) => (
             <tr key={`${row.action}-${index}`} className="hover:bg-muted/30 transition-colors">
-              <td className="px-6 py-4 text-muted-foreground tabular-nums">{formatDateTime(row.date)}</td>
+              <td className="px-6 py-4 text-muted-foreground tabular-nums">
+                {formatDateTime(row.date)}
+              </td>
               <td className="px-6 py-4 font-medium text-foreground">{row.user}</td>
               <td className="px-6 py-4">
-                <Badge variant="outline" className="rounded-lg text-[10px] uppercase tracking-wider">{row.role}</Badge>
+                <Badge
+                  variant="outline"
+                  className="rounded-lg text-[10px] uppercase tracking-wider"
+                >
+                  {row.role}
+                </Badge>
               </td>
               <td className="px-6 py-4 font-bold text-primary">{row.action}</td>
-              <td className="px-6 py-4 text-muted-foreground leading-relaxed max-w-xs truncate">{row.description}</td>
+              <td className="px-6 py-4 text-muted-foreground leading-relaxed max-w-xs truncate">
+                {row.description}
+              </td>
               <td className="px-6 py-4 text-muted-foreground/60 italic text-xs">Not logged</td>
             </tr>
           ))}
@@ -1113,7 +1163,9 @@ function FileRow({
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-foreground">{title}</p>
-          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">{subtitle}</p>
+          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">
+            {subtitle}
+          </p>
         </div>
       </div>
       {href ? (

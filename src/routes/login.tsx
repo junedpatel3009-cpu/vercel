@@ -89,7 +89,10 @@ const submitLogin = createServerFn({ method: "POST" })
       }
 
       if (passwordCheck.needsUpgrade) {
-        await prisma.user.update({ where: { email }, data: { passwordHash: hashPassword(data.password) } });
+        await prisma.user.update({
+          where: { email },
+          data: { passwordHash: hashPassword(data.password) },
+        });
       }
 
       await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

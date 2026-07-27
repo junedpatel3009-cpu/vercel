@@ -87,11 +87,7 @@ const professionalProfileSchema = z.object({
 type ProfessionalProfileForm = z.infer<typeof professionalProfileSchema>;
 
 type VerificationDocumentKey =
-  | "governmentIdUrl"
-  | "tradeLicenseUrl"
-  | "certificationsText"
-  | "insuranceUrl"
-  | "selfieUrl";
+  "governmentIdUrl" | "tradeLicenseUrl" | "certificationsText" | "insuranceUrl" | "selfieUrl";
 
 type LocationPickerTarget = "professionalCity" | "serviceArea" | "address";
 

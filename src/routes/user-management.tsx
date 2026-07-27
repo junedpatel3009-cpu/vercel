@@ -40,12 +40,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSummaryCard } from "@/components/admin/AdminSummaryCard";
 import { AdminSection } from "@/components/admin/AdminSection";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
-import {
-  formatDate,
-  formatDateTime,
-  formatEnum,
-  formatMoney,
-} from "@/lib/admin-formatters";
+import { formatDate, formatDateTime, formatEnum, formatMoney } from "@/lib/admin-formatters";
 import {
   getAdminManagedUserDetails,
   type AdminManagedUserDetail,
@@ -177,10 +172,11 @@ function UserManagement() {
   const displayName =
     `${data.viewer.firstName} ${data.viewer.lastName}`.trim() || data.viewer.email;
   const selectedUser = users.find((user) => user.id === selectedUserId) || null;
-  const userDetails = (data.userDetails ?? {}) as Record<number, AdminManagedUserDetail | undefined>;
-  const selectedUserDetail = selectedUserId
-    ? userDetails[selectedUserId]
-    : undefined;
+  const userDetails = (data.userDetails ?? {}) as Record<
+    number,
+    AdminManagedUserDetail | undefined
+  >;
+  const selectedUserDetail = selectedUserId ? userDetails[selectedUserId] : undefined;
 
   async function handleStatusChange(user: AdminUserRecord, isActive: boolean) {
     const actionKey = `status-${user.id}`;
@@ -292,7 +288,13 @@ function UserManagement() {
               </span>
             </span>
           </div>
-          <Button type="button" size="sm" variant="outline" className="rounded-xl font-bold uppercase tracking-widest text-[10px]" onClick={() => setSummaryFilter(null)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="rounded-xl font-bold uppercase tracking-widest text-[10px]"
+            onClick={() => setSummaryFilter(null)}
+          >
             Clear Filter
           </Button>
         </div>
@@ -423,19 +425,26 @@ function UserList({
                     className="h-14 w-14 rounded-2xl object-cover ring-2 ring-background shadow-sm"
                     alt=""
                   />
-                  <div className={cn(
-                    "absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-background shadow-sm",
-                    user.isActive ? "bg-emerald-500" : "bg-slate-300"
-                  )} />
+                  <div
+                    className={cn(
+                      "absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-background shadow-sm",
+                      user.isActive ? "bg-emerald-500" : "bg-slate-300",
+                    )}
+                  />
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="truncate text-lg font-bold text-foreground group-hover:text-primary transition-colors">{fullName}</h3>
+                    <h3 className="truncate text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                      {fullName}
+                    </h3>
                     <Badge variant={user.isActive ? "default" : "outline"} className="rounded-lg">
                       {user.isActive ? "Active" : "Inactive"}
                     </Badge>
                     {isProfessionals ? (
-                      <Badge variant={user.isVerified ? "default" : "secondary"} className="rounded-lg">
+                      <Badge
+                        variant={user.isVerified ? "default" : "secondary"}
+                        className="rounded-lg"
+                      >
                         {user.isVerified ? "Verified" : "Pending"}
                       </Badge>
                     ) : null}
@@ -462,7 +471,9 @@ function UserList({
                 onKeyDown={(event) => event.stopPropagation()}
               >
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-bold text-foreground uppercase tracking-wider text-[11px]">Account Access</span>
+                  <span className="font-bold text-foreground uppercase tracking-wider text-[11px]">
+                    Account Access
+                  </span>
                   <Switch
                     checked={user.isActive}
                     disabled={pendingAction !== null}
@@ -471,12 +482,16 @@ function UserList({
                   />
                 </div>
                 {pendingAction === statusKey && (
-                  <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Saving status...</p>
+                  <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                    Saving status...
+                  </p>
                 )}
                 {isProfessionals && onVerificationChange && (
                   <>
                     <div className="border-t border-border pt-4 flex items-center justify-between gap-3 text-sm">
-                      <span className="font-bold text-foreground uppercase tracking-wider text-[11px]">Verification</span>
+                      <span className="font-bold text-foreground uppercase tracking-wider text-[11px]">
+                        Verification
+                      </span>
                       <Switch
                         checked={user.isVerified}
                         disabled={pendingAction !== null}
@@ -485,7 +500,9 @@ function UserList({
                       />
                     </div>
                     {pendingAction === verifiedKey && (
-                      <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Saving verification...</p>
+                      <p className="text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                        Saving verification...
+                      </p>
                     )}
                   </>
                 )}
@@ -573,20 +590,38 @@ function UserDetailDialog({
               />
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                  <DialogTitle className="text-3xl font-bold tracking-tight">{fullName}</DialogTitle>
-                  <Badge className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">{formatEnum(user.role)}</Badge>
-                  <Badge variant={user.isActive ? "default" : "outline"} className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                  <DialogTitle className="text-3xl font-bold tracking-tight">
+                    {fullName}
+                  </DialogTitle>
+                  <Badge className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                    {formatEnum(user.role)}
+                  </Badge>
+                  <Badge
+                    variant={user.isActive ? "default" : "outline"}
+                    className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]"
+                  >
                     {user.isActive ? "Active" : "Inactive"}
                   </Badge>
                   {isProfessional ? (
-                    <Badge variant={user.isVerified ? "default" : "secondary"} className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                    <Badge
+                      variant={user.isVerified ? "default" : "secondary"}
+                      className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]"
+                    >
                       {user.isVerified ? "Verified" : "Pending Review"}
                     </Badge>
                   ) : null}
                 </div>
                 <div className="mt-3 flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-2 text-base font-medium text-muted-foreground">
-                  <span className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" />{user.email}</span>
-                  {user.phone ? <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" />{user.phone}</span> : null}
+                  <span className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" />
+                    {user.email}
+                  </span>
+                  {user.phone ? (
+                    <span className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" />
+                      {user.phone}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -619,9 +654,22 @@ function UserDetailDialog({
 
           <Tabs defaultValue="overview" className="mt-10">
             <TabsList className="grid w-full grid-cols-3 h-14 rounded-2xl bg-muted p-1 shadow-inner">
-              <TabsTrigger value="overview" className="rounded-xl font-bold text-sm data-[state=active]:shadow-md">Overview</TabsTrigger>
-              <TabsTrigger value="projects" className="rounded-xl font-bold text-sm data-[state=active]:shadow-md">Projects ({detail?.projectCount || 0})</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-xl font-bold text-sm data-[state=active]:shadow-md">
+              <TabsTrigger
+                value="overview"
+                className="rounded-xl font-bold text-sm data-[state=active]:shadow-md"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="projects"
+                className="rounded-xl font-bold text-sm data-[state=active]:shadow-md"
+              >
+                Projects ({detail?.projectCount || 0})
+              </TabsTrigger>
+              <TabsTrigger
+                value="payments"
+                className="rounded-xl font-bold text-sm data-[state=active]:shadow-md"
+              >
                 Payments ({detail?.transactions.length || 0})
               </TabsTrigger>
             </TabsList>
@@ -686,7 +734,10 @@ function UserDetailDialog({
                   ) : null}
                   <InfoRow label="Transactions" value={String(detail?.transactions.length || 0)} />
                 </DetailPanel>
-                <DetailPanel title="Security \u0026 Access Control" className="md:col-span-2 bg-primary/[0.02]">
+                <DetailPanel
+                  title="Security \u0026 Access Control"
+                  className="md:col-span-2 bg-primary/[0.02]"
+                >
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-6 rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-sm">
                     <div>
                       <p className="text-lg font-bold text-primary flex items-center gap-2">
@@ -708,7 +759,10 @@ function UserDetailDialog({
                     />
                   </div>
 
-                  <form className="mt-8 space-y-5 border-t border-border pt-8" onSubmit={submitPasswordChange}>
+                  <form
+                    className="mt-8 space-y-5 border-t border-border pt-8"
+                    onSubmit={submitPasswordChange}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="grid h-8 w-8 place-items-center rounded-lg bg-amber-100 text-amber-700">
                         <KeyRound className="h-4 w-4" />
@@ -717,7 +771,9 @@ function UserDetailDialog({
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">New Password</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                          New Password
+                        </label>
                         <Input
                           type="password"
                           value={newPassword}
@@ -729,7 +785,9 @@ function UserDetailDialog({
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirm Password</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                          Confirm Password
+                        </label>
                         <Input
                           type="password"
                           value={confirmPassword}
@@ -745,11 +803,19 @@ function UserDetailDialog({
                       Security tip: Use 8+ characters with mixed case, numbers, and symbols.
                     </p>
                     {passwordMessage && (
-                      <div className={cn(
-                        "rounded-xl p-4 text-sm font-bold flex items-center gap-2 animate-in fade-in duration-300",
-                        passwordMessage.type === "error" ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                      )}>
-                        {passwordMessage.type === "error" ? <ShieldCheck className="h-4 w-4 text-rose-600" /> : <ShieldCheck className="h-4 w-4" />}
+                      <div
+                        className={cn(
+                          "rounded-xl p-4 text-sm font-bold flex items-center gap-2 animate-in fade-in duration-300",
+                          passwordMessage.type === "error"
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                        )}
+                      >
+                        {passwordMessage.type === "error" ? (
+                          <ShieldCheck className="h-4 w-4 text-rose-600" />
+                        ) : (
+                          <ShieldCheck className="h-4 w-4" />
+                        )}
                         {passwordMessage.text}
                       </div>
                     )}
@@ -774,16 +840,30 @@ function UserDetailDialog({
               <div className="grid gap-4">
                 {detail?.projects.length ? (
                   detail.projects.map((project) => (
-                    <div key={project.id} className="group rounded-2xl border border-border p-5 hover:border-primary/30 transition-all hover:bg-muted/30">
+                    <div
+                      key={project.id}
+                      className="group rounded-2xl border border-border p-5 hover:border-primary/30 transition-all hover:bg-muted/30"
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <p className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{project.title}</p>
+                          <p className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                            {project.title}
+                          </p>
                           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground font-medium">
-                            <span className="flex items-center gap-1.5"><FolderKanban className="h-3.5 w-3.5" />{project.category}</span>
-                            <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{formatDate(project.createdAt)}</span>
+                            <span className="flex items-center gap-1.5">
+                              <FolderKanban className="h-3.5 w-3.5" />
+                              {project.category}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5" />
+                              {formatDate(project.createdAt)}
+                            </span>
                           </div>
                         </div>
-                        <Badge variant="outline" className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                        <Badge
+                          variant="outline"
+                          className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]"
+                        >
                           {formatEnum(project.trackingStatus || project.status)}
                         </Badge>
                       </div>
@@ -821,10 +901,13 @@ function UserDetailDialog({
                             <Wallet className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="font-bold text-foreground group-hover:text-emerald-700 transition-colors">{transaction.projectTitle}</p>
+                            <p className="font-bold text-foreground group-hover:text-emerald-700 transition-colors">
+                              {transaction.projectTitle}
+                            </p>
                             <p className="text-sm text-muted-foreground font-medium mt-0.5">
                               {isProfessional ? "From Client" : "To Professional"}:{" "}
-                              <span className="text-foreground">{transaction.counterpartName}</span> · {formatDateTime(transaction.createdAt)}
+                              <span className="text-foreground">{transaction.counterpartName}</span>{" "}
+                              · {formatDateTime(transaction.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -833,7 +916,10 @@ function UserDetailDialog({
                         <p className="text-2xl font-bold tracking-tight text-foreground">
                           {formatMoney(transaction.amount, transaction.currency)}
                         </p>
-                        <Badge variant={transaction.status === "COMPLETED" ? "default" : "outline"} className="mt-1 rounded-lg uppercase tracking-widest text-[9px] px-2">
+                        <Badge
+                          variant={transaction.status === "COMPLETED" ? "default" : "outline"}
+                          className="mt-1 rounded-lg uppercase tracking-widest text-[9px] px-2"
+                        >
                           {formatEnum(transaction.status)}
                         </Badge>
                       </div>
@@ -865,13 +951,23 @@ function DetailStat({
       <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
         <Icon className="h-5 w-5" />
       </div>
-      <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
       <p className="mt-1 text-sm font-bold text-foreground">{value}</p>
     </div>
   );
 }
 
-function DetailPanel({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
+function DetailPanel({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <section className={cn("rounded-2xl border border-border p-6 shadow-sm bg-card", className)}>
       <h3 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2 mb-5">

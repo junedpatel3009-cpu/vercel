@@ -92,7 +92,10 @@ const resetPassword = createServerFn({ method: "POST" })
         };
       }
 
-      await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(data.password) } });
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hashPassword(data.password) },
+      });
 
       return {
         ok: true as const,

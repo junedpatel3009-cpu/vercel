@@ -64,13 +64,19 @@ function ReportsPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const canLoad = Boolean(data.viewer && ["ADMIN", "PROFESSIONAL", "CLIENT"].includes(data.viewer.role));
-  const displayName = `${data.viewer?.firstName || ""} ${data.viewer?.lastName || ""}`.trim() || data.viewer?.email || "User";
-  const roleLabel = data.viewer?.role === "PROFESSIONAL" 
-    ? "Professional" 
-    : data.viewer?.role === "CLIENT" 
-    ? "Client" 
-    : "Admin";
+  const canLoad = Boolean(
+    data.viewer && ["ADMIN", "PROFESSIONAL", "CLIENT"].includes(data.viewer.role),
+  );
+  const displayName =
+    `${data.viewer?.firstName || ""} ${data.viewer?.lastName || ""}`.trim() ||
+    data.viewer?.email ||
+    "User";
+  const roleLabel =
+    data.viewer?.role === "PROFESSIONAL"
+      ? "Professional"
+      : data.viewer?.role === "CLIENT"
+        ? "Client"
+        : "Admin";
 
   const pageCount = Math.max(1, Math.ceil(totalRows / pageSize));
 
@@ -128,7 +134,7 @@ function ReportsPage() {
             to,
             search,
             id: filterId ? Number(filterId) : undefined,
-            po: filterPo || undefined
+            po: filterPo || undefined,
           },
         }),
       });
@@ -161,7 +167,7 @@ function ReportsPage() {
             to,
             search,
             id: filterId ? Number(filterId) : undefined,
-            po: filterPo || undefined
+            po: filterPo || undefined,
           },
           reportName: `${selectedTable}-export`,
         }),
@@ -217,10 +223,14 @@ function ReportsPage() {
           {/* Filters */}
           <div className="space-y-6">
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Configuration</h3>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+                Configuration
+              </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-700">Select Table</label>
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
+                    Select Table
+                  </label>
                   <select
                     value={selectedTable}
                     onChange={(e) => {
@@ -301,17 +311,34 @@ function ReportsPage() {
 
             {/* Export */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Export</h3>
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+                Export
+              </h3>
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => download("PDF")} disabled={!selectedTable || !!downloading}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => download("PDF")}
+                  disabled={!selectedTable || !!downloading}
+                >
                   <FileText className="mr-2 h-4 w-4 text-red-500" />
                   PDF
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => download("CSV")} disabled={!selectedTable || !!downloading}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => download("CSV")}
+                  disabled={!selectedTable || !!downloading}
+                >
                   <FileSpreadsheet className="mr-2 h-4 w-4 text-green-500" />
                   CSV
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => download("JSON")} disabled={!selectedTable || !!downloading}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => download("JSON")}
+                  disabled={!selectedTable || !!downloading}
+                >
                   <FileJson className="mr-2 h-4 w-4 text-purple-500" />
                   JSON
                 </Button>
@@ -349,7 +376,10 @@ function ReportsPage() {
                     <thead className="sticky top-0 bg-slate-50 text-slate-700">
                       <tr>
                         {columns.map((col) => (
-                          <th key={col} className="whitespace-nowrap px-6 py-3 font-semibold border-b border-slate-200">
+                          <th
+                            key={col}
+                            className="whitespace-nowrap px-6 py-3 font-semibold border-b border-slate-200"
+                          >
                             {col}
                           </th>
                         ))}

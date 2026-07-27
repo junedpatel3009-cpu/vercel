@@ -22,10 +22,7 @@ async function createPrismaClient() {
 
   if (process.env.PRISMA_ACCELERATE_URL) {
     options.accelerateUrl = process.env.PRISMA_ACCELERATE_URL;
-  } else if (
-    databaseUrl.startsWith("postgres://") ||
-    databaseUrl.startsWith("postgresql://")
-  ) {
+  } else if (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://")) {
     try {
       const { PrismaPg } = await import("@prisma/adapter-pg");
       options.adapter = new PrismaPg({ connectionString: databaseUrl });

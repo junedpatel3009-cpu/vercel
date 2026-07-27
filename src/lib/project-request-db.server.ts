@@ -141,12 +141,7 @@ export type ProjectRevisionRequestRecord = {
 };
 
 export type ProjectMilestoneStatus =
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "SUBMITTED"
-  | "APPROVED"
-  | "REVISION_REQUESTED"
-  | "PAID";
+  "PENDING" | "IN_PROGRESS" | "SUBMITTED" | "APPROVED" | "REVISION_REQUESTED" | "PAID";
 
 export type ProjectMilestoneInput = {
   trackingId: number;
@@ -227,12 +222,7 @@ export type ProjectCompletionRequestRecord = {
 };
 
 export type ProjectDisputeType =
-  | "PAYMENT"
-  | "WORK_QUALITY"
-  | "DEADLINE_DELAY"
-  | "COMMUNICATION"
-  | "FILE_PROBLEM"
-  | "OTHER";
+  "PAYMENT" | "WORK_QUALITY" | "DEADLINE_DELAY" | "COMMUNICATION" | "FILE_PROBLEM" | "OTHER";
 
 export type ProjectDisputePriority = "LOW" | "MEDIUM" | "HIGH";
 export type ProjectDisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED";
@@ -850,8 +840,7 @@ function saveCompletionTransaction(
       `,
     )
     .get(completion.trackingId) as
-    | (ProjectTrackingRecord & { bidAmount: number | null; projectTitle: string | null })
-    | undefined;
+    (ProjectTrackingRecord & { bidAmount: number | null; projectTitle: string | null }) | undefined;
 
   if (!tracking?.bidAmount || tracking.bidAmount <= 0) {
     return;

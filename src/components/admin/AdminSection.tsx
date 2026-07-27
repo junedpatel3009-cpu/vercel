@@ -20,10 +20,12 @@ export function AdminSection({
   className,
 }: AdminSectionProps) {
   return (
-    <section className={cn(
-      "rounded-2xl border border-border bg-card shadow-sm overflow-hidden",
-      className
-    )}>
+    <section
+      className={cn(
+        "rounded-2xl border border-border bg-card shadow-sm overflow-hidden",
+        className,
+      )}
+    >
       <div className="border-b border-border bg-muted/30 px-6 py-5">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-start gap-4">
@@ -34,21 +36,13 @@ export function AdminSection({
             )}
             <div>
               <h2 className="text-lg font-bold text-foreground">{title}</h2>
-              {description && (
-                <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-              )}
+              {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>
-          {actions && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {actions}
-            </div>
-          )}
+          {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
       </div>
-      <div className="p-0">
-        {children}
-      </div>
+      <div className="p-0">{children}</div>
     </section>
   );
 }

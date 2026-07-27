@@ -39,7 +39,9 @@ export function ReportExportActions({
       const blob = await res.blob();
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename=(?:"?)([^";]+)/);
-      const fileName = filenameMatch ? filenameMatch[1].replace(/"/g, "") : `${table}-${format.toLowerCase()}.bin`;
+      const fileName = filenameMatch
+        ? filenameMatch[1].replace(/"/g, "")
+        : `${table}-${format.toLowerCase()}.bin`;
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -65,7 +67,11 @@ export function ReportExportActions({
         onClick={() => exportReport("CSV")}
         disabled={!!downloading}
       >
-        {downloading === "CSV" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+        {downloading === "CSV" ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <FileSpreadsheet className="mr-2 h-4 w-4" />
+        )}
         CSV
       </Button>
       <Button
@@ -75,7 +81,11 @@ export function ReportExportActions({
         onClick={() => exportReport("EXCEL")}
         disabled={!!downloading}
       >
-        {downloading === "EXCEL" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+        {downloading === "EXCEL" ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="mr-2 h-4 w-4" />
+        )}
         Excel
       </Button>
       <Button
@@ -85,7 +95,11 @@ export function ReportExportActions({
         onClick={() => exportReport("PDF")}
         disabled={!!downloading}
       >
-        {downloading === "PDF" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+        {downloading === "PDF" ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <FileText className="mr-2 h-4 w-4" />
+        )}
         PDF
       </Button>
       {onPrint && (

@@ -613,8 +613,7 @@ export function updateProfessionalHireContractStatus(
         `,
       )
       .get(contractId, String(professionalId)) as
-      | { clientId: string; clientProjectId: number | null }
-      | undefined;
+      { clientId: string; clientProjectId: number | null } | undefined;
 
     if (contract?.clientProjectId) {
       db.prepare(
@@ -1042,8 +1041,7 @@ export function cancelHireProject(userId: number, contractId: string) {
       `,
     )
     .get(contractId, String(userId), String(userId)) as
-    | { id: string; trackingId: number | null }
-    | undefined;
+    { id: string; trackingId: number | null } | undefined;
 
   if (!contract) {
     throw new Error("Only started direct hire projects can be cancelled by project participants.");

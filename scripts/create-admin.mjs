@@ -12,7 +12,7 @@ if (!email || !/^\S+@\S+\.\S+$/.test(email) || !password || password.length < 12
 const rawDatabaseUrl = process.env.DATABASE_URL || "file:./prisma/app.db";
 if (rawDatabaseUrl.startsWith("postgres://") || rawDatabaseUrl.startsWith("postgresql://")) {
   console.error(
-    "DATABASE_URL points to PostgreSQL, but create-admin.mjs expects a SQLite file path. Use file:./prisma/app.db or migrate the script."
+    "DATABASE_URL points to PostgreSQL, but create-admin.mjs expects a SQLite file path. Use file:./prisma/app.db or migrate the script.",
   );
   process.exit(1);
 }

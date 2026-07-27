@@ -61,12 +61,7 @@ import { formatApproximateLocation } from "@/lib/location-privacy";
 import { getProfessionalProfileByUserId } from "@/lib/user-db.server";
 
 type ProfessionalStatsFilter =
-  | "running"
-  | "completed"
-  | "project-requests"
-  | "hire-requests"
-  | "ratings"
-  | "earnings";
+  "running" | "completed" | "project-requests" | "hire-requests" | "ratings" | "earnings";
 
 export const getProfessionalStatsData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();

@@ -11,7 +11,12 @@ type MapProps = {
   onMapReady?: (map: LeafletMap) => void;
 };
 
-export default function Map({ center = { lat: 21.1702, lng: 72.8311 }, zoom = 5, className, onMapReady }: MapProps) {
+export default function Map({
+  center = { lat: 21.1702, lng: 72.8311 },
+  zoom = 5,
+  className,
+  onMapReady,
+}: MapProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
 

@@ -27,10 +27,18 @@ export const Route = createFileRoute("/client-reports")({
 
 function ClientReportsPage() {
   const data = useLoaderData({ from: "/client-reports" }) as ClientReportsData;
-  const displayName = `${data.viewer?.firstName || ""} ${data.viewer?.lastName || ""}`.trim() || data.viewer?.email || "Client";
+  const displayName =
+    `${data.viewer?.firstName || ""} ${data.viewer?.lastName || ""}`.trim() ||
+    data.viewer?.email ||
+    "Client";
 
   return (
-    <AppShell title="My Reports" userName={displayName} userRole="Client" userAvatarUrl={data.viewer?.email ?? undefined}>
+    <AppShell
+      title="My Reports"
+      userName={displayName}
+      userRole="Client"
+      userAvatarUrl={data.viewer?.email ?? undefined}
+    >
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 px-4 py-8 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -42,13 +50,15 @@ function ClientReportsPage() {
             </Button>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900">My Reports</h1>
-          <p className="mt-2 text-lg text-slate-600">View and export your job posts, applications, and reviews.</p>
+          <p className="mt-2 text-lg text-slate-600">
+            View and export your job posts, applications, and reviews.
+          </p>
         </div>
 
         {/* Reports Component */}
-        <UserPersonalReports 
-          userRole="CLIENT" 
-          userId={data.viewer?.id ?? 0} 
+        <UserPersonalReports
+          userRole="CLIENT"
+          userId={data.viewer?.id ?? 0}
           userName={displayName}
         />
       </div>

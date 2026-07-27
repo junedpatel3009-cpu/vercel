@@ -28,10 +28,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminSummaryCard } from "@/components/admin/AdminSummaryCard";
 import { AdminSection } from "@/components/admin/AdminSection";
 import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
-import {
-  formatDateTime,
-  formatEnum,
-} from "@/lib/admin-formatters";
+import { formatDateTime, formatEnum } from "@/lib/admin-formatters";
 import { getCurrentUser } from "@/lib/current-user.server";
 import {
   getAdminVerificationRecords,
@@ -261,25 +258,43 @@ function VerificationManagement() {
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                         <div className="relative shrink-0">
                           <img
-                            src={record.avatarUrl || `https://i.pravatar.cc/100?u=verification-${record.userId}`}
+                            src={
+                              record.avatarUrl ||
+                              `https://i.pravatar.cc/100?u=verification-${record.userId}`
+                            }
                             className="h-16 w-16 rounded-2xl object-cover ring-4 ring-background shadow-lg"
                             alt=""
                           />
-                          <div className={cn(
-                            "absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-background shadow-md",
-                            record.isVerified ? "bg-emerald-500" : "bg-slate-300"
-                          )} />
+                          <div
+                            className={cn(
+                              "absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-background shadow-md",
+                              record.isVerified ? "bg-emerald-500" : "bg-slate-300",
+                            )}
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="truncate text-xl font-bold tracking-tight group-hover:text-primary transition-colors">{record.professionalName}</h3>
-                            <Badge variant={statusMeta.variant} className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">{statusMeta.label}</Badge>
-                            <Badge variant={record.isActive ? "default" : "outline"} className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]">
+                            <h3 className="truncate text-xl font-bold tracking-tight group-hover:text-primary transition-colors">
+                              {record.professionalName}
+                            </h3>
+                            <Badge
+                              variant={statusMeta.variant}
+                              className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]"
+                            >
+                              {statusMeta.label}
+                            </Badge>
+                            <Badge
+                              variant={record.isActive ? "default" : "outline"}
+                              className="rounded-lg px-3 py-1 font-bold uppercase tracking-widest text-[10px]"
+                            >
                               {record.isActive ? "Active Account" : "Inactive Account"}
                             </Badge>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground font-medium">
-                            <span className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary/60" />{record.professionalEmail}</span>
+                            <span className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-primary/60" />
+                              {record.professionalEmail}
+                            </span>
                             <span className="flex items-center gap-2">
                               <FileBadge className="h-4 w-4 text-primary/60" />
                               {record.professionalCategory || "Category not set"}
@@ -311,7 +326,10 @@ function VerificationManagement() {
                               </p>
                             </div>
                             <div className="mt-4 flex items-center justify-between gap-2">
-                              <Badge variant={document.hasValue ? "default" : "outline"} className="rounded-lg text-[9px] uppercase tracking-wider">
+                              <Badge
+                                variant={document.hasValue ? "default" : "outline"}
+                                className="rounded-lg text-[9px] uppercase tracking-wider"
+                              >
                                 {document.hasValue ? "Uploaded" : "Missing"}
                               </Badge>
                               {document.href ? (
@@ -334,7 +352,9 @@ function VerificationManagement() {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap gap-3 xl:w-64 xl:flex-col bg-muted/30 p-4 rounded-2xl border border-border/50 shadow-inner">
-                      <p className="w-full text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80 mb-1 px-1">Admin Decision</p>
+                      <p className="w-full text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/80 mb-1 px-1">
+                        Admin Decision
+                      </p>
                       <Button
                         type="button"
                         className="gap-2 h-12 rounded-xl font-bold shadow-md hover:shadow-lg transition-all"
@@ -365,7 +385,9 @@ function VerificationManagement() {
                         Mark as Pending
                       </Button>
                       {pendingAction?.endsWith(`-${record.userId}`) && (
-                        <p className="mt-1 text-center text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">Processing review...</p>
+                        <p className="mt-1 text-center text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                          Processing review...
+                        </p>
                       )}
                     </div>
                   </div>
@@ -457,7 +479,11 @@ function FilePreviewModal({
               />
             </div>
           ) : previewType === "pdf" ? (
-            <iframe src={`${url}#toolbar=1`} title={label} className="h-[75vh] w-full rounded-2xl shadow-xl ring-1 ring-border bg-white" />
+            <iframe
+              src={`${url}#toolbar=1`}
+              title={label}
+              className="h-[75vh] w-full rounded-2xl shadow-xl ring-1 ring-border bg-white"
+            />
           ) : (
             <div className="flex flex-col items-center justify-center gap-6 py-24 text-center">
               <div className="grid h-24 w-24 place-items-center rounded-3xl bg-muted text-muted-foreground/40">
@@ -469,7 +495,12 @@ function FilePreviewModal({
                   This file format cannot be displayed directly. Open it in a new tab to view it.
                 </p>
               </div>
-              <Button type="button" size="lg" className="rounded-xl px-8 font-bold" onClick={() => openDocumentInNewTab(url)}>
+              <Button
+                type="button"
+                size="lg"
+                className="rounded-xl px-8 font-bold"
+                onClick={() => openDocumentInNewTab(url)}
+              >
                 <ExternalLink className="mr-2 h-5 w-5" />
                 Open In New Tab
               </Button>

@@ -241,12 +241,14 @@ export async function createClientJob(userId: number, input: ClientJobInput) {
         locationLng: input.locationLng ?? null,
         status: input.status as any,
         attachments: input.attachments?.length
-          ? { create: input.attachments.map((a) => ({
-              fileName: a.fileName.trim(),
-              fileType: a.fileType?.trim() || null,
-              fileSize: a.fileSize ?? null,
-              previewUrl: a.previewUrl?.trim() || null,
-            })) }
+          ? {
+              create: input.attachments.map((a) => ({
+                fileName: a.fileName.trim(),
+                fileType: a.fileType?.trim() || null,
+                fileSize: a.fileSize ?? null,
+                previewUrl: a.previewUrl?.trim() || null,
+              })),
+            }
           : undefined,
       },
       include: { user: true, attachments: true },
@@ -254,7 +256,8 @@ export async function createClientJob(userId: number, input: ClientJobInput) {
 
     // Notify admin room via socket server (best-effort, do not fail job creation)
     try {
-      const socketUrl = process.env.SOCKET_URL || `http://localhost:${process.env.SOCKET_PORT || 4001}`;
+      const socketUrl =
+        process.env.SOCKET_URL || `http://localhost:${process.env.SOCKET_PORT || 4001}`;
       const sock = clientIo(socketUrl, { autoConnect: false });
       sock.connect();
       sock.emit("admin:activity", { reason: "client job posted" });
@@ -273,17 +276,17 @@ export async function createClientJob(userId: number, input: ClientJobInput) {
           description: job.description,
           budgetMin: job.budgetMin,
           budgetMax: job.budgetMax,
-          urgency: (job.urgency as unknown) as JobUrgency,
-          timingType: (job.timingType as unknown) as JobTimingType,
+          urgency: job.urgency as unknown as JobUrgency,
+          timingType: job.timingType as unknown as JobTimingType,
           hourlyRate: job.hourlyRate ?? null,
           jobDate: job.jobDate ? job.jobDate.toISOString() : null,
           deadline: job.deadline.toISOString(),
-          workMode: (job.workMode as unknown) as JobWorkMode,
+          workMode: job.workMode as unknown as JobWorkMode,
           locationLabel: job.locationLabel,
           locationAddress: job.locationAddress,
           locationLat: job.locationLat ?? null,
           locationLng: job.locationLng ?? null,
-          status: (job.status as unknown) as JobStatus,
+          status: job.status as unknown as JobStatus,
           createdAt: job.createdAt.toISOString(),
           updatedAt: job.updatedAt.toISOString(),
         },
@@ -491,7 +494,7 @@ export async function getOpenClientJobs() {
           budgetMin: job.budgetMin,
           budgetMax: job.budgetMax,
           urgency: job.urgency,
-          timingType: (job.timingType as unknown) as JobTimingType,
+          timingType: job.timingType as unknown as JobTimingType,
           hourlyRate: job.hourlyRate ?? null,
           jobDate: job.jobDate ? job.jobDate.toISOString() : null,
           deadline: job.deadline.toISOString(),

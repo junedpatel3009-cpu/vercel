@@ -17,9 +17,9 @@ export async function ensureCmsSchema() {
     ) AS "exists"
   `;
 
-  const websitePageExists = result?.[0]?.exists ?? false;
-  if (!websitePageExists) {
-    await prisma.$executeRawUnsafe(`
+    const websitePageExists = result?.[0]?.exists ?? false;
+    if (!websitePageExists) {
+      await prisma.$executeRawUnsafe(`
       DO $$
       BEGIN
         IF NOT EXISTS (
@@ -60,8 +60,8 @@ export async function ensureCmsSchema() {
         END IF;
       END$$;
     `);
-  }
-})();
+    }
+  })();
 
   return cmsSchemaInitializationPromise;
 }

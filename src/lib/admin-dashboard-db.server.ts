@@ -1338,8 +1338,7 @@ export function updateAdminDisputeStatus(
   ).run(status, timestamp, disputeId);
 
   const row = db.prepare(`SELECT id FROM "ProjectDispute" WHERE id = ? LIMIT 1`).get(disputeId) as
-    | { id: number }
-    | undefined;
+    { id: number } | undefined;
 
   if (!row) {
     throw new Error("Dispute not found.");

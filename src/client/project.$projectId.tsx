@@ -190,7 +190,10 @@ export function Project() {
                 </Button>
               ) : tracking ? (
                 <Button asChild>
-                  <Link to="/project-track/$trackingId" params={{ trackingId: String(tracking.id) }}>
+                  <Link
+                    to="/project-track/$trackingId"
+                    params={{ trackingId: String(tracking.id) }}
+                  >
                     <Search className="h-4 w-4" />
                     Open tracking
                   </Link>
@@ -234,8 +237,9 @@ export function Project() {
                     </div>
                     <p className="mt-3 text-2xl font-semibold">
                       {
-                        tracking.milestones.filter((milestone: { status: string }) => milestone.status === "DONE")
-                          .length
+                        tracking.milestones.filter(
+                          (milestone: { status: string }) => milestone.status === "DONE",
+                        ).length
                       }
                       /{tracking.milestones.length}
                     </p>
@@ -258,8 +262,9 @@ export function Project() {
                     </div>
                     <p className="mt-3 text-2xl font-semibold">
                       {
-                        tracking.revisionRequests.filter((item: { status: string }) => item.status === "REQUESTED")
-                          .length
+                        tracking.revisionRequests.filter(
+                          (item: { status: string }) => item.status === "REQUESTED",
+                        ).length
                       }
                     </p>
                     <p className="text-sm text-muted-foreground">Pending review items</p>

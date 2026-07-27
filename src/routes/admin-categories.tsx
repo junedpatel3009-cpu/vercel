@@ -72,7 +72,7 @@ function AdminCategories() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [message, setMessage] = useState<{ text: string, type: "success" | "error" } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [categoryForm, setCategoryForm] = useState<ServiceCategoryInput>({
     name: "",
     slug: "",
@@ -147,7 +147,10 @@ function AdminCategories() {
         setSelectedId(null);
       }
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : "Failed to save category.", type: "error" });
+      setMessage({
+        text: error instanceof Error ? error.message : "Failed to save category.",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -156,7 +159,8 @@ function AdminCategories() {
   async function handleDelete() {
     if (!selectedCategory) return;
 
-    if (!confirm("Are you sure you want to delete this category? This action cannot be undone.")) return;
+    if (!confirm("Are you sure you want to delete this category? This action cannot be undone."))
+      return;
 
     setMessage(null);
     setIsDeleting(true);
@@ -166,7 +170,10 @@ function AdminCategories() {
       setSelectedId(null);
       setMessage({ text: "Category deleted.", type: "success" });
     } catch (error) {
-      setMessage({ text: error instanceof Error ? error.message : "Failed to delete category.", type: "error" });
+      setMessage({
+        text: error instanceof Error ? error.message : "Failed to delete category.",
+        type: "error",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -250,23 +257,47 @@ function AdminCategories() {
                     "block w-full rounded-2xl border p-5 text-left transition-all hover:shadow-md active:scale-[0.98]",
                     selectedId === category.id
                       ? "border-primary bg-primary/[0.03] ring-1 ring-primary/20 shadow-sm"
-                      : "border-border bg-background hover:border-primary/40"
+                      : "border-border bg-background hover:border-primary/40",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={cn("font-bold text-lg truncate", selectedId === category.id ? "text-primary" : "text-foreground")}>{category.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground line-clamp-1 font-medium italic">"{category.description}"</p>
+                      <p
+                        className={cn(
+                          "font-bold text-lg truncate",
+                          selectedId === category.id ? "text-primary" : "text-foreground",
+                        )}
+                      >
+                        {category.name}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground line-clamp-1 font-medium italic">
+                        "{category.description}"
+                      </p>
                     </div>
-                    <Badge variant="outline" className="rounded-lg h-6 font-bold text-[9px] uppercase tracking-wider bg-background shrink-0">
+                    <Badge
+                      variant="outline"
+                      className="rounded-lg h-6 font-bold text-[9px] uppercase tracking-wider bg-background shrink-0"
+                    >
                       {category.jobCount} Jobs
                     </Badge>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-                    <div className="flex items-center gap-1.5"><span className="text-primary/40">SLUG:</span> <span className="text-foreground/80">{category.slug}</span></div>
-                    <div className="flex items-center gap-1.5"><span className="text-primary/40">ICON:</span> <span className="text-foreground/80">{category.iconName || "NONE"}</span></div>
-                    <div className="flex items-center gap-1.5"><span className="text-primary/40">ORDER:</span> <span className="text-foreground/80">{category.sortOrder}</span></div>
-                    <div className="flex items-center gap-1.5"><span className="text-primary/40">PROS:</span> <span className="text-foreground/80">{category.proCount}</span></div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-primary/40">SLUG:</span>{" "}
+                      <span className="text-foreground/80">{category.slug}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-primary/40">ICON:</span>{" "}
+                      <span className="text-foreground/80">{category.iconName || "NONE"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-primary/40">ORDER:</span>{" "}
+                      <span className="text-foreground/80">{category.sortOrder}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-primary/40">PROS:</span>{" "}
+                      <span className="text-foreground/80">{category.proCount}</span>
+                    </div>
                   </div>
                 </button>
               ))
@@ -282,19 +313,34 @@ function AdminCategories() {
 
         <AdminSection
           title={isEditing ? "Modify Category" : "Register New Category"}
-          description={isEditing ? "Update platform category details." : "Add a fresh work vertical to the marketplace."}
+          description={
+            isEditing
+              ? "Update platform category details."
+              : "Add a fresh work vertical to the marketplace."
+          }
           icon={BriefcaseBusiness}
-          actions={isEditing && (
-            <Button variant="destructive" size="sm" className="rounded-xl font-bold h-9 px-4" onClick={handleDelete} disabled={isDeleting}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              {isDeleting ? "DELETING..." : "DELETE"}
-            </Button>
-          )}
+          actions={
+            isEditing && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="rounded-xl font-bold h-9 px-4"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {isDeleting ? "DELETING..." : "DELETE"}
+              </Button>
+            )
+          }
         >
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1" htmlFor="category-name">
+                <label
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1"
+                  htmlFor="category-name"
+                >
                   Category Name
                 </label>
                 <Input
@@ -310,7 +356,10 @@ function AdminCategories() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1" htmlFor="category-slug">
+                <label
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1"
+                  htmlFor="category-slug"
+                >
                   URL Slug
                 </label>
                 <Input
@@ -325,7 +374,10 @@ function AdminCategories() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1" htmlFor="category-icon">
+                <label
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1"
+                  htmlFor="category-icon"
+                >
                   Lucide Icon Name
                 </label>
                 <Input
@@ -340,7 +392,10 @@ function AdminCategories() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1" htmlFor="category-sort-order">
+                <label
+                  className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1"
+                  htmlFor="category-sort-order"
+                >
                   Sort Priority (Order)
                 </label>
                 <Input
@@ -359,7 +414,10 @@ function AdminCategories() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1" htmlFor="category-description">
+              <label
+                className="text-xs font-bold uppercase tracking-widest text-muted-foreground ml-1"
+                htmlFor="category-description"
+              >
                 Marketplace Description
               </label>
               <Textarea
@@ -374,18 +432,35 @@ function AdminCategories() {
             </div>
 
             {message && (
-              <div className={cn(
-                "rounded-xl p-4 text-sm font-bold flex items-center gap-2 animate-in fade-in duration-300",
-                message.type === "error" ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              )}>
-                {message.type === "error" ? <Trash2 className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+              <div
+                className={cn(
+                  "rounded-xl p-4 text-sm font-bold flex items-center gap-2 animate-in fade-in duration-300",
+                  message.type === "error"
+                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                )}
+              >
+                {message.type === "error" ? (
+                  <Trash2 className="h-4 w-4" />
+                ) : (
+                  <ShieldCheck className="h-4 w-4" />
+                )}
                 {message.text}
               </div>
             )}
 
             <div className="flex flex-wrap gap-3 pt-4">
-              <Button type="submit" size="lg" className="h-12 px-8 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95" disabled={isSaving}>
-                {isSaving ? "SAVING RECORD..." : isEditing ? "UPDATE CATEGORY" : "REGISTER CATEGORY"}
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 px-8 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
+                disabled={isSaving}
+              >
+                {isSaving
+                  ? "SAVING RECORD..."
+                  : isEditing
+                    ? "UPDATE CATEGORY"
+                    : "REGISTER CATEGORY"}
               </Button>
               <Button
                 type="button"

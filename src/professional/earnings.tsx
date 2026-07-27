@@ -172,9 +172,17 @@ function Earnings() {
         <section className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-8 shadow-lg">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">{isProfessional ? "Earnings" : "Payments"} Dashboard</p>
-              <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">{isProfessional ? "Earnings Overview" : "Payment Summary"}</h1>
-              <p className="mt-2 max-w-xl text-base text-slate-600">{isProfessional ? "Track your completed earnings, pending payouts, and withdrawal requests." : "View all payments from your projects."}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                {isProfessional ? "Earnings" : "Payments"} Dashboard
+              </p>
+              <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
+                {isProfessional ? "Earnings Overview" : "Payment Summary"}
+              </h1>
+              <p className="mt-2 max-w-xl text-base text-slate-600">
+                {isProfessional
+                  ? "Track your completed earnings, pending payouts, and withdrawal requests."
+                  : "View all payments from your projects."}
+              </p>
             </div>
           </div>
         </section>
@@ -187,9 +195,15 @@ function Earnings() {
                 <Wallet className="h-5 w-5" />
               </div>
             </div>
-            <p className="mt-4 text-sm font-medium text-slate-600">{isProfessional ? "Available balance" : "Total paid"}</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900">{formatMoney(isProfessional ? availableBalance : lifetimeTotal)}</p>
-            <p className="mt-2 text-xs text-slate-500">{isProfessional ? "Ready to withdraw" : "Saved in transactions"}</p>
+            <p className="mt-4 text-sm font-medium text-slate-600">
+              {isProfessional ? "Available balance" : "Total paid"}
+            </p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">
+              {formatMoney(isProfessional ? availableBalance : lifetimeTotal)}
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              {isProfessional ? "Ready to withdraw" : "Saved in transactions"}
+            </p>
           </div>
           <div className="group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1">
             <div className="flex items-center justify-between">
@@ -223,85 +237,94 @@ function Earnings() {
           </div>
         </section>
 
-      {isProfessional ? (
-        <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
-            <div className="mb-6 border-b border-slate-200 pb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Completed Jobs</h2>
-                  <p className="mt-2 text-sm text-slate-600">Projects with payment records</p>
+        {isProfessional ? (
+          <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
+              <div className="mb-6 border-b border-slate-200 pb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900">Completed Jobs</h2>
+                    <p className="mt-2 text-sm text-slate-600">Projects with payment records</p>
+                  </div>
+                  <CheckCircle2 className="h-6 w-6 text-green-600" />
                 </div>
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="space-y-3">
+                {completedJobs.map((job) => (
+                  <div
+                    key={job.trackingId}
+                    className="group rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 transition-all hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-1 font-semibold text-slate-900">
+                          {job.projectTitle || "Completed project"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {job.projectCategory || "Project"} • {job.paymentCount} payment
+                          {job.paymentCount !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-slate-900">
+                        {formatMoney(job.amount)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Last paid {formatDate(job.lastPaidAt)}
+                    </p>
+                  </div>
+                ))}
+                {!completedJobs.length ? (
+                  <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+                    <CheckCircle2 className="mx-auto h-8 w-8 text-slate-400" />
+                    <h3 className="mt-3 font-semibold text-slate-900">No completed jobs yet</h3>
+                    <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
+                      Completed jobs will appear here after clients approve work or pay milestones.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
-            <div className="space-y-3">
-              {completedJobs.map((job) => (
-                <div
-                  key={job.trackingId}
-                  className="group rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4 transition-all hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-1 font-semibold text-slate-900">
-                        {job.projectTitle || "Completed project"}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {job.projectCategory || "Project"} • {job.paymentCount} payment{job.paymentCount !== 1 ? "s" : ""}
-                      </p>
-                    </div>
-                    <span className="font-semibold text-slate-900">{formatMoney(job.amount)}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Last paid {formatDate(job.lastPaidAt)}
-                  </p>
-                </div>
-              ))}
-              {!completedJobs.length ? (
-                <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 py-12 text-center">
-                  <CheckCircle2 className="mx-auto h-8 w-8 text-slate-400" />
-                  <h3 className="mt-3 font-semibold text-slate-900">No completed jobs yet</h3>
-                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">
-                    Completed jobs will appear here after clients approve work or pay milestones.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
-            <div className="mb-6 border-b border-slate-200 pb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Pending Payouts</h2>
-              <p className="mt-2 text-sm text-slate-600">Completed earnings</p>
-            </div>
-            <div className="mb-6 rounded-lg bg-gradient-to-br from-blue-50 to-slate-50 p-4">
-              <p className="text-xs font-medium uppercase tracking-widest text-slate-600">Total pending</p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">{formatMoney(lifetimeTotal)}</p>
-              <p className="mt-2 text-xs text-slate-600">
-                {formatMoney(availableBalance)} available
-              </p>
-            </div>
-            <div className="space-y-2">
-              {pendingPayouts.slice(0, 4).map((payout) => (
-                <div
-                  key={payout.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm hover:bg-slate-50"
-                >
-                  <span className="min-w-0 truncate text-slate-700">
-                    {payout.projectTitle || payout.description}
-                  </span>
-                  <span className="ml-2 font-medium text-slate-900">{formatMoney(payout.amount)}</span>
-                </div>
-              ))}
-              {!pendingPayouts.length ? (
-                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                  No pending payouts yet.
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg">
+              <div className="mb-6 border-b border-slate-200 pb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Pending Payouts</h2>
+                <p className="mt-2 text-sm text-slate-600">Completed earnings</p>
+              </div>
+              <div className="mb-6 rounded-lg bg-gradient-to-br from-blue-50 to-slate-50 p-4">
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">
+                  Total pending
                 </p>
-              ) : null}
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {formatMoney(lifetimeTotal)}
+                </p>
+                <p className="mt-2 text-xs text-slate-600">
+                  {formatMoney(availableBalance)} available
+                </p>
+              </div>
+              <div className="space-y-2">
+                {pendingPayouts.slice(0, 4).map((payout) => (
+                  <div
+                    key={payout.id}
+                    className="flex items-center justify-between rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm hover:bg-slate-50"
+                  >
+                    <span className="min-w-0 truncate text-slate-700">
+                      {payout.projectTitle || payout.description}
+                    </span>
+                    <span className="ml-2 font-medium text-slate-900">
+                      {formatMoney(payout.amount)}
+                    </span>
+                  </div>
+                ))}
+                {!pendingPayouts.length ? (
+                  <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                    No pending payouts yet.
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
-        </section>
-      ) : null}
+          </section>
+        ) : null}
       </div>
 
       <div className="space-y-8 px-1 py-2">
@@ -310,23 +333,37 @@ function Earnings() {
             <div className="mb-6 flex items-center justify-between border-b border-slate-200 pb-6">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">Invoices & Commission</h2>
-                <p className="mt-2 text-sm text-slate-600">Payment breakdown with commission deduction</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Payment breakdown with commission deduction
+                </p>
               </div>
               <ReceiptText className="h-6 w-6 text-slate-700" />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4">
-                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">Gross invoices</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900">{formatMoney(lifetimeTotal)}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">
+                  Gross invoices
+                </p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {formatMoney(lifetimeTotal)}
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-red-50 to-white p-4">
-                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">Commission</p>
-                <p className="mt-2 text-2xl font-bold text-red-600">-{formatMoney(totalCommission)}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">
+                  Commission
+                </p>
+                <p className="mt-2 text-2xl font-bold text-red-600">
+                  -{formatMoney(totalCommission)}
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-green-50 to-white p-4">
-                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">Net payout</p>
-                <p className="mt-2 text-2xl font-bold text-green-700">{formatMoney(totalNetPayout)}</p>
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-600">
+                  Net payout
+                </p>
+                <p className="mt-2 text-2xl font-bold text-green-700">
+                  {formatMoney(totalNetPayout)}
+                </p>
               </div>
             </div>
 
@@ -348,12 +385,14 @@ function Earnings() {
                       key={invoice.id}
                       className="border-b border-slate-200 last:border-0 hover:bg-slate-50"
                     >
-                      <td className="py-3 pr-4 font-medium text-slate-900">{invoice.invoiceNumber}</td>
-                      <td className="py-3 pr-4 text-slate-700">{invoice.projectTitle}</td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {formatDate(invoice.createdAt)}
+                      <td className="py-3 pr-4 font-medium text-slate-900">
+                        {invoice.invoiceNumber}
                       </td>
-                      <td className="py-3 pr-4 text-right text-slate-900">{formatMoney(invoice.gross)}</td>
+                      <td className="py-3 pr-4 text-slate-700">{invoice.projectTitle}</td>
+                      <td className="py-3 pr-4 text-slate-600">{formatDate(invoice.createdAt)}</td>
+                      <td className="py-3 pr-4 text-right text-slate-900">
+                        {formatMoney(invoice.gross)}
+                      </td>
                       <td className="py-3 pr-4 text-right text-red-600">
                         -{formatMoney(invoice.commission)}
                       </td>
@@ -409,7 +448,9 @@ function Earnings() {
               {formatMoney(isProfessional ? availableBalance : lifetimeTotal)}
             </p>
             <p className="mt-2 text-xs opacity-80">
-              {isProfessional ? "Net payout minus requested withdrawals" : "Loaded from the database"}
+              {isProfessional
+                ? "Net payout minus requested withdrawals"
+                : "Loaded from the database"}
             </p>
             <Button
               className="mt-6 w-full bg-white/20 text-white hover:bg-white/30 transition-all"
@@ -494,14 +535,20 @@ function Earnings() {
                       <td className="py-3 pr-4 text-slate-700">
                         {formatDate(withdrawal.createdAt)}
                       </td>
-                      <td className="py-3 pr-4 text-slate-700">{formatEnum(withdrawal.destinationType)}</td>
+                      <td className="py-3 pr-4 text-slate-700">
+                        {formatEnum(withdrawal.destinationType)}
+                      </td>
                       <td className="py-3 pr-4 text-slate-700">{withdrawal.destinationLabel}</td>
                       <td className="py-3 pr-4">
-                        <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
-                          withdrawal.status === "COMPLETED" ? "bg-green-100 text-green-700" :
-                          withdrawal.status === "PENDING" ? "bg-yellow-100 text-yellow-700" :
-                          "bg-slate-100 text-slate-700"
-                        }`}>
+                        <span
+                          className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
+                            withdrawal.status === "COMPLETED"
+                              ? "bg-green-100 text-green-700"
+                              : withdrawal.status === "PENDING"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
                           {formatEnum(withdrawal.status)}
                         </span>
                       </td>
@@ -572,21 +619,26 @@ function Earnings() {
                       </span>
                     </td>
                     <td className="py-3 pr-4">
-                      <span className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
-                        transaction.status === "COMPLETED"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-slate-100 text-slate-700"
-                      }`}>
+                      <span
+                        className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
+                          transaction.status === "COMPLETED"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
                         {formatEnum(transaction.status)}
                       </span>
                     </td>
-                    <td className="py-3 text-right font-medium text-slate-900">{formatMoney(transaction.amount)}</td>
+                    <td className="py-3 text-right font-medium text-slate-900">
+                      {formatMoney(transaction.amount)}
+                    </td>
                   </tr>
                 ))}
                 {!scopedTransactions.length ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-slate-600">
-                      No transactions yet. Mark a project milestone as paid to create the first record.
+                      No transactions yet. Mark a project milestone as paid to create the first
+                      record.
                     </td>
                   </tr>
                 ) : null}

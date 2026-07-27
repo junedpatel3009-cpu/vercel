@@ -150,9 +150,7 @@ function ProfileSetup() {
   // Form state (still using React Hook Form)
   const form = useForm<ClientProfileInput>({
     resolver: zodResolver(clientProfileSchema),
-    defaultValues: {
-      /* ... */
-    },
+    defaultValues: {/* ... */},
   });
 }
 ```

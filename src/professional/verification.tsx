@@ -56,11 +56,7 @@ export const Route = createFileRoute("/verification")({
 });
 
 type VerificationDocumentKey =
-  | "governmentIdUrl"
-  | "licenseUrl"
-  | "certifications"
-  | "insuranceUrl"
-  | "selfieUrl";
+  "governmentIdUrl" | "licenseUrl" | "certifications" | "insuranceUrl" | "selfieUrl";
 
 const documentOptions: Array<{
   key: VerificationDocumentKey;

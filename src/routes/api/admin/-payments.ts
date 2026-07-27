@@ -7,19 +7,21 @@ export const APIRoute = createAPIFileRoute("/api/admin/payments")({
   GET: async (_ctx: { request: Request }) => {
     requireCurrentUserRole("ADMIN");
 
-    const payments = await prisma.$queryRaw<Array<{
-      paymentId: number;
-      jobTitle: string | null;
-      clientName: string | null;
-      clientEmail: string | null;
-      professionalName: string | null;
-      professionalEmail: string | null;
-      amount: number;
-      currency: string;
-      paymentType: string;
-      status: string;
-      createdAt: string;
-    }>>`
+    const payments = await prisma.$queryRaw<
+      Array<{
+        paymentId: number;
+        jobTitle: string | null;
+        clientName: string | null;
+        clientEmail: string | null;
+        professionalName: string | null;
+        professionalEmail: string | null;
+        amount: number;
+        currency: string;
+        paymentType: string;
+        status: string;
+        createdAt: string;
+      }>
+    >`
           SELECT
             "ProjectTransaction"."id" AS "paymentId",
             COALESCE("ClientJob"."title", "ProjectTransaction"."description", 'Project payment') AS "jobTitle",
