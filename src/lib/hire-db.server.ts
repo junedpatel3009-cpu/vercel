@@ -96,7 +96,82 @@ export type DirectHireNegotiationInput = {
 
 const globalForHireDb = globalThis as typeof globalThis & {
   hireDb?: BetterSqlite3Database;
+  postgresHireTablesReady?: Promise<void>;
 };
+
+async function ensurePostgresHireTables() {
+  if (!globalForHireDb.postgresHireTablesReady) {
+    globalForHireDb.postgresHireTablesReady = (async () => {
+      // These are additive tables. Creating them here also protects a fresh
+      // Vercel deployment when its build hook has not yet run `prisma db push`.
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "hire_jobs" (
+          "id" TEXT PRIMARY KEY,
+          "client_id" TEXT NOT NULL,
+          "title" TEXT NOT NULL,
+          "description" TEXT,
+          "budget_min" DOUBLE PRECISION,
+          "budget_max" DOUBLE PRECISION,
+          "currency" TEXT NOT NULL DEFAULT 'INR',
+          "job_type" TEXT,
+          "city" TEXT,
+          "job_date" TIMESTAMP(3),
+          "deadline" TIMESTAMP(3),
+          "urgency" TEXT,
+          "status" TEXT NOT NULL DEFAULT 'draft',
+          "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "hire_contracts" (
+          "id" TEXT PRIMARY KEY,
+          "job_id" TEXT NOT NULL REFERENCES "hire_jobs"("id") ON DELETE CASCADE,
+          "client_id" TEXT NOT NULL,
+          "professional_id" TEXT NOT NULL,
+          "client_project_id" INTEGER,
+          "tracking_id" INTEGER,
+          "total_amount" DOUBLE PRECISION,
+          "platform_fee" DOUBLE PRECISION,
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "start_date" TIMESTAMP(3),
+          "end_date" TIMESTAMP(3),
+          "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "hire_job_attachments" (
+          "id" TEXT PRIMARY KEY,
+          "job_id" TEXT NOT NULL REFERENCES "hire_jobs"("id") ON DELETE CASCADE,
+          "file_url" TEXT,
+          "file_type" TEXT,
+          "uploaded_by" TEXT
+        )
+      `);
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "hire_milestones" (
+          "id" TEXT PRIMARY KEY,
+          "contract_id" TEXT NOT NULL REFERENCES "hire_contracts"("id") ON DELETE CASCADE,
+          "title" TEXT,
+          "amount" DOUBLE PRECISION,
+          "due_date" TIMESTAMP(3),
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "completed_proof" TEXT
+        )
+      `);
+      await prisma.$executeRawUnsafe(
+        `CREATE INDEX IF NOT EXISTS "hire_contracts_client_id_idx" ON "hire_contracts"("client_id")`,
+      );
+      await prisma.$executeRawUnsafe(
+        `CREATE INDEX IF NOT EXISTS "hire_contracts_professional_id_idx" ON "hire_contracts"("professional_id")`,
+      );
+    })().catch((error) => {
+      globalForHireDb.postgresHireTablesReady = undefined;
+      throw error;
+    });
+  }
+
+  return globalForHireDb.postgresHireTablesReady;
+}
 
 function getDatabase() {
   if (!globalForHireDb.hireDb) {
@@ -291,6 +366,7 @@ export async function createHireContract(clientId: number, input: HireContractIn
   }
 
   if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
     const clientProjectId = input.clientProjectId ?? null;
     if (clientProjectId != null) {
       const project = await prisma.clientJob.findFirst({
