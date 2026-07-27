@@ -40,11 +40,10 @@ const submitLogin = createServerFn({ method: "POST" })
   .inputValidator((data: LoginInput) => loginSchema.parse(data))
   .handler(async ({ data }) => {
     try {
-      const { findUserByEmail, recordUserLogin, getProfessionalProfileByUserId } =
-        await import("@/lib/user-db.server");
+      const { prisma } = await import("@/lib/prisma");
 
       const email = data.email.trim().toLowerCase();
-      const user = findUserByEmail(email);
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
         return {
@@ -90,21 +89,19 @@ const submitLogin = createServerFn({ method: "POST" })
       }
 
       if (passwordCheck.needsUpgrade) {
-        const { updateUserPasswordByEmail } = await import("@/lib/user-db.server");
-        updateUserPasswordByEmail(email, hashPassword(data.password));
+        await prisma.user.update({ where: { email }, data: { passwordHash: hashPassword(data.password) } });
       }
 
-      recordUserLogin(user.id);
+      await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
       let isProfileComplete = false;
       if (user.role === "PROFESSIONAL") {
-        const proProfile = getProfessionalProfileByUserId(user.id);
         isProfileComplete = !!(
-          proProfile?.professionalCategory &&
-          proProfile?.professionalCity &&
-          proProfile?.skills?.some((skill) => skill.trim().length > 0) &&
-          proProfile?.companyDescription &&
-          proProfile?.address
+          user.professionalCategory &&
+          user.professionalCity &&
+          user.professionalSkillsJson &&
+          user.companyDescription &&
+          user.address
         );
       }
 
@@ -118,7 +115,7 @@ const submitLogin = createServerFn({ method: "POST" })
           email: user.email,
           phone: user.phone,
           avatarUrl: user.avatarUrl,
-          authProvider: user.authProvider,
+          authProvider: user.authProvider as "LOCAL" | "GOOGLE",
         }),
       );
 
@@ -133,7 +130,7 @@ const submitLogin = createServerFn({ method: "POST" })
           email: user.email,
           phone: user.phone,
           avatarUrl: user.avatarUrl,
-          authProvider: user.authProvider,
+          authProvider: user.authProvider as "LOCAL" | "GOOGLE",
         },
       };
     } catch (error) {
