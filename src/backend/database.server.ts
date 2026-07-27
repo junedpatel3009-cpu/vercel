@@ -1,4 +1,5 @@
 import path from "node:path";
+import { mkdirSync } from "node:fs";
 import Database from "better-sqlite3";
 
 export type AppDatabase = InstanceType<typeof Database>;
@@ -24,7 +25,9 @@ export function databasePath() {
 
 export function getApiDatabase() {
   if (!globalDatabase.servioApiDb) {
-    const db = new Database(databasePath());
+    const dbPath = databasePath();
+    mkdirSync(path.dirname(dbPath), { recursive: true });
+    const db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");
     migrateApiSchema(db);
