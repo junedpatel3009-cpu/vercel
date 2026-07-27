@@ -1,7 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { initializeUserDatabase } from "../src/lib/user-db.server";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
+    // Vercel functions receive a fresh /tmp filesystem on cold starts.  Create
+    // the SQLite schema before route modules issue their first User query.
+    initializeUserDatabase();
+
     // @ts-expect-error Generated build output
     const { default: serverEntry } = await import("../dist/server/server.js");
 
@@ -23,7 +28,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         headers,
       }),
       {},
-      {}
+      {},
     );
 
     res.statusCode = response.status;
@@ -45,7 +50,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       JSON.stringify({
         error: "Internal server error",
         message: error instanceof Error ? error.message : String(error),
-      })
+      }),
     );
   }
 }
