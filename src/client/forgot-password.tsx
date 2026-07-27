@@ -33,8 +33,8 @@ const sendPasswordResetOtp = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const email = data.email.trim().toLowerCase();
-      const { findUserByEmail } = await import("@/lib/user-db.server");
-      const user = findUserByEmail(email);
+      const { prisma } = await import("@/lib/prisma");
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (user) {
         const { sendPasswordResetOtpEmail } = await import("@/lib/otp.server");
@@ -58,11 +58,11 @@ const resetPassword = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const email = data.email.trim().toLowerCase();
-      const { findUserByEmail, updateUserPasswordByEmail } = await import("@/lib/user-db.server");
+      const { prisma } = await import("@/lib/prisma");
       const { verifyPasswordResetOtp } = await import("@/lib/otp.server");
 
       const fieldErrors: Partial<Record<keyof ResetPasswordInput, string>> = {};
-      const user = findUserByEmail(email);
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
         fieldErrors.email = "No account found for that email.";
@@ -92,15 +92,7 @@ const resetPassword = createServerFn({ method: "POST" })
         };
       }
 
-      const updated = updateUserPasswordByEmail(email, hashPassword(data.password));
-
-      if (!updated) {
-        return {
-          ok: false as const,
-          fieldErrors: {},
-          formError: "Unable to update your password. Please try again.",
-        };
-      }
+      await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(data.password) } });
 
       return {
         ok: true as const,
