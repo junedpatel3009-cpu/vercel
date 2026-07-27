@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
+import { prisma } from "@/lib/prisma";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -276,7 +277,7 @@ function normalizeDate(value: string) {
   return value.trim() || null;
 }
 
-export function createHireContract(clientId: number, input: HireContractInput) {
+export async function createHireContract(clientId: number, input: HireContractInput) {
   if (!input.acceptedTerms) {
     throw new Error("Please accept the terms and conditions.");
   }
@@ -287,6 +288,69 @@ export function createHireContract(clientId: number, input: HireContractInput) {
 
   if (!input.workDescription.trim()) {
     throw new Error("Work description is required.");
+  }
+
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    const clientProjectId = input.clientProjectId ?? null;
+    if (clientProjectId != null) {
+      const project = await prisma.clientJob.findFirst({
+        where: { id: clientProjectId, userId: clientId },
+        select: { id: true },
+      });
+      if (!project) throw new Error("Selected project was not found.");
+    }
+
+    const jobId = randomUUID();
+    const contractId = randomUUID();
+    const totalAmount = input.paymentOption === "fixed" ? input.fixedPrice : null;
+    const platformFee = totalAmount != null ? Number((totalAmount * 0.1).toFixed(2)) : null;
+    const milestones = input.paymentSchedule === "milestones"
+      ? input.milestones.filter((milestone) => milestone.title.trim())
+      : [{ title: "Whole contract", amount: totalAmount }];
+
+    await prisma.hireJob.create({
+      data: {
+        id: jobId,
+        clientId: String(clientId),
+        title: input.contractTitle.trim(),
+        description: input.workDescription.trim(),
+        budgetMin: input.paymentOption === "hourly" ? input.hourlyRate : input.fixedPrice,
+        budgetMax: input.paymentOption === "hourly" ? input.hourlyRate : input.fixedPrice,
+        jobType: input.workMode,
+        city: input.location.trim() || null,
+        jobDate: normalizeDate(input.jobDate) ? new Date(input.jobDate) : null,
+        deadline: normalizeDate(input.deadline) ? new Date(input.deadline) : null,
+        urgency: "medium",
+        attachments: {
+          create: input.attachments.map((attachment) => ({
+            id: randomUUID(),
+            fileUrl: attachment.fileUrl?.trim() || attachment.fileName.trim(),
+            fileType: attachment.fileType?.trim() || "document",
+            uploadedBy: String(clientId),
+          })),
+        },
+        contracts: {
+          create: {
+            id: contractId,
+            clientId: String(clientId),
+            professionalId: String(input.professionalId),
+            clientProjectId,
+            totalAmount,
+            platformFee,
+            startDate: normalizeDate(input.jobDate) ? new Date(input.jobDate) : null,
+            endDate: normalizeDate(input.deadline) ? new Date(input.deadline) : null,
+            milestones: {
+              create: milestones.map((milestone) => ({
+                id: randomUUID(), title: milestone.title.trim(), amount: milestone.amount,
+                dueDate: normalizeDate(input.deadline) ? new Date(input.deadline) : null,
+              })),
+            },
+          },
+        },
+      },
+    });
+
+    return { jobId, contractId };
   }
 
   const db = getDatabase();

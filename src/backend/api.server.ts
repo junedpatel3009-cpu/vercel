@@ -280,7 +280,7 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "POST" && pathname === `${API_PREFIX}/client/hire`) {
     const user = currentUser(request, ["CLIENT"]);
-    return json(createHireContract(user.id, (await body(request)) as never), 201);
+    return json(await createHireContract(user.id, (await body(request)) as never), 201);
   }
   if (method === "POST" && pathname === `${API_PREFIX}/client/reviews`) {
     const user = currentUser(request, ["CLIENT"]);

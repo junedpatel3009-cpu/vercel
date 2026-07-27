@@ -53,7 +53,7 @@ const saveHireContract = createServerFn({ method: "POST" })
   .inputValidator((data: HireContractInput) => data)
   .handler(async ({ data }) => {
     const viewer = requireCurrentUserRole("CLIENT");
-    const result = createHireContract(viewer.id, data);
+    const result = await createHireContract(viewer.id, data);
 
     return {
       ok: true as const,
