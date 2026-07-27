@@ -21,7 +21,7 @@ const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
     homeIntroHtml: editorPage ? extractFirstSection(editorPage.content) : null,
     openJobs: await getOpenClientJobs(),
     favoriteJobIds: user ? getFavoriteJobIds(user.id) : [],
-    professionals: getProfessionalUsers().map((professional) => ({
+    professionals: (await getProfessionalUsers()).map((professional) => ({
       ...professional,
       verification: getProfessionalVerificationByUserId(professional.id),
     })),

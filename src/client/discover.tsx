@@ -26,7 +26,7 @@ import { getCurrentUser } from "@/lib/current-user.server";
 import { formatApproximateLocation } from "@/lib/location-privacy";
 import { getProfessionalUsers } from "@/lib/user-db.server";
 
-type ProfessionalDiscoveryUser = ReturnType<typeof getProfessionalUsers>[number];
+type ProfessionalDiscoveryUser = Awaited<ReturnType<typeof getProfessionalUsers>>[number];
 type ProfessionalWithDistance = ProfessionalDiscoveryUser & {
   distanceKm: number | null;
 };
@@ -53,7 +53,7 @@ type SavedFilter = {
 
 const getDiscoveryData = createServerFn({ method: "GET" }).handler(async () => ({
   viewer: getCurrentUser(),
-  professionals: getProfessionalUsers(),
+  professionals: await getProfessionalUsers(),
 }));
 
 export const Route = createFileRoute("/discover")({

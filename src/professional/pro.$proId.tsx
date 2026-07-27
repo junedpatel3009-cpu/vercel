@@ -54,7 +54,7 @@ const getProDetails = createServerFn({ method: "GET" })
       return null;
     }
 
-    const profile = getProfessionalProfileByUserId(proId);
+    const profile = await getProfessionalProfileByUserId(proId);
 
     if (!profile) return null;
 

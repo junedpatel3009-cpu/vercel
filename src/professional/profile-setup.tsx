@@ -161,7 +161,7 @@ const getProfessionalProfilePage = createServerFn({ method: "GET" }).handler(asy
   return {
     viewer,
     professionalProfile:
-      viewer.role === "PROFESSIONAL" ? getProfessionalProfileByUserId(viewer.id) : null,
+      viewer.role === "PROFESSIONAL" ? await getProfessionalProfileByUserId(viewer.id) : null,
     verification:
       viewer.role === "PROFESSIONAL" ? getProfessionalVerificationByUserId(viewer.id) : null,
   };
@@ -179,7 +179,7 @@ const saveProfessionalProfile = createServerFn({ method: "POST" })
       };
     }
 
-    const profile = updateProfessionalProfileByUserId({
+    const profile = await updateProfessionalProfileByUserId({
       userId: viewer.id,
       fullName: data.fullName,
       profilePhotoUrl: data.profilePhotoUrl || null,

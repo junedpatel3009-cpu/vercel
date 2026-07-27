@@ -147,7 +147,7 @@ async function route(request: Request, url: URL): Promise<Response> {
   if (method === "POST" && pathname === `${API_PREFIX}/auth/register`) {
     const input = parse(registration, await body(request));
     if (findUserByEmail(input.email)) throw new ApiError(409, "Email is already registered.");
-    const user = createUserRecord({
+    const user = await createUserRecord({
       ...input,
       phone: input.phone ?? null,
       passwordHash: hashPassword(input.password),
