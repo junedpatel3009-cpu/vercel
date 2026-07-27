@@ -524,6 +524,68 @@ export async function getOpenClientJobs() {
   }
 
   const db = getDatabase();
+  const rows = db
+    .prepare(
+      `
+        SELECT
+          ClientJob.*,
+          TRIM(User.firstName || ' ' || User.lastName) AS clientName,
+          User.companyName AS clientCompanyName,
+          User.avatarUrl AS clientAvatarUrl
+        FROM "ClientJob"
+        INNER JOIN "User" ON User.id = ClientJob.userId
+        WHERE ${availableJobPredicate()}
+        ORDER BY datetime(ClientJob.createdAt) DESC, ClientJob.id DESC
+      `,
+    )
+    .all() as Array<Omit<PublicClientJobRecord, "attachments">>;
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const attachmentRows = db
+    .prepare(
+      `
+        SELECT *
+        FROM "ClientJobAttachment"
+        WHERE jobId IN (${rows.map(() => "?").join(",")})
+        ORDER BY id ASC
+      `,
+    )
+    .all(...rows.map((r) => r.id)) as ClientJobAttachmentRecord[];
+
+  return rows.map((job) => ({
+    ...mapJob(
+      {
+        id: job.id,
+        userId: job.userId,
+        category: job.category,
+        title: job.title,
+        description: job.description,
+        budgetMin: job.budgetMin,
+        budgetMax: job.budgetMax,
+        urgency: job.urgency,
+        timingType: job.timingType ?? (job.hourlyRate ? "HOURLY" : "FIXED"),
+        hourlyRate: job.hourlyRate ?? null,
+        jobDate: job.jobDate ?? null,
+        deadline: job.deadline,
+        workMode: job.workMode,
+        locationLabel: job.locationLabel,
+        locationAddress: job.locationAddress,
+        locationLat: job.locationLat ?? null,
+        locationLng: job.locationLng ?? null,
+        status: job.status,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+      },
+      attachmentRows.filter((a) => a.jobId === job.id),
+    ),
+    clientName: job.clientName,
+    clientCompanyName: job.clientCompanyName,
+    clientAvatarUrl: job.clientAvatarUrl,
+  }));
+
 }
 
 export function getOpenClientJobById(jobId: number) {
