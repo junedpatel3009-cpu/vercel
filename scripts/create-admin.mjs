@@ -9,7 +9,14 @@ if (!email || !/^\S+@\S+\.\S+$/.test(email) || !password || password.length < 12
   process.exit(1);
 }
 
-const databaseUrl = (process.env.DATABASE_URL || "file:./prisma/app.db").replace(/^file:/, "");
+const rawDatabaseUrl = process.env.DATABASE_URL || "file:./prisma/app.db";
+if (rawDatabaseUrl.startsWith("postgres://") || rawDatabaseUrl.startsWith("postgresql://")) {
+  console.error(
+    "DATABASE_URL points to PostgreSQL, but create-admin.mjs expects a SQLite file path. Use file:./prisma/app.db or migrate the script."
+  );
+  process.exit(1);
+}
+const databaseUrl = rawDatabaseUrl.replace(/^file:/, "");
 const db = new Database(path.resolve(process.cwd(), databaseUrl));
 const salt = randomBytes(16).toString("base64url");
 const passwordHash = `scrypt$${salt}$${scryptSync(password, salt, 64).toString("base64url")}`;

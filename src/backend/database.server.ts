@@ -6,8 +6,20 @@ export type AppDatabase = InstanceType<typeof Database>;
 const globalDatabase = globalThis as typeof globalThis & { servioApiDb?: AppDatabase };
 
 export function databasePath() {
-  const configured = process.env.DATABASE_URL?.replace(/^file:/, "");
-  return path.resolve(process.cwd(), configured || "prisma/app.db");
+  const rawDatabaseUrl = process.env.DATABASE_URL;
+  if (!rawDatabaseUrl) {
+    return path.resolve(process.cwd(), "prisma/app.db");
+  }
+
+  const configured = rawDatabaseUrl.replace(/^file:/, "");
+  if (configured.startsWith("postgres://") || configured.startsWith("postgresql://")) {
+    throw new Error(
+      "DATABASE_URL points to PostgreSQL, but the backend SQLite loader requires a SQLite file path. " +
+      "Set DATABASE_URL to a SQLite file like \"file:./prisma/app.db\" or migrate the API to a Postgres-compatible adapter."
+    );
+  }
+
+  return path.resolve(process.cwd(), configured);
 }
 
 export function getApiDatabase() {
