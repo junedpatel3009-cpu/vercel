@@ -1,5 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
+import { prisma } from "@/lib/prisma";
 import { io as clientIo } from "socket.io-client";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
@@ -215,7 +216,93 @@ function availableJobPredicate() {
   `;
 }
 
-export function createClientJob(userId: number, input: ClientJobInput) {
+export async function createClientJob(userId: number, input: ClientJobInput) {
+  // If DATABASE_URL points to Postgres, use Prisma to create the job so
+  // deployments on Vercel that use Supabase/Postgres persist jobs.
+  const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  if (isPostgres) {
+    const job = await prisma.clientJob.create({
+      data: {
+        userId,
+        category: input.category.trim(),
+        title: input.title.trim(),
+        description: input.description.trim(),
+        budgetMin: input.budgetMin ?? null,
+        budgetMax: input.budgetMax ?? null,
+        urgency: input.urgency as any,
+        timingType: input.timingType,
+        hourlyRate: input.hourlyRate ?? null,
+        jobDate: input.jobDate ? new Date(input.jobDate) : null,
+        deadline: input.deadline ? new Date(input.deadline) : new Date(),
+        workMode: input.workMode as any,
+        locationLabel: input.locationLabel?.trim() || null,
+        locationAddress: input.locationAddress?.trim() || null,
+        locationLat: input.locationLat ?? null,
+        locationLng: input.locationLng ?? null,
+        status: input.status as any,
+        attachments: input.attachments?.length
+          ? { create: input.attachments.map((a) => ({
+              fileName: a.fileName.trim(),
+              fileType: a.fileType?.trim() || null,
+              fileSize: a.fileSize ?? null,
+              previewUrl: a.previewUrl?.trim() || null,
+            })) }
+          : undefined,
+      },
+      include: { user: true, attachments: true },
+    });
+
+    // Notify admin room via socket server (best-effort, do not fail job creation)
+    try {
+      const socketUrl = process.env.SOCKET_URL || `http://localhost:${process.env.SOCKET_PORT || 4001}`;
+      const sock = clientIo(socketUrl, { autoConnect: false });
+      sock.connect();
+      sock.emit("admin:activity", { reason: "client job posted" });
+      sock.disconnect();
+    } catch (e) {
+      // ignore errors — admin refresh is best-effort
+    }
+
+    return {
+      ...mapJob(
+        {
+          id: job.id,
+          userId: job.userId,
+          category: job.category,
+          title: job.title,
+          description: job.description,
+          budgetMin: job.budgetMin,
+          budgetMax: job.budgetMax,
+          urgency: (job.urgency as unknown) as JobUrgency,
+          timingType: (job.timingType as unknown) as JobTimingType,
+          hourlyRate: job.hourlyRate ?? null,
+          jobDate: job.jobDate ? job.jobDate.toISOString() : null,
+          deadline: job.deadline.toISOString(),
+          workMode: (job.workMode as unknown) as JobWorkMode,
+          locationLabel: job.locationLabel,
+          locationAddress: job.locationAddress,
+          locationLat: job.locationLat ?? null,
+          locationLng: job.locationLng ?? null,
+          status: (job.status as unknown) as JobStatus,
+          createdAt: job.createdAt.toISOString(),
+          updatedAt: job.updatedAt.toISOString(),
+        },
+        job.attachments.map((a) => ({
+          id: a.id,
+          jobId: a.jobId,
+          fileName: a.fileName,
+          fileType: a.fileType ?? null,
+          fileSize: a.fileSize ?? null,
+          previewUrl: a.previewUrl ?? null,
+          createdAt: a.createdAt.toISOString(),
+        })),
+      ),
+      clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
+      clientCompanyName: job.user.companyName || null,
+      clientAvatarUrl: job.user.avatarUrl || null,
+    };
+  }
+
   const db = getDatabase();
   const timestamp = new Date().toISOString();
 
@@ -382,48 +469,58 @@ export function getClientJobsByUserId(userId: number) {
   );
 }
 
-export function getOpenClientJobs() {
-  const db = getDatabase();
-  const jobs = db
-    .prepare(
-      `
-        SELECT
-          ClientJob.*,
-          TRIM(User.firstName || ' ' || User.lastName) AS clientName,
-          User.companyName AS clientCompanyName,
-          User.avatarUrl AS clientAvatarUrl
-        FROM "ClientJob"
-        INNER JOIN "User" ON User.id = ClientJob.userId
-        WHERE ${availableJobPredicate()}
-        ORDER BY datetime(ClientJob.createdAt) DESC, ClientJob.id DESC
-      `,
-    )
-    .all() as Array<Omit<PublicClientJobRecord, "attachments">>;
+export async function getOpenClientJobs() {
+  const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
-  if (!jobs.length) {
-    return [];
+  if (isPostgres) {
+    const rows = await prisma.clientJob.findMany({
+      where: { status: "OPEN" as any },
+      orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+      include: { user: true, attachments: true },
+    });
+
+    // Map Prisma results to the public client job shape used by the rest of the app
+    return rows.map((job) => ({
+      ...mapJob(
+        {
+          id: job.id,
+          userId: job.userId,
+          category: job.category,
+          title: job.title,
+          description: job.description,
+          budgetMin: job.budgetMin,
+          budgetMax: job.budgetMax,
+          urgency: job.urgency,
+          timingType: (job.timingType as unknown) as JobTimingType,
+          hourlyRate: job.hourlyRate ?? null,
+          jobDate: job.jobDate ? job.jobDate.toISOString() : null,
+          deadline: job.deadline.toISOString(),
+          workMode: job.workMode,
+          locationLabel: job.locationLabel,
+          locationAddress: job.locationAddress,
+          locationLat: job.locationLat ?? null,
+          locationLng: job.locationLng ?? null,
+          status: job.status,
+          createdAt: job.createdAt.toISOString(),
+          updatedAt: job.updatedAt.toISOString(),
+        },
+        job.attachments.map((a: any) => ({
+          id: a.id,
+          jobId: a.jobId,
+          fileName: a.fileName,
+          fileType: a.fileType ?? null,
+          fileSize: a.fileSize ?? null,
+          previewUrl: a.previewUrl ?? null,
+          createdAt: a.createdAt.toISOString(),
+        })),
+      ),
+      clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
+      clientCompanyName: job.user.companyName || null,
+      clientAvatarUrl: job.user.avatarUrl || null,
+    }));
   }
 
-  const attachmentRows = db
-    .prepare(
-      `
-        SELECT *
-        FROM "ClientJobAttachment"
-        WHERE jobId IN (${jobs.map(() => "?").join(",")})
-        ORDER BY id ASC
-      `,
-    )
-    .all(...jobs.map((job) => job.id)) as ClientJobAttachmentRecord[];
-
-  return jobs.map((job) => ({
-    ...mapJob(
-      job,
-      attachmentRows.filter((attachment) => attachment.jobId === job.id),
-    ),
-    clientName: job.clientName,
-    clientCompanyName: job.clientCompanyName,
-    clientAvatarUrl: job.clientAvatarUrl,
-  }));
+  const db = getDatabase();
 }
 
 export function getOpenClientJobById(jobId: number) {
@@ -485,7 +582,7 @@ export function getFavoriteJobIds(userId: number) {
   ).map((row) => row.jobId);
 }
 
-export function getFavoriteJobsByUserId(userId: number) {
+export async function getFavoriteJobsByUserId(userId: number) {
   const favoriteIds = getFavoriteJobIds(userId);
 
   if (!favoriteIds.length) {
@@ -495,9 +592,11 @@ export function getFavoriteJobsByUserId(userId: number) {
   const favoriteIdSet = new Set(favoriteIds);
   const favoriteOrder = new Map(favoriteIds.map((jobId, index) => [jobId, index]));
 
-  return getOpenClientJobs()
-    .filter((job) => favoriteIdSet.has(job.id))
-    .sort((a, b) => (favoriteOrder.get(a.id) ?? 0) - (favoriteOrder.get(b.id) ?? 0));
+  const openJobs = (await getOpenClientJobs()) || [];
+
+  return (openJobs as any[])
+    .filter((job: any) => favoriteIdSet.has(job.id))
+    .sort((a: any, b: any) => (favoriteOrder.get(a.id) ?? 0) - (favoriteOrder.get(b.id) ?? 0));
 }
 
 export function isFavoriteJob(userId: number, jobId: number) {

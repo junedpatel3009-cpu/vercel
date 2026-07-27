@@ -93,7 +93,7 @@ export const getProfessionalStatsData = createServerFn({ method: "GET" }).handle
     viewer,
     profile: getProfessionalProfileByUserId(viewer.id),
     projectRequests: getProfessionalProjectRequests(viewer.id),
-    favoriteJobs: getFavoriteJobsByUserId(viewer.id),
+    favoriteJobs: await getFavoriteJobsByUserId(viewer.id),
     projectNegotiations: getProjectNegotiationsForProfessional(viewer.id),
     hireNegotiations: getProfessionalHireNegotiations(viewer.id),
     hireRequests: getProfessionalHireRequests(viewer.id),
@@ -1397,7 +1397,7 @@ function ProfessionalStats() {
 
           {favoriteJobs.length ? (
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              {favoriteJobs.map((job) => (
+              {favoriteJobs.map((job: any) => (
                 <Link
                   key={job.id}
                   to="/job/$jobId"

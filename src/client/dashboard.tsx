@@ -42,7 +42,7 @@ const getDashboardAccess = createServerFn({ method: "GET" }).handler(async () =>
 
   if (viewer.role === "CLIENT") {
     const clientProfile = getClientProfileByUserId(viewer.id);
-    const clientJobs = getClientJobsByUserId(viewer.id);
+    const clientJobs = await getClientJobsByUserId(viewer.id);
 
     return {
       viewer,
@@ -56,7 +56,7 @@ const getDashboardAccess = createServerFn({ method: "GET" }).handler(async () =>
     viewer,
     clientProfile: null,
     clientJobs: [],
-    openJobs: getOpenClientJobs(),
+    openJobs: await getOpenClientJobs(),
   };
 });
 
@@ -128,7 +128,7 @@ function Dashboard() {
     return null;
   }
 
-  const { viewer, clientProfile, clientJobs } = access;
+  const { viewer, clientProfile, clientJobs = [] } = access;
   const displayName = clientProfile?.fullName || `${viewer.firstName} ${viewer.lastName}`.trim();
 
   if (viewer.role === "ADMIN") {
@@ -137,7 +137,7 @@ function Dashboard() {
 
   if (viewer.role === "PROFESSIONAL") {
     return (
-      <ProfessionalDashboard displayName={displayName} viewer={viewer} openJobs={access.openJobs} />
+      <ProfessionalDashboard displayName={displayName} viewer={viewer} openJobs={access.openJobs ?? []} />
     );
   }
 
@@ -442,15 +442,16 @@ function ProfessionalDashboard({
   viewer: { avatarUrl: string | null };
   openJobs: Awaited<ReturnType<typeof getOpenClientJobs>>;
 }) {
-  const highUrgencyJobs = openJobs.filter((job) => job.urgency === "HIGH").length;
-  const remoteJobs = openJobs.filter(
+  const safeOpenJobs = openJobs || [];
+  const highUrgencyJobs = safeOpenJobs.filter((job) => job.urgency === "HIGH").length;
+  const remoteJobs = safeOpenJobs.filter(
     (job) => job.workMode === "REMOTE" || job.workMode === "BOTH",
   ).length;
-  const withAttachments = openJobs.filter((job) => job.attachments.length > 0).length;
+  const withAttachments = safeOpenJobs.filter((job) => job.attachments.length > 0).length;
   const stats = [
     {
       label: "Open jobs",
-      value: String(openJobs.length),
+      value: String(safeOpenJobs.length),
       icon: Briefcase,
       tint: "text-primary bg-primary/10",
     },
@@ -507,9 +508,9 @@ function ProfessionalDashboard({
           </div>
         </div>
 
-        {openJobs.length ? (
+        {safeOpenJobs.length ? (
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            {openJobs.map((job) => (
+            {safeOpenJobs.map((job) => (
               <Link
                 key={job.id}
                 to="/job/$jobId"

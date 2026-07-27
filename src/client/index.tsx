@@ -86,7 +86,8 @@ const saveFavoriteJob = createServerFn({ method: "POST" })
 
 export function Landing() {
   const { user } = indexRoute.useRouteContext();
-  const { openJobs, professionals, favoriteJobIds, homeIntroHtml } = indexRoute.useLoaderData();
+  const { openJobs = [], professionals = [], favoriteJobIds = [], homeIntroHtml } =
+    indexRoute.useLoaderData();
   const welcomeName = user ? `${user.firstName} ${user.lastName}`.trim() : "";
   const isProfessional = user?.role === "PROFESSIONAL";
   const [selectedProfessional, setSelectedProfessional] = useState<any | null>(null);

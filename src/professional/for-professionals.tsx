@@ -31,7 +31,7 @@ import { formatApproximateCoordinates, formatApproximateLocation } from "@/lib/l
 
 const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   return {
-    openJobs: getOpenClientJobs(),
+    openJobs: await getOpenClientJobs(),
   };
 });
 

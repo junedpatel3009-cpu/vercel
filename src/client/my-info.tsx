@@ -74,11 +74,10 @@ const getMyInfoData = createServerFn({ method: "GET" }).handler(async () => {
   }
 
   const clientProfile = getClientProfileByUserId(viewer.id);
-
   return {
     viewer,
     clientProfile,
-    favoriteJobs: getFavoriteJobsByUserId(viewer.id),
+    favoriteJobs: await getFavoriteJobsByUserId(viewer.id),
   };
 });
 
@@ -791,7 +790,7 @@ function MyInfoPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {favoriteJobs.length ? (
-                favoriteJobs.map((job) => (
+                favoriteJobs.map((job: any) => (
                   <Link
                     key={job.id}
                     to="/job/$jobId"
