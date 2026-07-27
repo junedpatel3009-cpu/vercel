@@ -75,14 +75,31 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
     };
   }
 
+  // Project requests and direct hires are still stored by the legacy SQLite
+  // modules. On Vercel, PostgreSQL is the primary database and those modules
+  // intentionally receive an empty, ephemeral SQLite database. Querying them
+  // there can throw (their related User/ClientJob tables are absent), which
+  // previously made the complete Projects page fail to render.
+  const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  const legacyProjectData = usesPostgres
+    ? {
+        projectRequests: [] as ClientProjectRequestRecord[],
+        projectNegotiations: [] as ProjectNegotiationRecord[],
+        trackedProjects: [] as ClientTrackedProjectRecord[],
+        hireRequests: [] as ClientHireRequestRecord[],
+      }
+    : {
+        projectRequests: getClientProjectRequests(viewer.id),
+        projectNegotiations: getProjectNegotiationsForClient(viewer.id),
+        trackedProjects: getClientTrackedProjects(viewer.id),
+        hireRequests: getClientHireRequests(viewer.id),
+      };
+
   return {
     viewer,
     clientProfile: await getClientProfileByUserId(viewer.id),
     projects: await getClientJobsByUserId(viewer.id),
-    projectRequests: getClientProjectRequests(viewer.id),
-    projectNegotiations: getProjectNegotiationsForClient(viewer.id),
-    trackedProjects: getClientTrackedProjects(viewer.id),
-    hireRequests: getClientHireRequests(viewer.id),
+    ...legacyProjectData,
   };
 });
 
