@@ -172,7 +172,30 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "POST" && pathname === `${API_PREFIX}/auth/login`) {
     const input = parse(login, await body(request));
-    const user = findUserByEmail(input.email);
+    let user = findUserByEmail(input.email);
+    // The main application still uses the legacy SQLite user store for
+    // sessions and project data, while newer sign-ups may have been created
+    // through Prisma/PostgreSQL. Import that account once at login so both
+    // authentication paths refer to the same local user record.
+    if (!user) {
+      const { prisma } = await import("@/lib/prisma");
+      const prismaUser = await prisma.user.findUnique({ where: { email: input.email } });
+
+      if (prismaUser && prismaUser.isActive) {
+        await createUserRecord({
+          role: prismaUser.role as UserRole,
+          firstName: prismaUser.firstName,
+          lastName: prismaUser.lastName,
+          email: prismaUser.email,
+          phone: prismaUser.phone,
+          passwordHash: prismaUser.passwordHash,
+          googleId: prismaUser.googleId,
+          avatarUrl: prismaUser.avatarUrl,
+          authProvider: prismaUser.authProvider as "LOCAL" | "GOOGLE",
+        });
+        user = findUserByEmail(input.email);
+      }
+    }
     const check = await verifyPassword(input.password, user?.passwordHash ?? null);
     if (!user || !user.isActive || !check.valid)
       throw new ApiError(401, "Invalid email or password.");
