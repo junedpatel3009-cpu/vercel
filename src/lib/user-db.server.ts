@@ -890,7 +890,8 @@ export function findUserByEmail(email: string) {
       db
         .prepare(
           `
-            SELECT id, role, firstName, lastName, email, phone, passwordHash, googleId, avatarUrl, authProvider, isActive
+            SELECT id, role, firstName, lastName, email, phone, passwordHash, googleId, avatarUrl, authProvider, isActive,
+                   professionalCategory, professionalCity, professionalSkillsJson, companyDescription, address
             FROM "User"
             WHERE email = ?
             LIMIT 1
@@ -909,6 +910,11 @@ export function findUserByEmail(email: string) {
             avatarUrl: string | null;
             authProvider: AuthProvider;
             isActive: number;
+            professionalCategory: string | null;
+            professionalCity: string | null;
+            professionalSkillsJson: string | null;
+            companyDescription: string | null;
+            address: string | null;
           }
         | undefined,
   );
