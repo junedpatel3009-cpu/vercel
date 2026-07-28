@@ -6,7 +6,7 @@ import { issueAccessToken, opaqueToken, readAccessToken, tokenHash } from "./aut
 import { getApiDatabase } from "./database.server";
 import { ApiError, body, errorResponse, json } from "./http.server";
 import { sendAccountLink } from "./email.server";
-import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
+import { createSessionCookie, readSessionFromCookieHeader } from "@/lib/auth-session.server";
 import { hashPassword, verifyPassword } from "@/lib/password.server";
 import { unlink } from "node:fs/promises";
 // or if using callbacks: import { unlink } from "node:fs";
@@ -177,7 +177,22 @@ async function route(request: Request, url: URL): Promise<Response> {
     if (!user || !user.isActive || !check.valid)
       throw new ApiError(401, "Invalid email or password.");
     if (check.needsUpgrade) updateUserPasswordByEmail(user.email, hashPassword(input.password));
-    return json({ user: publicAccount(user), accessToken: issueAccessToken(user) });
+    const isProfileComplete =
+      user.role !== "PROFESSIONAL" ||
+      Boolean(
+        user.professionalCategory &&
+          user.professionalCity &&
+          user.professionalSkillsJson &&
+          user.companyDescription &&
+          user.address,
+      );
+    const response = json({
+      user: publicAccount(user),
+      accessToken: issueAccessToken(user),
+      isProfileComplete,
+    });
+    response.headers.set("Set-Cookie", createSessionCookie(publicAccount(user)!));
+    return response;
   }
   if (method === "GET" && pathname === `${API_PREFIX}/auth/me`)
     return json(publicAccount(currentUser(request)));

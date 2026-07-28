@@ -2,6 +2,7 @@ import { createFileRoute, useLoaderData, useLocation } from "@tanstack/react-rou
 import { createServerFn } from "@tanstack/react-start";
 import {
   MoreHorizontal,
+  MessageSquare,
   Paperclip,
   Phone,
   PhoneOff,
@@ -957,7 +958,7 @@ function Messages() {
       userRole="Client"
       userAvatarUrl={viewer?.avatarUrl}
     >
-      <div className="grid h-[calc(100vh-12rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-soft md:grid-cols-[320px_1fr]">
+      <div className="grid h-[calc(100vh-12.5rem)] min-h-[560px] overflow-hidden rounded-3xl border border-border/80 bg-card shadow-xl shadow-foreground/[0.05] md:grid-cols-[340px_1fr]">
         <MessageSidebar
           conversations={conversations}
           active={active}
@@ -987,7 +988,7 @@ function Messages() {
                 answerCall={answerCall}
                 endCall={endInlineCall}
               />
-              <div className="flex-1 space-y-3 overflow-y-auto bg-surface p-6">
+              <div className="flex-1 space-y-3 overflow-y-auto bg-muted/[0.18] p-5 sm:p-6">
                 {activeMessages.map((message) => (
                   <MessageBubble
                     key={message.id}
@@ -1027,27 +1028,28 @@ function MessageSidebar({
   onSelect: (conversation: Conversation) => void;
 }) {
   return (
-    <aside className="border-r border-border">
-      <div className="border-b border-border p-4">
+    <aside className="flex min-h-0 flex-col border-r border-border/70 bg-muted/[0.12]">
+      <div className="border-b border-border/70 p-4 sm:p-5">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inbox</p>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search conversations" className="pl-9" />
+          <Input placeholder="Search conversations" className="h-10 rounded-xl border-border/80 bg-card pl-9 shadow-sm" />
         </div>
       </div>
-      <div className="overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {conversations.length ? (
           conversations.map((conversation: Conversation) => (
             <button
               key={conversation.id}
               type="button"
               onClick={() => onSelect(conversation)}
-              className={`flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition-colors ${
-                active?.id === conversation.id ? "bg-primary/5" : "hover:bg-muted"
+              className={`mb-1 flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition-all ${
+                active?.id === conversation.id ? "bg-primary/[0.09] shadow-sm" : "hover:bg-card hover:shadow-sm"
               }`}
             >
               <img
                 src={conversation.otherUserAvatarUrl || "https://i.pravatar.cc/100?u=message-user"}
-                className="h-10 w-10 rounded-full object-cover"
+                className="h-10 w-10 rounded-xl object-cover shadow-sm"
                 alt=""
               />
               <div className="min-w-0 flex-1">
@@ -1068,7 +1070,15 @@ function MessageSidebar({
             </button>
           ))
         ) : (
-          <div className="p-6 text-sm text-muted-foreground">{emptyText}</div>
+          <div className="grid h-full min-h-56 place-items-center p-6 text-center">
+            <div>
+              <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-primary/[0.09] text-primary">
+                <MessageSquare className="h-5 w-5" />
+              </span>
+              <p className="mt-3 text-sm font-medium text-foreground">Your inbox is quiet</p>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">{emptyText}</p>
+            </div>
+          </div>
         )}
       </div>
     </aside>
@@ -1095,10 +1105,10 @@ function MessageHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="flex items-center gap-3 border-b border-border p-4">
+    <header className="flex items-center gap-3 border-b border-border/70 bg-card p-4 sm:px-6">
       <img
         src={active.otherUserAvatarUrl || "https://i.pravatar.cc/100?u=message-user"}
-        className="h-10 w-10 rounded-full object-cover"
+        className="h-10 w-10 rounded-xl object-cover shadow-sm"
         alt=""
       />
       <div className="min-w-0 flex-1">
@@ -1481,10 +1491,13 @@ function HeaderTypingDots() {
 
 function EmptyConversation({ text }: { text: string }) {
   return (
-    <div className="grid flex-1 place-items-center bg-surface p-6 text-center">
-      <div>
-        <p className="text-lg font-semibold">No conversation selected</p>
-        <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+    <div className="grid flex-1 place-items-center bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.07),transparent_52%)] p-6 text-center">
+      <div className="max-w-sm">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-3xl border border-primary/10 bg-card text-primary shadow-lg shadow-primary/[0.08]">
+          <MessageSquare className="h-7 w-7" />
+        </span>
+        <p className="mt-5 text-xl font-bold tracking-tight">Your conversations live here</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
       </div>
     </div>
   );

@@ -123,6 +123,9 @@ function Dashboard() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [updatingJobId, setUpdatingJobId] = useState<number | null>(null);
+  const [dashboardFilter, setDashboardFilter] = useState<
+    "all" | "active" | "upcoming" | "budgeted"
+  >("all");
 
   if (!access) {
     return null;
@@ -148,7 +151,11 @@ function Dashboard() {
   const openJobs = clientJobs.filter((job) => job.status === "OPEN").length;
   const draftJobs = clientJobs.filter((job) => job.status === "DRAFT").length;
   const closedJobs = clientJobs.filter((job) => job.status === "CLOSED").length;
-  const upcomingJobs = clientJobs.filter((job) => new Date(job.deadline) >= new Date()).length;
+  const upcomingDeadlineJobs = clientJobs.filter(
+    (job) => job.status === "OPEN" && new Date(job.deadline) >= new Date(),
+  );
+  const upcomingJobs = upcomingDeadlineJobs.length;
+  const budgetedJobs = clientJobs.filter((job) => job.budgetMin != null || job.budgetMax != null);
   const totalBudget = clientJobs.reduce(
     (sum, job) => sum + (job.budgetMax ?? job.budgetMin ?? 0),
     0,
@@ -159,26 +166,44 @@ function Dashboard() {
       value: String(clientJobs.length),
       icon: Briefcase,
       tint: "text-primary bg-primary/10",
+      filter: "all" as const,
+      description: "Every job and project you have posted, including drafts and closed work.",
     },
     {
       label: "Active jobs",
       value: String(openJobs),
       icon: ClipboardList,
       tint: "text-accent bg-accent/15",
+      filter: "active" as const,
+      description: "Open jobs that professionals can currently view and respond to.",
     },
     {
       label: "Upcoming deadlines",
       value: String(upcomingJobs),
       icon: CalendarClock,
       tint: "text-warning bg-warning/15",
+      filter: "upcoming" as const,
+      description: "Active jobs with a deadline today or later.",
     },
     {
       label: "Planned budget",
       value: totalBudget ? `$${totalBudget.toLocaleString()}` : "$0",
       icon: DollarSign,
       tint: "text-success bg-success/15",
+      filter: "budgeted" as const,
+      description: "The combined maximum budget across jobs where you entered a budget.",
     },
   ];
+
+  const filteredJobs =
+    dashboardFilter === "active"
+      ? clientJobs.filter((job) => job.status === "OPEN")
+      : dashboardFilter === "upcoming"
+        ? upcomingDeadlineJobs
+        : dashboardFilter === "budgeted"
+          ? budgetedJobs
+          : clientJobs;
+  const activeStat = stats.find((stat) => stat.filter === dashboardFilter) ?? stats[0];
 
   const changeJobStatus = async (jobId: number, status: JobStatus) => {
     setUpdatingJobId(jobId);
@@ -214,23 +239,32 @@ function Dashboard() {
       userRole="Client"
       userAvatarUrl={clientProfile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {displayName}</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="mx-auto max-w-7xl space-y-8 pb-8">
+        <section className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.10] via-card to-card px-6 py-7 shadow-soft sm:px-8 sm:py-8">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div className="max-w-2xl">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                Client workspace
+              </p>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                Welcome back, {displayName}
+              </h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
             Post jobs, track the project details you saved, and manage deadlines from one place.
-          </p>
-        </div>
-        <Button size="lg" asChild>
-          <Link to="/post-job">
-            <FilePlus2 className="h-4 w-4" />
-            Post job / project
-          </Link>
-        </Button>
-      </div>
+              </p>
+            </div>
+            <Button size="lg" className="shadow-lg shadow-primary/20" asChild>
+              <Link to="/post-job">
+                <FilePlus2 className="h-4 w-4" />
+                Post job / project
+              </Link>
+            </Button>
+          </div>
+        </section>
 
-      <div className="mb-8 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-        <div className="rounded-xl border border-border bg-card p-6 shadow-soft">
+      <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-4">
             <img
               src={
@@ -239,31 +273,33 @@ function Dashboard() {
                 "https://i.pravatar.cc/120?u=client-dashboard"
               }
               alt={displayName}
-              className="h-16 w-16 rounded-xl object-cover"
+              className="h-16 w-16 rounded-2xl border-2 border-background object-cover shadow-md"
             />
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl font-semibold">Job posting hub</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Workspace</p>
+              <h2 className="mt-1 text-xl font-semibold">Job posting hub</h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {clientProfile?.companyName || "Independent client account"}
               </p>
-              <p className="mt-3 text-sm text-foreground">
+              <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0 text-primary" />
                 {clientProfile?.address || "No main address saved yet."}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPinHouse className="h-4 w-4 text-primary" />
               <h2 className="text-lg font-semibold">Saved locations</h2>
             </div>
-            <Link to="/my-info" className="text-sm text-primary hover:underline">
+            <Link to="/my-info" className="text-sm font-medium text-primary hover:underline">
               View profile
             </Link>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-2">
             {(clientProfile?.savedLocations?.length
               ? clientProfile.savedLocations
               : [
@@ -275,7 +311,7 @@ function Dashboard() {
             ).map((location, index) => (
               <div
                 key={`${location.label}-${index}`}
-                className="rounded-lg border border-border bg-muted/30 p-4"
+                className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3"
               >
                 <p className="font-medium">{location.label}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{location.address}</p>
@@ -283,11 +319,19 @@ function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-5 shadow-soft">
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => setDashboardFilter(s.filter)}
+            aria-pressed={dashboardFilter === s.filter}
+            className={`border-b border-border/70 p-5 text-left transition-colors last:border-b-0 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0 ${
+              dashboardFilter === s.filter ? "bg-primary/[0.04]" : "bg-card"
+            }`}
+          >
             <div className="flex items-start justify-between">
               <div className={`grid h-10 w-10 place-items-center rounded-xl ${s.tint}`}>
                 <s.icon className="h-5 w-5" />
@@ -296,13 +340,14 @@ function Dashboard() {
                 <span className="text-xs font-medium text-muted-foreground">{draftJobs} draft</span>
               ) : null}
             </div>
-            <p className="mt-4 text-2xl font-semibold">{s.value}</p>
-            <p className="text-sm text-muted-foreground">{s.label}</p>
-          </div>
+            <p className="mt-4 text-2xl font-bold tracking-tight">{s.value}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{s.label}</p>
+          </button>
         ))}
-      </div>
+      </section>
 
-      <div className="mt-8 rounded-xl border border-border bg-card p-6 shadow-soft">
+      <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <div className="border-b border-border/70 bg-muted/20 p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h2 className="text-lg font-semibold">Posted jobs / projects</h2>
@@ -310,7 +355,7 @@ function Dashboard() {
               Manage draft, active, and closed projects from one table.
             </p>
           </div>
-          <Button variant="outline" asChild>
+          <Button variant="outline" className="bg-card" asChild>
             <Link to="/post-job">Add project</Link>
           </Button>
         </div>
@@ -318,6 +363,17 @@ function Dashboard() {
           <Badge variant="secondary">{draftJobs} Draft</Badge>
           <Badge>{openJobs} Active</Badge>
           <Badge variant="outline">{closedJobs} Closed</Badge>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] px-4 py-3 text-sm">
+          <p className="text-muted-foreground">
+            <span className="font-semibold text-foreground">{activeStat.label}: </span>
+            {activeStat.description} Showing {filteredJobs.length} {filteredJobs.length === 1 ? "result" : "results"}.
+          </p>
+          {dashboardFilter !== "all" ? (
+            <Button size="sm" variant="ghost" onClick={() => setDashboardFilter("all")}>
+              Show all jobs
+            </Button>
+          ) : null}
         </div>
         {statusMessage ? (
           <div className="mt-4 rounded-lg border border-success/20 bg-success/5 px-4 py-3 text-sm text-success">
@@ -330,9 +386,9 @@ function Dashboard() {
           </div>
         ) : null}
 
-        {clientJobs.length ? (
-          <div className="mt-5">
-            <Table>
+        {filteredJobs.length ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[860px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Project</TableHead>
@@ -346,9 +402,9 @@ function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientJobs.map((job) => (
+                {filteredJobs.map((job) => (
                   <TableRow key={job.id}>
-                    <TableCell className="min-w-56">
+                    <TableCell className="min-w-56 py-4">
                       <Link
                         to="/project/$projectId"
                         params={{ projectId: String(job.id) }}
@@ -420,18 +476,29 @@ function Dashboard() {
             </Table>
           </div>
         ) : (
-          <div className="mt-5 rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
+          <div className="m-5 rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center sm:m-6">
             <Briefcase className="mx-auto h-8 w-8 text-muted-foreground" />
-            <h3 className="mt-3 font-semibold">No jobs posted yet</h3>
+            <h3 className="mt-3 font-semibold">
+              {clientJobs.length ? "No matching jobs" : "No jobs posted yet"}
+            </h3>
             <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-              Start with one job or project. The posting flow will capture category, title,
-              description, budget, dates, location, and uploaded files.
+              {clientJobs.length
+                ? "Try a different dashboard summary to see other posted jobs."
+                : "Start with one job or project. The posting flow will capture category, title, description, budget, dates, location, and uploaded files."}
             </p>
-            <Button className="mt-4" asChild>
-              <Link to="/post-job">Post your first job</Link>
-            </Button>
+            {clientJobs.length ? (
+              <Button className="mt-4" variant="outline" onClick={() => setDashboardFilter("all")}>
+                Show all jobs
+              </Button>
+            ) : (
+              <Button className="mt-4" asChild>
+                <Link to="/post-job">Post your first job</Link>
+              </Button>
+            )}
           </div>
         )}
+        </div>
+      </section>
       </div>
     </AppShell>
   );

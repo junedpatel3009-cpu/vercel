@@ -616,26 +616,26 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-background pb-16 lg:pb-0">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/[0.025] pb-16 lg:pb-0">
       {!isProfessional ? (
-        <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border bg-surface lg:block">
-          <div className="flex h-16 items-center px-5">
+        <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border/80 bg-card/95 shadow-[12px_0_34px_-28px_hsl(var(--foreground)/0.35)] backdrop-blur-xl lg:block">
+          <div className="flex h-20 items-center border-b border-border/60 px-5">
             <Logo label={isAdmin ? "Admin panel" : "Servio"} />
           </div>
-          <nav className="px-3 py-2">
+          <nav className="space-y-1 px-3 py-5">
             {items.map((it) => {
               const active = isActivePath(path, it.to);
               return (
                 <Link
                   key={it.to}
                   to={it.to}
-                  className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                  className={`group relative flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ${
                     active
-                      ? "bg-primary text-primary-foreground font-medium shadow-soft"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+                      : "text-muted-foreground hover:translate-x-0.5 hover:bg-primary/[0.06] hover:text-foreground"
                   }`}
                 >
-                  <it.icon className="h-4 w-4" />
+                  <it.icon className={`h-[18px] w-[18px] ${active ? "" : "text-muted-foreground group-hover:text-primary"}`} />
                   {it.label}
                 </Link>
               );
@@ -644,17 +644,17 @@ export function AppShell({
         </aside>
       ) : null}
       <div className={isProfessional ? "" : "lg:pl-64"}>
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border bg-background/85 px-4 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex flex-1 items-center gap-2">
             {isProfessional ? (
               <>
-                <Button asChild variant="outline" size="sm" className="gap-2">
+                <Button asChild variant="outline" size="sm" className="gap-2 rounded-xl bg-card shadow-sm">
                   <Link to="/">
                     <Home className="h-4 w-4" />
                     Back to home
                   </Link>
                 </Button>
-                <div className="hidden items-center gap-2 sm:flex">
+                <div className="hidden items-center gap-1 rounded-2xl border border-border/70 bg-card/70 p-1 shadow-sm sm:flex">
                   {professionalItems.map((item) => {
                     const active = path === item.to;
                     return (
@@ -663,7 +663,7 @@ export function AppShell({
                         asChild
                         variant={active ? "default" : "ghost"}
                         size="sm"
-                        className="gap-2"
+                        className={`gap-2 rounded-xl ${active ? "shadow-sm" : ""}`}
                       >
                         <Link to={item.to}>
                           <item.icon className="h-4 w-4" />
@@ -689,14 +689,14 @@ export function AppShell({
                     }
                   }}
                   placeholder="Search jobs, professionals..."
-                  className="h-9 w-full rounded-lg border border-input bg-surface pl-9 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="h-10 w-full rounded-xl border border-border/80 bg-card/80 pl-9 pr-3 text-sm shadow-sm outline-none transition-all placeholder:text-muted-foreground/75 focus:border-primary/50 focus:bg-card focus:ring-4 focus:ring-primary/10"
                 />
               </div>
             )}
           </div>
           {!isProfessional && !isAdmin ? (
             <Link to="/post-job" className="hidden sm:inline-flex">
-              <Button size="sm" className="bg-cta text-cta-foreground hover:bg-cta/90">
+              <Button size="sm" className="rounded-xl bg-cta px-4 shadow-md shadow-cta/20 hover:bg-cta/90">
                 Post a Job
               </Button>
             </Link>
@@ -704,7 +704,7 @@ export function AppShell({
           <button
             type="button"
             onClick={() => void toggleNotificationPanel()}
-            className={`relative grid h-9 w-9 place-items-center rounded-lg hover:bg-muted ${
+            className={`relative grid h-10 w-10 place-items-center rounded-xl transition-colors hover:bg-primary/[0.07] ${
               unreadNotifications ? "text-cta" : ""
             }`}
             aria-label={
@@ -725,7 +725,7 @@ export function AppShell({
             <img
               src={userAvatarUrl || "https://i.pravatar.cc/100?u=me"}
               alt="me"
-              className="h-8 w-8 rounded-full object-cover"
+              className="h-9 w-9 rounded-full border-2 border-card object-cover shadow-sm"
             />
             <div className="hidden text-sm leading-tight sm:block">
               <p className="font-medium">{userName}</p>
@@ -733,7 +733,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-8 lg:px-8">
           {title && (
             <h1 className="font-display mb-6 text-3xl font-bold tracking-tight">{title}</h1>
           )}
@@ -743,7 +743,7 @@ export function AppShell({
 
       {/* Mobile bottom nav */}
       {!isProfessional ? (
-        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur-md lg:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border/80 bg-card/95 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
           <div
             className="grid"
             style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}
@@ -754,7 +754,7 @@ export function AppShell({
                 <Link
                   key={it.label}
                   to={it.to}
-                  className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}
+                  className={`mx-0.5 my-1 flex flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-[11px] font-medium transition-colors ${active ? "bg-primary/[0.09] text-primary" : "text-muted-foreground"}`}
                 >
                   <it.icon className="h-5 w-5" />
                   {it.label}

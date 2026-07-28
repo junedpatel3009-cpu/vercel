@@ -184,7 +184,7 @@ const cancelProfessionalDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only professionals can cancel direct hire projects from this page.");
     }
 
-    return cancelHireProject(viewer.id, data.contractId);
+    return await cancelHireProject(viewer.id, data.contractId);
   });
 
 const deleteProfessionalRejectedDirectHire = createServerFn({ method: "POST" })
@@ -198,7 +198,7 @@ const deleteProfessionalRejectedDirectHire = createServerFn({ method: "POST" })
       );
     }
 
-    return deleteRejectedHireRequest(viewer.id, data.contractId);
+    return await deleteRejectedHireRequest(viewer.id, data.contractId);
   });
 
 const saveReviewResponse = createServerFn({ method: "POST" })
@@ -331,7 +331,7 @@ function ProfessionalStats() {
     ratings: reviewedCompletedProjects.length,
     earnings: Math.round(completedEarnings),
   };
-  const showAllStatsSections = activeStatsFilter === null;
+  const showAllStatsSections = false;
   const activeStatsFilterLabel = activeStatsFilter
     ? getProfessionalStatsFilterLabel(activeStatsFilter)
     : null;
@@ -597,19 +597,21 @@ function ProfessionalStats() {
       userRole="Professional"
       userAvatarUrl={profile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My stats</h1>
-          <p className="text-sm text-muted-foreground">
-            Project and earning details from accepted client requests.
-          </p>
+      <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary via-[#174fb9] to-[#0a2f7a] px-6 py-7 text-primary-foreground shadow-lg shadow-primary/15 sm:px-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Professional workspace</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em]">Your work, at a glance</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100">Track active work, client requests, reviews, and earnings from one clear workspace.</p>
+          </div>
+          <Button variant="secondary" asChild className="shrink-0 rounded-xl bg-white text-primary hover:bg-blue-50">
+            <Link to="/professional-profile">View profile</Link>
+          </Button>
         </div>
-        <Button variant="outline" asChild>
-          <Link to="/professional-profile">Profile</Link>
-        </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <StatBox
           icon={Briefcase}
           label="Projects"
@@ -673,7 +675,7 @@ function ProfessionalStats() {
       </div>
 
       {activeStatsFilterLabel ? (
-        <div className="mt-6 flex flex-col justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center">
+        <div className="mt-6 flex flex-col justify-between gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] px-5 py-4 sm:flex-row sm:items-center">
           <p className="text-sm font-medium">
             Showing only {activeStatsFilterLabel.toLowerCase()}.
           </p>
@@ -686,10 +688,14 @@ function ProfessionalStats() {
             Show all projects
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-4 text-sm text-muted-foreground">
+          Select a summary card above to view its records.
+        </div>
+      )}
 
       {showAllStatsSections || activeStatsFilter === "completed" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Completed projects</h2>
@@ -703,7 +709,7 @@ function ProfessionalStats() {
           </div>
 
           {completedTrackedProjects.length ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
               {completedTrackedProjects.map((project) => (
                 <div
                   key={`completed-${project.id}`}
@@ -781,7 +787,7 @@ function ProfessionalStats() {
       ) : null}
 
       {activeStatsFilter === "ratings" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Ratings & Client Reviews</h2>
@@ -853,7 +859,7 @@ function ProfessionalStats() {
       ) : null}
 
       {activeStatsFilter === "earnings" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Earnings</h2>
@@ -924,7 +930,7 @@ function ProfessionalStats() {
       ) : null}
 
       {showAllStatsSections || activeStatsFilter === "running" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Running projects</h2>
@@ -1072,7 +1078,7 @@ function ProfessionalStats() {
       ) : null}
 
       {showAllStatsSections || activeStatsFilter === "hire-requests" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Direct hire requests</h2>
@@ -1110,20 +1116,23 @@ function ProfessionalStats() {
                   duration: getDurationWeeksValue(null, request.deadline),
                   message: request.description || "",
                 };
+                const descriptionParts = (request.description || "").split(/client note\s*:/i);
+                const workDescription = descriptionParts[0]?.trim();
+                const clientNote = descriptionParts.slice(1).join("Client note:").trim();
 
                 return (
                   <div
                     key={request.contractId}
-                    className={`rounded-lg border p-4 transition ${
+                    className={`overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
                       request.status === "pending"
-                        ? "border-primary/30 bg-primary/5 shadow-soft"
-                        : "border-border"
+                        ? "border-primary/35 ring-1 ring-primary/5"
+                        : "border-border/80"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary">Direct hire</Badge>
+                          <Badge variant="secondary" className="rounded-full bg-primary/10 px-2.5 text-primary">Direct hire</Badge>
                           <Badge
                             variant={
                               request.status === "accepted"
@@ -1139,7 +1148,7 @@ function ProfessionalStats() {
                             <Badge variant="outline">{negotiationHistory.length} offers</Badge>
                           ) : null}
                         </div>
-                        <h3 className="mt-3 line-clamp-2 font-semibold">{request.title}</h3>
+                        <h3 className="mt-3 line-clamp-2 text-lg font-semibold tracking-tight">{request.title}</h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Client: {request.clientName || `Client ${request.clientId}`}
                         </p>
@@ -1150,10 +1159,10 @@ function ProfessionalStats() {
                           `https://i.pravatar.cc/100?u=hire-client-${request.clientId}`
                         }
                         alt=""
-                        className="h-11 w-11 rounded-lg object-cover"
+                        className="h-12 w-12 rounded-2xl border border-border object-cover shadow-sm"
                       />
                     </div>
-                    <div className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+                    <div className="mt-5 grid gap-3 rounded-xl bg-muted/45 p-3.5 text-sm text-muted-foreground sm:grid-cols-2">
                       <span>
                         Budget:{" "}
                         {formatMoney(
@@ -1178,11 +1187,17 @@ function ProfessionalStats() {
                         <span className="truncate">{request.location || "Location not set"}</span>
                       </span>
                     </div>
-                    <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
-                      {request.description || "No work description added."}
+                    <p className="mt-4 line-clamp-3 border-l-2 border-primary/25 pl-3 text-sm leading-6 text-muted-foreground">
+                      {workDescription || (!clientNote ? "No work description added." : "No work description added.")}
                     </p>
+                    {clientNote ? (
+                      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                        <p className="font-semibold text-amber-900">Client note</p>
+                        <p className="mt-1 leading-6 text-amber-800">{clientNote}</p>
+                      </div>
+                    ) : null}
                     {latestNegotiation ? (
-                      <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
+                      <div className="mt-4 rounded-xl border border-border/80 bg-muted/30 p-3.5">
                         <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
                           <Handshake className="h-4 w-4 text-primary" />
                           <span>Latest negotiation offer</span>
@@ -1205,7 +1220,7 @@ function ProfessionalStats() {
                       </p>
                     ) : null}
                     {request.status === "pending" ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-5 flex flex-wrap gap-2 border-t border-border/70 pt-4">
                         <Button
                           size="sm"
                           onClick={() => handleHireStatus(request.contractId, "accepted")}
@@ -1241,7 +1256,7 @@ function ProfessionalStats() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-5 flex flex-wrap gap-2 border-t border-border/70 pt-4">
                         <Button size="sm" variant="outline" asChild>
                           <Link to="/professional-messages">Message client</Link>
                         </Button>
@@ -1396,7 +1411,7 @@ function ProfessionalStats() {
       ) : null}
 
       {showAllStatsSections ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Saved jobs</h2>
@@ -1458,7 +1473,7 @@ function ProfessionalStats() {
       ) : null}
 
       {showAllStatsSections || activeStatsFilter === "project-requests" ? (
-        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Project requests you sent</h2>
@@ -1789,7 +1804,7 @@ function StatBox({
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <div className={`grid h-10 w-10 place-items-center rounded-xl ${tint}`}>
+        <div className={`grid h-11 w-11 place-items-center rounded-2xl ${tint}`}>
           <Icon className="h-5 w-5" />
         </div>
         {delta && delta > 0 ? (
@@ -1798,9 +1813,9 @@ function StatBox({
           </Badge>
         ) : null}
       </div>
-      <p className="mt-4 text-2xl font-semibold">{value}</p>
-      <p className="text-sm font-medium">{label}</p>
-      <p className="text-xs text-muted-foreground">{sub}</p>
+      <p className="mt-5 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-1 text-sm font-semibold">{label}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{sub}</p>
     </>
   );
 
@@ -1808,7 +1823,7 @@ function StatBox({
     return (
       <Link
         to={to as never}
-        className="block rounded-xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/50 hover:bg-primary/5"
+        className="block rounded-2xl border border-border/80 bg-card p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
       >
         {content}
       </Link>
@@ -1821,8 +1836,8 @@ function StatBox({
         type="button"
         onClick={onClick}
         aria-pressed={isActive}
-        className={`rounded-xl border p-5 text-left shadow-soft transition-colors hover:border-primary/50 hover:bg-primary/5 ${
-          isActive ? "border-primary bg-primary/10" : "border-border bg-card"
+        className={`rounded-2xl border p-5 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${
+          isActive ? "border-primary bg-primary/[0.07] shadow-primary/10" : "border-border/80 bg-card"
         }`}
       >
         {content}
@@ -1830,7 +1845,7 @@ function StatBox({
     );
   }
 
-  return <div className="rounded-xl border border-border bg-card p-5 shadow-soft">{content}</div>;
+  return <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft">{content}</div>;
 }
 
 function getProfessionalStatsFilterLabel(filter: ProfessionalStatsFilter) {

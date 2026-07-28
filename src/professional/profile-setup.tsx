@@ -498,8 +498,9 @@ function ProfessionalProfileSetup() {
         userRole="Professional"
         userAvatarUrl={form.profilePhotoUrl || viewer.avatarUrl}
       >
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.10] via-card to-card p-6 shadow-lg shadow-primary/[0.05] sm:p-7">
+            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div className="flex items-start gap-4">
                 <img
@@ -509,14 +510,14 @@ function ProfessionalProfileSetup() {
                     "https://i.pravatar.cc/140?u=professional-profile"
                   }
                   alt={displayName}
-                  className="h-24 w-24 rounded-2xl object-cover"
+                  className="h-24 w-24 rounded-3xl border-4 border-card object-cover shadow-lg"
                 />
                 <div>
-                  <div className="flex items-center gap-2 text-sm text-primary">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                     <UserRound className="h-4 w-4" />
                     Professional profile
                   </div>
-                  <h1 className="mt-2 text-2xl font-semibold tracking-tight">{displayName}</h1>
+                  <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{displayName}</h1>
                   <p className="mt-1 text-muted-foreground">
                     {form.professionalCategory || "Service category not added"}
                   </p>
@@ -525,7 +526,7 @@ function ProfessionalProfileSetup() {
                   </p>
                 </div>
               </div>
-              <Button type="button" onClick={() => setIsEditing(true)} className="gap-2">
+              <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg shadow-primary/20">
                 <Pencil className="h-4 w-4" />
                 Edit profile
               </Button>
@@ -533,7 +534,7 @@ function ProfessionalProfileSetup() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+            <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
               <SectionTitle
                 title="Profile information"
                 subtitle="All information saved in your professional profile."
@@ -579,14 +580,14 @@ function ProfessionalProfileSetup() {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+              <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
                 <SectionTitle title="Skills" subtitle="Services clients can match with." />
                 <div className="mt-5 flex flex-wrap gap-2">
                   {selectedSkills.length ? (
                     selectedSkills.map((skill) => (
                       <span
                         key={skill}
-                        className="rounded-full border border-border bg-muted/30 px-3 py-1 text-sm"
+                        className="rounded-full border border-primary/10 bg-primary/[0.06] px-3 py-1.5 text-sm font-medium text-primary"
                       >
                         {skill}
                       </span>
@@ -597,7 +598,7 @@ function ProfessionalProfileSetup() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-6 shadow-soft">
+              <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
                 <SectionTitle
                   title="Profile status"
                   subtitle="Completion and verification summary."

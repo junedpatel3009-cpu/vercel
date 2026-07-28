@@ -249,7 +249,7 @@ function Signup() {
   return (
     <AuthLayout
       title={`Create your ${accountType} account`}
-      subtitle="Complete every field below. Email, phone, and password are all required."
+      subtitle="Set up your account in a few quick steps. You can complete your profile after signing up."
       footer={
         <>
           Already have an account?{" "}
@@ -261,7 +261,7 @@ function Signup() {
     >
       <div className="mb-5">
         <p className="mb-3 text-sm font-medium text-foreground">I’m signing up as</p>
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-1.5">
           {(
             [
               { value: "client", label: "I'm a client" },
@@ -272,10 +272,10 @@ function Signup() {
               key={option.value}
               type="button"
               onClick={() => form.setValue("accountType", option.value, { shouldValidate: true })}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
                 accountType === option.value
-                  ? "bg-card text-foreground shadow-soft"
-                  : "text-muted-foreground"
+                  ? "bg-white text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {option.label}
@@ -285,9 +285,9 @@ function Signup() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="grid grid-cols-1 gap-3">
-            <Button asChild type="button" variant="outline" className="w-full">
+            <Button asChild type="button" variant="outline" className="h-12 w-full rounded-xl border-slate-200 bg-white shadow-sm hover:bg-slate-50">
               <a href="/api/auth/google?returnTo=/profile-setup">
                 <Chrome />
                 Register with Google
@@ -338,7 +338,7 @@ function Signup() {
                   <FormLabel>Email address</FormLabel>
                   <Button
                     type="button"
-                    className="h-9 whitespace-nowrap text-sm"
+                    className="h-9 rounded-lg px-3 whitespace-nowrap text-sm"
                     onClick={async () => {
                       const email = field.value.trim();
                       const emailValidation = z.string().trim().email().safeParse(email);
@@ -499,7 +499,7 @@ function Signup() {
             </div>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="h-12 w-full rounded-xl text-[15px] font-semibold shadow-lg shadow-primary/25" disabled={isSubmitting}>
             Create account
           </Button>
         </form>

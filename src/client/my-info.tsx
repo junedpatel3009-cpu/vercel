@@ -308,22 +308,23 @@ function MyInfoPage() {
         userRole="Client"
         userAvatarUrl={profileImage}
       >
-        <div className="space-y-6">
-          <Card className="border-border shadow-soft">
-            <CardContent className="p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <Card className="relative overflow-hidden border-primary/10 bg-gradient-to-br from-primary/[0.10] via-card to-card shadow-lg shadow-primary/[0.05]">
+            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+            <CardContent className="relative p-6 sm:p-7">
               <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
                 <div className="flex items-start gap-4">
                   <img
                     src={profileImage}
                     alt={displayName}
-                    className="h-24 w-24 rounded-2xl object-cover"
+                    className="h-24 w-24 rounded-3xl border-4 border-card object-cover shadow-lg"
                   />
                   <div>
-                    <div className="flex items-center gap-2 text-sm text-primary">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
                       <UserRound className="h-4 w-4" />
                       Client profile
                     </div>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+                    <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                       {displayName || "Client"}
                     </h1>
                     <p className="mt-1 text-muted-foreground">
@@ -334,7 +335,7 @@ function MyInfoPage() {
                     </p>
                   </div>
                 </div>
-                <Button type="button" onClick={() => setIsEditing(true)} className="gap-2">
+                <Button type="button" onClick={() => setIsEditing(true)} className="gap-2 shadow-lg shadow-primary/20">
                   <Pencil className="h-4 w-4" />
                   Edit profile
                 </Button>
@@ -343,14 +344,14 @@ function MyInfoPage() {
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-            <Card className="border-border shadow-soft">
-              <CardHeader>
+            <Card className="rounded-3xl border-border/80 shadow-sm">
+              <CardHeader className="border-b border-border/60 pb-5">
                 <CardTitle>Profile information</CardTitle>
                 <CardDescription>
                   All information saved from the client profile setup.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
+              <CardContent className="grid gap-3 pt-6 sm:grid-cols-2">
                 <SummaryItem label="Contact name" value={form.watch("fullName") || "Not added"} />
                 <SummaryItem label="Email" value={form.watch("email") || "Not added"} />
                 <SummaryItem label="Phone" value={form.watch("phone") || "Not added"} />
@@ -363,8 +364,8 @@ function MyInfoPage() {
             </Card>
 
             <div className="space-y-6">
-              <Card className="border-border shadow-soft">
-                <CardHeader>
+              <Card className="rounded-3xl border-border/80 shadow-sm">
+                <CardHeader className="pb-4">
                   <CardTitle>Hiring needs</CardTitle>
                   <CardDescription>Skills and services this client hires for.</CardDescription>
                 </CardHeader>
@@ -373,7 +374,7 @@ function MyInfoPage() {
                     hiringNeeds.map((need) => (
                       <span
                         key={need}
-                        className="rounded-full border border-border bg-muted/30 px-3 py-1 text-sm"
+                        className="rounded-full border border-primary/10 bg-primary/[0.06] px-3 py-1.5 text-sm font-medium text-primary"
                       >
                         {need}
                       </span>
@@ -386,8 +387,8 @@ function MyInfoPage() {
 
               <ClientLocationMap locationAddress={primaryLocationAddress} />
 
-              <Card className="border-border shadow-soft">
-                <CardHeader>
+              <Card className="rounded-3xl border-border/80 shadow-sm">
+                <CardHeader className="pb-4">
                   <CardTitle>Saved locations</CardTitle>
                   <CardDescription>Addresses saved for job posting and matching.</CardDescription>
                 </CardHeader>
@@ -398,7 +399,7 @@ function MyInfoPage() {
                       .map((location, index) => (
                         <div
                           key={`${location.label}-${index}`}
-                          className="rounded-2xl border border-border bg-muted/30 p-4"
+                          className="rounded-2xl border border-border/70 bg-muted/20 p-4 transition-colors hover:border-primary/25"
                         >
                           <p className="font-medium">{location.label || "Saved location"}</p>
                           <p className="mt-1 text-sm text-muted-foreground">{location.address}</p>
@@ -423,9 +424,9 @@ function MyInfoPage() {
       userRole="Client"
       userAvatarUrl={profilePhotoPreview || clientProfile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="grid gap-6 lg:grid-cols-[1.45fr_1fr]">
-        <Card className="border-border shadow-soft">
-          <CardHeader>
+      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.45fr_1fr]">
+        <Card className="rounded-3xl border-border/80 shadow-sm">
+          <CardHeader className="border-b border-border/60 bg-muted/20 pb-5">
             <div className="flex items-center gap-2 text-sm text-primary">
               <UserRound className="h-4 w-4" />
               Client account information
@@ -436,10 +437,10 @@ function MyInfoPage() {
               here.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="flex items-start gap-4 rounded-2xl border border-border bg-muted/40 p-4">
+                <div className="flex items-start gap-4 rounded-2xl border border-primary/10 bg-primary/[0.04] p-4">
                   <img
                     src={
                       profilePhotoPreview ||
@@ -448,7 +449,7 @@ function MyInfoPage() {
                       "https://i.pravatar.cc/120?u=client-my-info"
                     }
                     alt={displayName}
-                    className="h-20 w-20 rounded-2xl object-cover"
+                    className="h-20 w-20 rounded-2xl border-2 border-card object-cover shadow-md"
                   />
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -735,8 +736,8 @@ function MyInfoPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-border shadow-soft">
-            <CardHeader>
+          <Card className="rounded-3xl border-border/80 shadow-sm">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <Building2 className="h-4 w-4" />
                 Company summary
@@ -756,8 +757,8 @@ function MyInfoPage() {
 
           <ClientLocationMap locationAddress={primaryLocationAddress} />
 
-          <Card className="border-border shadow-soft">
-            <CardHeader>
+          <Card className="rounded-3xl border-border/80 shadow-sm">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <BriefcaseBusiness className="h-4 w-4" />
                 Hiring summary
@@ -779,8 +780,8 @@ function MyInfoPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border shadow-soft">
-            <CardHeader>
+          <Card className="rounded-3xl border-border/80 shadow-sm">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-2 text-sm text-primary">
                 <Heart className="h-4 w-4" />
                 Saved favorites
@@ -881,8 +882,8 @@ function ClientLocationMap({ locationAddress }: { locationAddress: string }) {
   };
 
   return (
-    <Card className="border-border shadow-soft">
-      <CardHeader>
+    <Card className="overflow-hidden rounded-3xl border-border/80 shadow-sm">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle>Client location map</CardTitle>
@@ -896,7 +897,7 @@ function ClientLocationMap({ locationAddress }: { locationAddress: string }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="rounded-2xl border border-border overflow-hidden bg-muted/40">
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/40 shadow-inner">
           {mapSrc ? (
             <iframe
               title="Client location map"
@@ -964,9 +965,9 @@ function formatDate(value: string) {
 
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-muted/30 p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-medium">{value}</p>
+    <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 transition-colors hover:border-primary/25 hover:bg-primary/[0.025]">
+      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className="mt-1.5 break-words font-medium text-foreground">{value}</p>
     </div>
   );
 }

@@ -93,7 +93,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const { default: serverEntry } = await import("../dist/server/server.js");
 
     const host = req.headers.host || "localhost";
-    const url = new URL(req.url || "/", `https://${host}`);
+    const forwardedProto = req.headers["x-forwarded-proto"];
+    const protocol = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+    const url = new URL(req.url || "/", `${protocol === "https" ? "https" : "http"}://${host}`);
     const method = req.method || "GET";
 
     const headers = new Headers();

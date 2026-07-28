@@ -1,7 +1,7 @@
 import { getRequest } from "@tanstack/react-start/server";
 
 import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
-import type { PublicUser, UserRole } from "@/lib/user-db.server";
+import { findUserById, type PublicUser, type UserRole } from "@/lib/user-db.server";
 
 export function getCurrentUser(): PublicUser | null {
   const request = getRequest();
@@ -11,16 +11,7 @@ export function getCurrentUser(): PublicUser | null {
     return null;
   }
 
-  return {
-    id: session.userId,
-    email: session.email,
-    role: session.role,
-    firstName: session.firstName,
-    lastName: session.lastName,
-    phone: session.phone,
-    avatarUrl: session.avatarUrl,
-    authProvider: session.authProvider,
-  };
+  return findUserById(session.userId) ?? null;
 }
 
 export function requireCurrentUser() {

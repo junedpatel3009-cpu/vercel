@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { getRequest } from "@tanstack/react-start/server";
 
-import type { PublicUser, UserRole } from "@/lib/user-db.server";
+import type { PublicUser } from "@/lib/user-db.server";
 
 const SESSION_COOKIE_NAME = "servio_session";
 const GOOGLE_STATE_COOKIE_NAME = "servio_google_state";
@@ -10,13 +10,6 @@ const THIRTY_DAYS_IN_SECONDS = ONE_DAY_IN_SECONDS * 30;
 
 type SessionPayload = {
   userId: number;
-  email: string;
-  role: UserRole;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  avatarUrl: string | null;
-  authProvider: "LOCAL" | "GOOGLE";
   exp: number;
 };
 
@@ -110,13 +103,6 @@ function serializeCookie(name: string, value: string, maxAge: number) {
 export function createSessionCookie(user: PublicUser) {
   const payload: SessionPayload = {
     userId: user.id,
-    email: user.email,
-    role: user.role,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    phone: user.phone,
-    avatarUrl: user.avatarUrl,
-    authProvider: user.authProvider,
     exp: Date.now() + THIRTY_DAYS_IN_SECONDS * 1000,
   };
 

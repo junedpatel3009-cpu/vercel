@@ -705,7 +705,63 @@ export async function getProfessionalHireRequests(professionalId: number) {
     .all(String(professionalId)) as ProfessionalHireRequestRecord[];
 }
 
-export function getClientHireRequests(clientId: number) {
+export async function getClientHireRequests(clientId: number) {
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+    const contracts = await prisma.hireContract.findMany({
+      where: { clientId: String(clientId) },
+      include: { job: { include: { attachments: true } } },
+      orderBy: { updatedAt: "desc" },
+    });
+    const professionalIds = [...new Set(contracts.map((contract) => Number(contract.professionalId)))].filter(
+      Number.isInteger,
+    );
+    const professionals = professionalIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: professionalIds } },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, professionalCategory: true },
+        })
+      : [];
+    const professionalsById = new Map(professionals.map((professional) => [professional.id, professional]));
+
+    return contracts.map((contract) => {
+      const professional = professionalsById.get(Number(contract.professionalId));
+      return {
+        contractId: contract.id,
+        jobId: contract.jobId,
+        clientProjectId: contract.clientProjectId,
+        trackingId: contract.trackingId,
+        clientId: contract.clientId,
+        professionalId: contract.professionalId,
+        totalAmount: contract.totalAmount,
+        platformFee: contract.platformFee,
+        status: contract.status as HireContractStatus,
+        startDate: contract.startDate?.toISOString() ?? null,
+        endDate: contract.endDate?.toISOString() ?? null,
+        updatedAt: contract.updatedAt.toISOString(),
+        title: contract.job.title,
+        description: contract.job.description,
+        budgetMin: contract.job.budgetMin,
+        budgetMax: contract.job.budgetMax,
+        workMode: contract.job.jobType,
+        location: contract.job.city,
+        jobDate: contract.job.jobDate?.toISOString() ?? null,
+        deadline: contract.job.deadline?.toISOString() ?? null,
+        createdAt: contract.job.createdAt.toISOString(),
+        clientName: null,
+        clientAvatarUrl: null,
+        professionalName: professional ? `${professional.firstName} ${professional.lastName}`.trim() : null,
+        professionalAvatarUrl: professional?.avatarUrl?.startsWith("data:") ? null : (professional?.avatarUrl ?? null),
+        professionalCategory: professional?.professionalCategory ?? null,
+        attachmentsJson: JSON.stringify(contract.job.attachments.map((attachment) => ({
+          fileUrl: attachment.fileUrl,
+          fileType: attachment.fileType,
+        }))),
+        milestonesJson: "[]",
+      } satisfies ClientHireRequestRecord;
+    });
+  }
+
   const db = getDatabase();
 
   return db
@@ -1004,7 +1060,17 @@ function getDirectHireNegotiationsByContract(contractId: string) {
     .all(contractId) as DirectHireNegotiationRecord[];
 }
 
-export function startClientHireProject(clientId: number, contractId: string) {
+export async function startClientHireProject(clientId: number, contractId: string) {
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+    const result = await prisma.hireContract.updateMany({
+      where: { id: contractId, clientId: String(clientId), status: "accepted" },
+      data: { status: "started", updatedAt: new Date() },
+    });
+    if (!result.count) throw new Error("Only accepted direct hires can be started.");
+    return { contractId, status: "started" as const };
+  }
+
   const db = getDatabase();
   const timestamp = new Date().toISOString();
 
@@ -1254,7 +1320,21 @@ export function startClientHireProject(clientId: number, contractId: string) {
   };
 }
 
-export function cancelHireProject(userId: number, contractId: string) {
+export async function cancelHireProject(userId: number, contractId: string) {
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+    const result = await prisma.hireContract.updateMany({
+      where: {
+        id: contractId,
+        status: "started",
+        OR: [{ clientId: String(userId) }, { professionalId: String(userId) }],
+      },
+      data: { status: "cancelled", updatedAt: new Date() },
+    });
+    if (!result.count) throw new Error("Only started direct hire projects can be cancelled by project participants.");
+    return { contractId, status: "cancelled" as const };
+  }
+
   const db = getDatabase();
   const timestamp = new Date().toISOString();
 
@@ -1312,7 +1392,20 @@ export function cancelHireProject(userId: number, contractId: string) {
   };
 }
 
-export function deleteRejectedHireRequest(userId: number, contractId: string) {
+export async function deleteRejectedHireRequest(userId: number, contractId: string) {
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+    const result = await prisma.hireContract.deleteMany({
+      where: {
+        id: contractId,
+        status: "rejected",
+        OR: [{ clientId: String(userId) }, { professionalId: String(userId) }],
+      },
+    });
+    if (!result.count) throw new Error("Only rejected direct hire requests can be deleted by project participants.");
+    return { contractId, deleted: true as const };
+  }
+
   const db = getDatabase();
 
   const contract = db

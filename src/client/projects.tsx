@@ -76,24 +76,21 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
     };
   }
 
-  // Project requests and direct hires are still stored by the legacy SQLite
-  // modules. On Vercel, PostgreSQL is the primary database and those modules
-  // intentionally receive an empty, ephemeral SQLite database. Querying them
-  // there can throw (their related User/ClientJob tables are absent), which
-  // previously made the complete Projects page fail to render.
+  // Project-request tracking is still a legacy SQLite workflow. Direct hires
+  // are persisted in PostgreSQL too, so they must always be loaded here.
   const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
   const legacyProjectData = usesPostgres
     ? {
         projectRequests: [] as ClientProjectRequestRecord[],
         projectNegotiations: [] as ProjectNegotiationRecord[],
         trackedProjects: [] as ClientTrackedProjectRecord[],
-        hireRequests: [] as ClientHireRequestRecord[],
+        hireRequests: await getClientHireRequests(viewer.id),
       }
     : {
         projectRequests: getClientProjectRequests(viewer.id),
         projectNegotiations: getProjectNegotiationsForClient(viewer.id),
         trackedProjects: getClientTrackedProjects(viewer.id),
-        hireRequests: getClientHireRequests(viewer.id),
+        hireRequests: await getClientHireRequests(viewer.id),
       };
 
   return {
@@ -202,7 +199,7 @@ const startDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only clients can start direct hire projects.");
     }
 
-    return startClientHireProject(viewer.id, data.contractId);
+    return await startClientHireProject(viewer.id, data.contractId);
   });
 
 const cancelTrackedProject = createServerFn({ method: "POST" })
@@ -226,7 +223,7 @@ const cancelDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only clients can cancel direct hire projects from this page.");
     }
 
-    return cancelHireProject(viewer.id, data.contractId);
+    return await cancelHireProject(viewer.id, data.contractId);
   });
 
 const deleteRejectedDirectHire = createServerFn({ method: "POST" })
@@ -238,7 +235,7 @@ const deleteRejectedDirectHire = createServerFn({ method: "POST" })
       throw new Error("Only clients can delete rejected direct hire requests from this page.");
     }
 
-    return deleteRejectedHireRequest(viewer.id, data.contractId);
+    return await deleteRejectedHireRequest(viewer.id, data.contractId);
   });
 
 export const Route = createFileRoute("/projects")({
@@ -274,7 +271,10 @@ function Projects() {
   const [ratingDrafts, setRatingDrafts] = useState<
     Record<number, { rating: number; comment: string }>
   >({});
-  const [activeProjectFilter, setActiveProjectFilter] = useState<ProjectBucketFilter | null>(null);
+  // Start on live work. The summary tiles switch the board to the selected
+  // database-backed project state instead of rendering every large section.
+  const [activeProjectFilter, setActiveProjectFilter] = useState<ProjectBucketFilter | null>("running");
+  const [selectedPostedProjectId, setSelectedPostedProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
@@ -299,6 +299,8 @@ function Projects() {
   const visibleProjects = projects.filter(
     (project) => !trackedJobIds.has(project.id) && !isClosedProjectExpired(project, now),
   );
+  const selectedPostedProject =
+    visibleProjects.find((project) => project.id === selectedPostedProjectId) ?? null;
   const displayName = clientProfile?.fullName || `${viewer.firstName} ${viewer.lastName}`.trim();
   const runningProjects = trackedProjects.filter((project) => project.status === "ACTIVE");
   const completedProjects = trackedProjects.filter((project) => project.status === "COMPLETED");
@@ -321,7 +323,7 @@ function Projects() {
     : null;
 
   function toggleProjectFilter(filter: ProjectBucketFilter) {
-    setActiveProjectFilter((current) => (current === filter ? null : filter));
+    setActiveProjectFilter(filter);
   }
 
   async function handleRequestStatus(requestId: number, status: ProjectRequestStatus) {
@@ -450,147 +452,114 @@ function Projects() {
       userRole="Client"
       userAvatarUrl={clientProfile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
-            These projects are loaded from your saved database records.
-          </p>
-        </div>
-        <Button asChild>
-          <Link to="/post-job">
-            <PlusCircle className="h-4 w-4" />
-            Create new project
-          </Link>
-        </Button>
-      </div>
+      <div className="mx-auto max-w-7xl space-y-6 pb-8">
+        <section className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.10] via-card to-card px-6 py-7 shadow-lg shadow-primary/[0.04] sm:px-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+          <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Project workspace</p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Projects</h1>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Your saved project records, requests, and direct hires in one place.
+              </p>
+            </div>
+            <Button className="shadow-lg shadow-primary/20" asChild>
+              <Link to="/post-job">
+                <PlusCircle className="h-4 w-4" />
+                Create new project
+              </Link>
+            </Button>
+          </div>
+        </section>
 
       {visibleProjects.length ? (
-        <div className="mb-6 grid auto-rows-fr gap-4 lg:grid-cols-2">
-          {visibleProjects.map((project) => {
-            const removeInMs = getClosedProjectRemovalMs(project, now);
-
-            return (
-              <div
-                key={project.id}
-                className="flex min-h-[240px] flex-col rounded-xl border border-border bg-card p-5 shadow-soft transition-colors hover:border-primary/50 hover:bg-primary/5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="secondary">{project.category}</Badge>
-                      <Badge
-                        variant={
-                          project.status === "OPEN"
-                            ? "default"
-                            : project.status === "DRAFT"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {project.status === "OPEN" ? "Active" : formatEnum(project.status)}
-                      </Badge>
+        <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-5 py-4 sm:px-6">
+            <div>
+              <h2 className="font-semibold">Your posted projects</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">Select a project to view its complete details and controls.</p>
+            </div>
+            <Badge variant="secondary">{visibleProjects.length} saved</Badge>
+          </div>
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="divide-y divide-border/60 border-b border-border/60 lg:border-b-0 lg:border-r">
+              {visibleProjects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => setSelectedPostedProjectId(project.id)}
+                  className={`flex w-full items-center gap-4 px-5 py-4 text-left transition-colors sm:px-6 ${
+                    selectedPostedProject?.id === project.id
+                      ? "bg-primary/[0.07]"
+                      : "hover:bg-muted/35"
+                  }`}
+                >
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${project.status === "OPEN" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                    <Briefcase className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold text-foreground">{project.title}</span>
+                    <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                      {project.category} · {formatBudget(project.budgetMin, project.budgetMax, project.timingType)}
+                    </span>
+                  </span>
+                  <Badge variant={project.status === "OPEN" ? "default" : "secondary"}>
+                    {project.status === "OPEN" ? "Active" : formatEnum(project.status)}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+            <div className="min-h-[260px] bg-muted/[0.16] p-5 sm:p-6">
+              {selectedPostedProject ? (
+                <div className="flex h-full flex-col">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary">{selectedPostedProject.category}</Badge>
+                        <Badge variant={selectedPostedProject.status === "OPEN" ? "default" : "secondary"}>
+                          {selectedPostedProject.status === "OPEN" ? "Active" : formatEnum(selectedPostedProject.status)}
+                        </Badge>
+                      </div>
+                      <h3 className="mt-3 text-xl font-bold tracking-tight">{selectedPostedProject.title}</h3>
                     </div>
-                    <h2 className="mt-3 line-clamp-2 text-lg font-semibold">{project.title}</h2>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                      {project.description}
-                    </p>
-                  </div>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link to="/project/$projectId" params={{ projectId: String(project.id) }}>
-                      <Search className="h-4 w-4" />
-                      View
-                    </Link>
-                  </Button>
-                </div>
-
-                <div className="mt-5 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-                  <span className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    {formatBudget(project.budgetMin, project.budgetMax, project.timingType)}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4" />
-                    {formatDate(project.deadline)}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <Briefcase className="h-4 w-4" />
-                    {formatWorkMode(project.workMode)}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    {project.attachments.length} files
-                  </span>
-                </div>
-
-                <div className="mt-auto flex items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4 shrink-0" />
-                  <span className="truncate">
-                    {formatApproximateLocation(
-                      project.locationAddress || project.locationLabel,
-                      "Remote or no location saved",
-                    )}
-                  </span>
-                </div>
-
-                {removeInMs != null ? (
-                  <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
-                    Closed project. Removes in {formatCountdown(removeInMs)}.
-                  </div>
-                ) : null}
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" asChild>
-                    <Link to="/project/$projectId" params={{ projectId: String(project.id) }}>
-                      View project
-                    </Link>
-                  </Button>
-                  {project.status === "OPEN" ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleProjectStatus(project.id, "CLOSED")}
-                      disabled={pendingAction !== null}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      {pendingAction === `project-${project.id}-CLOSED`
-                        ? "Closing"
-                        : "Close project"}
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/project/$projectId" params={{ projectId: String(selectedPostedProject.id) }}>Open</Link>
                     </Button>
-                  ) : null}
-                  {project.status === "CLOSED" ? (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleProjectStatus(project.id, "OPEN")}
-                        disabled={pendingAction !== null}
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        {pendingAction === `project-${project.id}-OPEN`
-                          ? "Opening"
-                          : "Reopen project"}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{selectedPostedProject.description}</p>
+                  <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+                    <InfoPill icon={DollarSign} label="Budget" value={formatBudget(selectedPostedProject.budgetMin, selectedPostedProject.budgetMax, selectedPostedProject.timingType)} />
+                    <InfoPill icon={CalendarDays} label="Deadline" value={formatDate(selectedPostedProject.deadline)} />
+                    <InfoPill icon={Briefcase} label="Work" value={formatWorkMode(selectedPostedProject.workMode)} />
+                    <InfoPill icon={FileText} label="Files" value={`${selectedPostedProject.attachments.length} attached`} />
+                  </div>
+                  <div className="mt-5 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+                    {selectedPostedProject.status === "OPEN" ? (
+                      <Button size="sm" variant="outline" onClick={() => handleProjectStatus(selectedPostedProject.id, "CLOSED")} disabled={pendingAction !== null}>
+                        {pendingAction === `project-${selectedPostedProject.id}-CLOSED` ? "Closing" : "Close project"}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRemoveProjectNow(project.id)}
-                        disabled={pendingAction !== null}
-                      >
-                        <XCircle className="h-4 w-4" />
-                        {pendingAction === `project-${project.id}-REMOVE`
-                          ? "Removing"
-                          : "Close immediately"}
+                    ) : null}
+                    {selectedPostedProject.status === "CLOSED" ? (
+                      <Button size="sm" variant="outline" onClick={() => handleProjectStatus(selectedPostedProject.id, "OPEN")} disabled={pendingAction !== null}>
+                        {pendingAction === `project-${selectedPostedProject.id}-OPEN` ? "Opening" : "Reopen project"}
                       </Button>
-                    </>
-                  ) : null}
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              ) : (
+                <div className="grid h-full place-items-center text-center">
+                  <div>
+                    <Briefcase className="mx-auto h-8 w-8 text-muted-foreground" />
+                    <p className="mt-3 font-medium">Select a project</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Its details and actions appear here.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       ) : (
-        <div className="mb-6 rounded-xl border border-dashed border-border bg-card p-10 text-center shadow-soft">
+        <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center shadow-sm">
           <Briefcase className="mx-auto h-9 w-9 text-muted-foreground" />
           <h2 className="mt-3 font-semibold">No projects saved yet</h2>
           <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
@@ -603,7 +572,7 @@ function Projects() {
         </div>
       )}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm sm:grid-cols-2 lg:grid-cols-4">
         <ProjectStat
           label="Running"
           value={runningProjectCount}
@@ -632,10 +601,10 @@ function Projects() {
           isActive={activeProjectFilter === "direct-hires"}
           onClick={() => toggleProjectFilter("direct-hires")}
         />
-      </div>
+      </section>
 
       {activeProjectFilterLabel ? (
-        <div className="mb-6 flex flex-col justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-primary/15 bg-primary/[0.05] px-4 py-3 sm:flex-row sm:items-center">
           <p className="text-sm font-medium">
             Showing only {activeProjectFilterLabel.toLowerCase()}.
           </p>
@@ -650,10 +619,10 @@ function Projects() {
         </div>
       ) : null}
 
-      <div className="mb-6 space-y-6">
+      <div className="space-y-6">
         {showAllProjectBuckets || activeProjectFilter === "running" ? (
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
+            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold">Running projects</h2>
                 <p className="text-sm text-muted-foreground">
@@ -663,7 +632,7 @@ function Projects() {
               <Badge>{runningProjectCount} running</Badge>
             </div>
             {runningProjectCount ? (
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {runningProjects.map((project) => (
                   <TrackedProjectCard
                     key={`running-${project.id}`}
@@ -705,8 +674,8 @@ function Projects() {
         ) : null}
 
         {showAllProjectBuckets || activeProjectFilter === "direct-hires" ? (
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
+            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold">Direct hires</h2>
                 <p className="text-sm text-muted-foreground">
@@ -716,7 +685,7 @@ function Projects() {
               <Badge variant="secondary">{visibleHireRequests.length} hires</Badge>
             </div>
             {visibleHireRequests.length ? (
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {visibleHireRequests.map((request) => (
                   <DirectHireCard
                     key={request.contractId}
@@ -738,8 +707,8 @@ function Projects() {
         ) : null}
 
         {showAllProjectBuckets || activeProjectFilter === "completed" ? (
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
+            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold">Completed projects</h2>
                 <p className="text-sm text-muted-foreground">
@@ -749,7 +718,7 @@ function Projects() {
               <Badge variant="secondary">{completedProjects.length} completed</Badge>
             </div>
             {completedProjects.length ? (
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {completedProjects.map((project) => (
                   <TrackedProjectCard
                     key={`completed-${project.id}`}
@@ -782,8 +751,8 @@ function Projects() {
         ) : null}
 
         {showAllProjectBuckets || activeProjectFilter === "requests" ? (
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
+            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
                 <h2 className="text-lg font-semibold">Request projects</h2>
                 <p className="text-sm text-muted-foreground">
@@ -794,7 +763,7 @@ function Projects() {
             </div>
 
             {projectRequests.length ? (
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {projectRequests.map((request) => (
                   <ProjectRequestCard
                     key={request.id}
@@ -820,6 +789,7 @@ function Projects() {
             )}
           </section>
         ) : null}
+      </div>
       </div>
     </AppShell>
   );
@@ -1732,8 +1702,8 @@ function ProjectStat({
       type="button"
       onClick={onClick}
       aria-pressed={isActive}
-      className={`rounded-xl border p-5 text-left shadow-soft transition-colors hover:border-primary/50 hover:bg-primary/5 ${
-        isActive ? "border-primary bg-primary/10" : "border-border bg-card"
+      className={`border-b border-border/70 p-5 text-left transition-colors hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0 ${
+        isActive ? "bg-primary/[0.08]" : "bg-card"
       }`}
     >
       <Icon className="h-5 w-5 text-primary" />

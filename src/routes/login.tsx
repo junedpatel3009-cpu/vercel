@@ -3,6 +3,7 @@ import { setResponseHeader } from "@tanstack/react-start/server";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Chrome } from "lucide-react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
@@ -159,24 +160,41 @@ function Login() {
     },
   });
 
+  // Credentials must never remain in the address bar, browser history, or
+  // referrer headers. Login only accepts form data sent by the POST server fn.
+  useEffect(() => {
+    const currentUrl = new URL(window.location.href);
+    if (!currentUrl.searchParams.has("password")) return;
+
+    currentUrl.searchParams.delete("password");
+    window.history.replaceState(window.history.state, "", currentUrl.toString());
+  }, []);
+
   const onSubmit = async (values: LoginInput) => {
     dispatch(clearLoginFeedback());
     dispatch(setLoginSubmitting(true));
     form.clearErrors();
 
     try {
-      const result = await submitLogin({ data: values });
-
-      if (!result.ok) {
-        Object.entries(result.fieldErrors).forEach(([field, message]) => {
-          if (message) {
-            form.setError(field as keyof LoginInput, { type: "server", message });
+      const response = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(values),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | {
+            data?: {
+              user?: { id: number; role: "ADMIN" | "CLIENT" | "PROFESSIONAL"; firstName: string };
+              isProfileComplete?: boolean;
+            };
+            error?: { message?: string };
           }
-        });
+        | null;
+      const result = payload?.data;
 
-        if (result.formError) {
-          dispatch(setLoginSubmitError(result.formError));
-        }
+      if (!response.ok || !result?.user) {
+        dispatch(setLoginSubmitError(payload?.error?.message || "Invalid email or password."));
         return;
       }
 
@@ -216,15 +234,15 @@ function Login() {
       }
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <div className="grid grid-cols-2 gap-3">
-            <Button asChild type="button" variant="outline">
+            <Button asChild type="button" variant="outline" className="h-12 rounded-xl border-slate-200 bg-white shadow-sm hover:bg-slate-50">
               <a href="/api/auth/google?returnTo=/">
                 <Chrome />
                 Continue with Google
               </a>
             </Button>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" className="h-12 rounded-xl border-slate-200 bg-white shadow-sm hover:bg-slate-50">
               Continue with Apple
             </Button>
           </div>
@@ -280,7 +298,7 @@ function Login() {
           {submitError ? <p className="text-sm text-destructive">{submitError}</p> : null}
           {successMessage ? <p className="text-sm text-success">{successMessage}</p> : null}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="h-12 w-full rounded-xl text-[15px] font-semibold shadow-lg shadow-primary/25" disabled={isSubmitting}>
             Log in
           </Button>
         </form>
