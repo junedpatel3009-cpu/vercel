@@ -79,12 +79,16 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
   // Project-request tracking is still a legacy SQLite workflow. Direct hires
   // are persisted in PostgreSQL too, so they must always be loaded here.
   const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  const postgresViewer = usesPostgres
+    ? await prisma.user.findUnique({ where: { email: viewer.email }, select: { id: true } })
+    : null;
+  const dataUserId = postgresViewer?.id ?? viewer.id;
   const legacyProjectData = usesPostgres
     ? {
         projectRequests: [] as ClientProjectRequestRecord[],
         projectNegotiations: [] as ProjectNegotiationRecord[],
         trackedProjects: [] as ClientTrackedProjectRecord[],
-        hireRequests: await getClientHireRequests(viewer.id),
+        hireRequests: await getClientHireRequests(dataUserId),
       }
     : {
         projectRequests: getClientProjectRequests(viewer.id),
@@ -96,7 +100,7 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
   return {
     viewer,
     clientProfile: await getClientProfileByUserId(viewer.id),
-    projects: await getClientJobsByUserId(viewer.id),
+    projects: await getClientJobsByUserId(dataUserId),
     ...legacyProjectData,
   };
 });

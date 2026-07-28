@@ -1,7 +1,7 @@
 import { getRequest } from "@tanstack/react-start/server";
 
 import { readSessionFromCookieHeader } from "@/lib/auth-session.server";
-import { findUserById, type PublicUser, type UserRole } from "@/lib/user-db.server";
+import type { PublicUser, UserRole } from "@/lib/user-db.server";
 
 export function getCurrentUser(): PublicUser | null {
   const request = getRequest();
@@ -11,7 +11,17 @@ export function getCurrentUser(): PublicUser | null {
     return null;
   }
 
-  return findUserById(session.userId) ?? null;
+  return {
+    id: session.userId,
+    email: session.email,
+    role: session.role,
+    firstName: session.firstName,
+    lastName: session.lastName,
+    phone: session.phone,
+    // Avatars can be data URLs and must never be carried in a cookie.
+    avatarUrl: null,
+    authProvider: session.authProvider,
+  };
 }
 
 export function requireCurrentUser() {
