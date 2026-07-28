@@ -6,7 +6,11 @@ import { issueAccessToken, opaqueToken, readAccessToken, tokenHash } from "./aut
 import { getApiDatabase } from "./database.server";
 import { ApiError, body, errorResponse, json } from "./http.server";
 import { sendAccountLink } from "./email.server";
-import { createSessionCookie, readSessionFromCookieHeader } from "@/lib/auth-session.server";
+import {
+  clearSessionCookie,
+  createSessionCookie,
+  readSessionFromCookieHeader,
+} from "@/lib/auth-session.server";
 import { hashPassword, verifyPassword } from "@/lib/password.server";
 import { unlink } from "node:fs/promises";
 // or if using callbacks: import { unlink } from "node:fs";
@@ -215,6 +219,11 @@ async function route(request: Request, url: URL): Promise<Response> {
       isProfileComplete,
     });
     response.headers.set("Set-Cookie", createSessionCookie(publicAccount(user)!));
+    return response;
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/auth/logout`) {
+    const response = json({ loggedOut: true });
+    response.headers.set("Set-Cookie", clearSessionCookie());
     return response;
   }
   if (method === "GET" && pathname === `${API_PREFIX}/auth/me`)

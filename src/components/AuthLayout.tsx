@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/current-user.server";
-import { logoutAction } from "@/lib/logout.server";
 import type { PublicUser } from "@/lib/user-db.server";
 import { CheckCircle2, LogOut, Quote, Star, User } from "lucide-react";
 
@@ -52,19 +51,17 @@ export function AuthLayout({
     };
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setIsLoggingOut(true);
-
-    try {
-      const result = await logoutAction();
-
-      if (result.ok) {
-        window.location.assign("/login");
-      }
-    } catch (error) {
-      console.error("Logout failed:", error);
-      setIsLoggingOut(false);
-    }
+    // Do not keep the user on the current page while a serverless function
+    // wakes up. `keepalive` lets the cookie-clear request finish during the
+    // navigation to the public login page.
+    void fetch("/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+    });
+    window.location.replace("/login");
   };
 
   return (
