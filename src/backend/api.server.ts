@@ -98,9 +98,27 @@ function currentUser(request: Request, roles?: UserRole[]) {
   const jwt = readAccessToken(request);
   const session = readSessionFromCookieHeader(request.headers.get("cookie"));
   const id = jwt?.sub ?? session?.userId;
-  const user = id ? findUserById(id) : null;
-  const account = user ? findUserByEmail(user.email) : null;
-  if (!user || !account?.isActive) throw new ApiError(401, "Authentication required.");
+  const localUser = id ? findUserById(id) : null;
+  const account = localUser ? findUserByEmail(localUser.email) : null;
+  // Vercel functions do not share the legacy SQLite file. A verified signed
+  // session therefore remains the source of identity when a fresh function
+  // cannot find the local mirror of that account.
+  const user =
+    localUser ??
+    (session
+      ? {
+          id: session.userId,
+          email: session.email,
+          role: session.role,
+          firstName: session.firstName,
+          lastName: session.lastName,
+          phone: session.phone,
+          avatarUrl: null,
+          authProvider: session.authProvider,
+        }
+      : null);
+  if (!user || (localUser && !account?.isActive))
+    throw new ApiError(401, "Authentication required.");
   if (roles && !roles.includes(user.role))
     throw new ApiError(403, "You do not have permission to perform this action.");
   return user;
