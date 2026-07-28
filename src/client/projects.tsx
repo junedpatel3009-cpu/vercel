@@ -273,7 +273,7 @@ function Projects() {
   >({});
   // Start on live work. The summary tiles switch the board to the selected
   // database-backed project state instead of rendering every large section.
-  const [activeProjectFilter, setActiveProjectFilter] = useState<ProjectBucketFilter | null>("running");
+  const [activeProjectFilter, setActiveProjectFilter] = useState<ProjectBucketFilter | null>(null);
   const [selectedPostedProjectId, setSelectedPostedProjectId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -323,7 +323,7 @@ function Projects() {
     : null;
 
   function toggleProjectFilter(filter: ProjectBucketFilter) {
-    setActiveProjectFilter(filter);
+    setActiveProjectFilter((current) => (current === filter ? null : filter));
   }
 
   async function handleRequestStatus(requestId: number, status: ProjectRequestStatus) {
