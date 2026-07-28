@@ -771,13 +771,46 @@ export function getClientHireRequests(clientId: number) {
     .all(String(clientId)) as ClientHireRequestRecord[];
 }
 
-export function updateProfessionalHireContractStatus(
+export async function updateProfessionalHireContractStatus(
   professionalId: number,
   contractId: string,
   status: HireContractStatus,
 ) {
   if (!["accepted", "rejected"].includes(status)) {
     throw new Error("Hire request status is not available.");
+  }
+
+  if ((process.env.DATABASE_URL || "").startsWith("postgres")) {
+    await ensurePostgresHireTables();
+
+    // Keep the ownership and pending-state checks in the update itself. This
+    // avoids accepting a request that was changed in another browser tab.
+    const result = await prisma.hireContract.updateMany({
+      where: {
+        id: contractId,
+        professionalId: String(professionalId),
+        status: "pending",
+      },
+      data: { status, updatedAt: new Date() },
+    });
+
+    if (!result.count) {
+      throw new Error("Only pending hire requests can be updated.");
+    }
+
+    const contract = await prisma.hireContract.findFirst({
+      where: { id: contractId, professionalId: String(professionalId) },
+      select: { clientId: true, clientProjectId: true },
+    });
+
+    if (status === "accepted" && contract?.clientProjectId) {
+      await prisma.clientJob.updateMany({
+        where: { id: contract.clientProjectId, userId: Number(contract.clientId) },
+        data: { status: "CLOSED" },
+      });
+    }
+
+    return contract;
   }
 
   const db = getDatabase();

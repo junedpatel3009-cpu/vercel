@@ -134,7 +134,11 @@ const updateHireRequestStatus = createServerFn({ method: "POST" })
       throw new Error("Only professionals can update hire requests.");
     }
 
-    const updated = updateProfessionalHireContractStatus(viewer.id, data.contractId, data.status);
+    const updated = await updateProfessionalHireContractStatus(
+      viewer.id,
+      data.contractId,
+      data.status,
+    );
 
     return {
       ok: true as const,

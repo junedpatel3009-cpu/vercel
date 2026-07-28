@@ -681,6 +681,35 @@ export function getOpenClientJobById(jobId: number) {
   };
 }
 
+/**
+ * Reads a public job from the configured primary database. Unlike the legacy
+ * synchronous helper above, this works when the app is deployed with
+ * PostgreSQL (where Vercel's local SQLite filesystem is only temporary).
+ */
+export async function getPublicOpenClientJobById(jobId: number) {
+  const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+
+  if (!isPostgres) {
+    return getOpenClientJobById(jobId);
+  }
+
+  const job = await prisma.clientJob.findFirst({
+    where: { id: jobId, status: "OPEN" as any },
+    include: { user: true, attachments: true },
+  });
+
+  if (!job) {
+    return null;
+  }
+
+  return {
+    ...mapPrismaClientJob(job),
+    clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
+    clientCompanyName: job.user.companyName || null,
+    clientAvatarUrl: job.user.avatarUrl || null,
+  };
+}
+
 export function getFavoriteJobIds(userId: number) {
   const db = getDatabase();
   ensureFavoriteJobTable(db);

@@ -32,7 +32,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { getCurrentUser } from "@/lib/current-user.server";
-import { getOpenClientJobById, isFavoriteJob, setFavoriteJob } from "@/lib/job-db.server";
+import {
+  getPublicOpenClientJobById,
+  isFavoriteJob,
+  setFavoriteJob,
+} from "@/lib/job-db.server";
 import { formatApproximateLocation } from "@/lib/location-privacy";
 import { queueAccountEmailNotification } from "@/lib/notification-email.server";
 import { createProjectRequest } from "@/lib/project-request-db.server";
@@ -47,7 +51,7 @@ const getJobDetails = createServerFn({ method: "GET" })
       return null;
     }
 
-    const job = getOpenClientJobById(jobId);
+    const job = await getPublicOpenClientJobById(jobId);
 
     if (!job) {
       return null;
@@ -112,7 +116,7 @@ const submitProjectRequest = createServerFn({ method: "POST" })
         coverLetter: data.coverLetter,
         attachments: data.attachments ?? [],
       });
-      const job = getOpenClientJobById(data.jobId);
+      const job = await getPublicOpenClientJobById(data.jobId);
       const professionalName = `${viewer.firstName} ${viewer.lastName}`.trim() || viewer.email;
       const projectTitle = job?.title || "your project";
 
