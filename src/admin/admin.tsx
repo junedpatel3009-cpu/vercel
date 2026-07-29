@@ -114,7 +114,8 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
     };
   }
 
-  const usesPostgres = /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
+  const usesPostgres =
+    Boolean(process.env.VERCEL) && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
   let dashboard = getAdminDashboardSnapshot();
   if (usesPostgres) {
     try {
