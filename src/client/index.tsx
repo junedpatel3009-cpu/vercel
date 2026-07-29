@@ -323,7 +323,7 @@ export function Landing() {
     <div className="min-h-screen bg-background">
       <SiteHeader user={user} onLogout={logout} />
 
-      <main>
+      <main className="min-w-0 overflow-x-hidden">
         {homeIntroHtml ? (
           <section className="border-b border-border bg-surface">
             <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -615,11 +615,11 @@ export function Landing() {
           </DialogContent>
         </Dialog>
 
-        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <div className={isProfessional ? "" : "flex flex-col gap-6 lg:flex-row lg:items-start"}>
+        <section className="mx-auto max-w-7xl min-w-0 px-4 pb-12 sm:px-6 lg:px-8">
+          <div className={isProfessional ? "min-w-0" : "flex min-w-0 flex-col gap-6 lg:flex-row lg:items-start"}>
             <div
               className={cn(
-                "rounded-2xl border border-border bg-card p-6 shadow-soft",
+                "min-w-0 rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6",
                 !isProfessional && "flex-1",
               )}
             >
@@ -634,7 +634,7 @@ export function Landing() {
                       : "Discover trusted professionals and explore available job posts in your area."}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   {!isProfessional && (
                     <Button
                       type="button"
@@ -749,11 +749,11 @@ export function Landing() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-5 grid auto-rows-fr gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-5 grid min-w-0 auto-rows-fr grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {filteredOpenJobs.map((job) => (
                         <div
                           key={job.id}
-                          className="group relative flex flex-col rounded-xl border border-border bg-background p-4 transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
+                          className="group relative flex min-w-0 flex-col rounded-xl border border-border bg-background p-4 transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex flex-wrap gap-1.5">

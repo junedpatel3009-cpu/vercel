@@ -208,6 +208,7 @@
     color: var(--color-foreground);
     font-family: "Inter", "Open Sans", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
   h1,
   h2,
