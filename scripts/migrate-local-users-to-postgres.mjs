@@ -45,7 +45,36 @@ try {
     migrated += 1;
   }
 
-  console.log(`Migrated ${migrated} users from SQLite to PostgreSQL.`);
+  const localJobs = sqlite.prepare('SELECT * FROM "ClientJob"').all();
+  let migratedJobs = 0;
+  for (const job of localJobs) {
+    const owner = users.find((user) => user.id === job.userId);
+    if (!owner) continue;
+    const ownerResult = await client.query('SELECT id FROM "User" WHERE email = $1 LIMIT 1', [owner.email]);
+    const ownerId = ownerResult.rows[0]?.id;
+    if (!ownerId) continue;
+    const exists = await client.query(
+      'SELECT id FROM "ClientJob" WHERE "userId" = $1 AND title = $2 AND "createdAt" = $3 LIMIT 1',
+      [ownerId, job.title, job.createdAt],
+    );
+    if (exists.rowCount) continue;
+    await client.query(
+      `INSERT INTO "ClientJob" (
+        "userId", category, title, description, "budgetMin", "budgetMax", urgency, "timingType",
+        "hourlyRate", "jobDate", deadline, "workMode", "locationLabel", "locationAddress",
+        "locationLat", "locationLng", status, "createdAt", "updatedAt"
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+      [
+        ownerId, job.category, job.title, job.description, job.budgetMin, job.budgetMax,
+        job.urgency || "MEDIUM", job.timingType || "FIXED", job.hourlyRate, job.jobDate,
+        job.deadline || job.createdAt, job.workMode || "BOTH", job.locationLabel, job.locationAddress,
+        job.locationLat, job.locationLng, job.status || "OPEN", job.createdAt, job.updatedAt || job.createdAt,
+      ],
+    );
+    migratedJobs += 1;
+  }
+
+  console.log(`Migrated ${migrated} users and ${migratedJobs} jobs from SQLite to PostgreSQL.`);
 } finally {
   sqlite.close();
   await client.end();
