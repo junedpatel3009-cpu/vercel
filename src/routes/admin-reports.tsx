@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useLoaderData } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
@@ -61,6 +61,9 @@ const getAdminReportsData = createServerFn({ method: "GET" }).handler(async () =
 });
 
 export const Route = createFileRoute("/admin-reports")({
+  beforeLoad: () => {
+    throw redirect({ to: "/reports" });
+  },
   loader: () => getAdminReportsData(),
   head: () => ({ meta: [{ title: "Platform Reports - Servio" }] }),
   component: AdminReportsPage,

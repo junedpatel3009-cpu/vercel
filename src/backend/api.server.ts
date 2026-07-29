@@ -4,6 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 import { issueAccessToken, opaqueToken, readAccessToken, tokenHash } from "./auth.server";
 import { getApiDatabase } from "./database.server";
+import { prisma } from "@/lib/prisma";
 import { ApiError, body, errorResponse, json } from "./http.server";
 import { sendAccountLink } from "./email.server";
 import {
@@ -922,19 +923,22 @@ async function route(request: Request, url: URL): Promise<Response> {
     try {
       const user = currentUser(request, ["ADMIN", "PROFESSIONAL", "CLIENT"]);
 
+      if (process.env.VERCEL && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "")) {
+        const [users, jobs, payments] = await Promise.all([
+          prisma.user.count(),
+          prisma.clientJob.count(),
+          prisma.projectTransaction.count(),
+        ]);
+        const tables = [
+          { name: "User", label: "Users", rows: users, primaryKey: "id" },
+          { name: "ClientJob", label: "Jobs", rows: jobs, primaryKey: "id" },
+          { name: "ProjectTransaction", label: "Payments", rows: payments, primaryKey: "id" },
+        ];
+        return json({ tables, status: "connected", totalTables: tables.length, totalRecords: users + jobs + payments, timestamp: new Date().toISOString() });
+      }
+
       // Get all real database tables
       const allTables = getRealDatabaseTables();
-
-      return json(
-        {
-          tables: [],
-          status: "disconnected",
-          error: "No database tables found. Database may not be initialized.",
-          totalTables: 0,
-          totalRecords: 0,
-        },
-        503,
-      ); // 👈 Changed `{ status: 503 }` to just `503`
 
       // Friendly mapping for table names
       const tableLabels: Record<string, string> = {
@@ -958,6 +962,11 @@ async function route(request: Request, url: URL): Promise<Response> {
 
       // Filter by role
       let visibleTables = allTables;
+      // Keep the report picker usable while a legacy SQLite database is being
+      // initialized; the preview endpoint will return the available rows.
+      if (!visibleTables.length) {
+        visibleTables = ["User", "ClientJob", "ProjectTransaction"];
+      }
       if (user.role !== "ADMIN") {
         // Professionals see their own core activity tables
         if (user.role === "PROFESSIONAL") {
@@ -999,7 +1008,9 @@ async function route(request: Request, url: URL): Promise<Response> {
           "ProjectWithdrawal",
           "ServiceCategory",
         ];
-        visibleTables = allTables.filter((t) => requestedTables.includes(t));
+        visibleTables = allTables.length
+          ? allTables.filter((t) => requestedTables.includes(t))
+          : ["User", "ClientJob", "ProjectTransaction"];
 
         // Ensure we don't show both ProfessionalVerification and verifications if both exist
         if (

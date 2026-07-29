@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useLoaderData } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,9 @@ const getClientReportsData = createServerFn({ method: "GET" }).handler(async () 
 });
 
 export const Route = createFileRoute("/client-reports")({
+  beforeLoad: () => {
+    throw redirect({ to: "/reports" });
+  },
   loader: () => getClientReportsData(),
   head: () => ({ meta: [{ title: "My Reports - Servio" }] }),
   component: ClientReportsPage,

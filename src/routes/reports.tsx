@@ -207,24 +207,25 @@ function ReportsPage() {
 
   return (
     <AppShell title="Reports" userName={displayName} userRole={roleLabel}>
-      <div className="min-h-screen bg-slate-50 p-6 lg:p-8">
-        <div className="mb-8 flex items-center justify-between">
+      <div className="min-h-screen bg-muted/20 p-5 lg:p-8">
+        <div className="mb-8 flex flex-col gap-5 rounded-3xl border border-border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Reports</h1>
-            <p className="text-slate-500">View and export database records.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Reporting center</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground">Reports</h1>
+            <p className="mt-1 text-muted-foreground">Choose a report, filter by day or date range, then export it.</p>
           </div>
-          <Button onClick={() => fetchTables()} variant="outline" className="gap-2">
+          <Button onClick={() => fetchTables()} variant="outline" className="gap-2 rounded-xl">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           {/* Filters */}
           <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-                Configuration
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                Report filters
               </h3>
               <div className="space-y-4">
                 <div>
