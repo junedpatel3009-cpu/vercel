@@ -672,6 +672,60 @@ async function route(request: Request, url: URL): Promise<Response> {
   if (method === "GET" && pathname === `${API_PREFIX}/admin/contact-requests`)
     return json(db.prepare(`SELECT * FROM "ContactRequest" ORDER BY id DESC`).all());
 
+  // Focused admin reporting API. This intentionally exposes report datasets,
+  // rather than arbitrary database tables, so the reporting screen stays safe
+  // and understandable as the schema evolves.
+  if (method === "GET" && pathname === `${API_PREFIX}/reports/overview`) {
+    const user = currentUser(request, ["ADMIN"]);
+    const report = new URL(request.url).searchParams.get("report") ?? "users";
+    const url = new URL(request.url);
+    const fromValue = url.searchParams.get("from") ?? "";
+    const toValue = url.searchParams.get("to") ?? "";
+    const range = url.searchParams.get("range") ?? "30";
+    const allowedReports = ["users", "verifications", "jobs", "earnings"];
+    if (!allowedReports.includes(report)) throw new ApiError(400, "Invalid report type.");
+
+    const end = toValue ? new Date(`${toValue}T23:59:59.999`) : new Date();
+    const start = fromValue
+      ? new Date(`${fromValue}T00:00:00`)
+      : range === "all"
+        ? null
+        : new Date(end.getTime() - (Math.max(1, Number(range) || 30) - 1) * 86_400_000);
+    const inPeriod = (value: unknown) => {
+      const time = new Date(String(value ?? "")).getTime();
+      return !Number.isNaN(time) && (!start || time >= start.getTime()) && time <= end.getTime();
+    };
+
+    let rows: Array<Record<string, unknown>> = [];
+    let columns: string[] = [];
+    if (report === "users") {
+      rows = getAdminUsers()
+        .filter((account) => inPeriod(account.createdAt))
+        .map((account) => ({ id: account.id, name: `${account.firstName} ${account.lastName}`.trim(), email: account.email, role: account.role, active: account.isActive, verified: account.isVerified, createdAt: account.createdAt }));
+      columns = ["id", "name", "email", "role", "active", "verified", "createdAt"];
+    } else if (report === "verifications") {
+      rows = getAdminUsers()
+        .filter((account) => account.role === "PROFESSIONAL" && inPeriod(account.updatedAt || account.createdAt))
+        .map((account) => ({ id: account.id, professional: `${account.firstName} ${account.lastName}`.trim(), email: account.email, category: account.professionalCategory, status: account.isVerified ? "VERIFIED" : "PENDING", active: account.isActive, updatedAt: account.updatedAt || account.createdAt }));
+      columns = ["id", "professional", "email", "category", "status", "active", "updatedAt"];
+    } else if (report === "jobs") {
+      rows = getAdminJobRecords()
+        .filter((job) => inPeriod(job.createdAt))
+        .map((job) => ({ id: job.id, title: job.title, category: job.category, client: job.clientName, clientEmail: job.clientEmail, status: job.status, budget: job.budgetMax ?? job.budgetMin, createdAt: job.createdAt }));
+      columns = ["id", "title", "category", "client", "clientEmail", "status", "budget", "createdAt"];
+    } else {
+      rows = getAdminPaymentTransactions()
+        .filter((payment) => inPeriod(payment.dateTime))
+        .map((payment) => ({ id: payment.id, job: payment.jobTitle, client: payment.clientName, professional: payment.professionalName, amount: payment.amount, currency: payment.currency, type: payment.paymentType, status: payment.status, dateTime: payment.dateTime }));
+      columns = ["id", "job", "client", "professional", "amount", "currency", "type", "status", "dateTime"];
+    }
+    rows.sort((a, b) => new Date(String(b.createdAt ?? b.updatedAt ?? b.dateTime)).getTime() - new Date(String(a.createdAt ?? a.updatedAt ?? a.dateTime)).getTime());
+    const verified = report === "verifications" ? rows.filter((row) => row.status === "VERIFIED").length : undefined;
+    const pending = report === "verifications" ? rows.filter((row) => row.status === "PENDING").length : undefined;
+    const amount = report === "earnings" ? rows.reduce((sum, row) => sum + (row.status === "COMPLETED" ? Number(row.amount ?? 0) : 0), 0) : undefined;
+    return json({ report, columns, rows, total: rows.length, summary: { total: rows.length, verified, pending, amount } });
+  }
+
   // Reports API - Query Real Database Tables
 
   function buildDateFilterClause(from: string, to: string) {
@@ -1619,6 +1673,24 @@ async function route(request: Request, url: URL): Promise<Response> {
           const [total, rows] = await Promise.all([prisma.projectTransaction.count({ where }), prisma.projectTransaction.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" } })]);
           return json({ columns: ["id", "amount", "currency", "type", "status", "description", "createdAt"], rows: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })), total, page, pageSize, status: "success" });
         }
+      }
+      if (["User", "ClientJob", "ProjectTransaction"].includes(table)) {
+        const page = Number(payload.page || 1);
+        const pageSize = Number(payload.pageSize || 50);
+        const search = String(payload.filters?.search || "").trim().toLowerCase();
+        const from = payload.filters?.from ? new Date(String(payload.filters.from)).getTime() : -Infinity;
+        const to = payload.filters?.to
+          ? new Date(`${String(payload.filters.to)}T23:59:59.999Z`).getTime()
+          : Infinity;
+        const source = table === "User" ? getAdminUsers() : table === "ClientJob" ? getAdminJobRecords() : getAdminPaymentTransactions();
+        const rows = source
+          .filter((row: any) => {
+            const date = new Date(row.createdAt || row.dateTime || 0).getTime();
+            return date >= from && date <= to && (!search || JSON.stringify(row).toLowerCase().includes(search));
+          })
+          .slice((page - 1) * pageSize, page * pageSize);
+        const columns = rows.length ? Object.keys(rows[0] as Record<string, unknown>) : table === "User" ? ["id", "role", "firstName", "lastName", "email", "createdAt"] : table === "ClientJob" ? ["id", "title", "category", "status", "createdAt"] : ["id", "jobTitle", "amount", "status", "dateTime"];
+        return json({ columns, rows, total: source.length, page, pageSize, status: "success" });
       }
       const allTables = getRealDatabaseTables();
 
