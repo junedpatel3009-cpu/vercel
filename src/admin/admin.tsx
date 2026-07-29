@@ -485,6 +485,18 @@ function Admin() {
       return;
     }
 
+    // Vercel does not host the separate Socket.IO service on port 4001.
+    // Use the polling refresh there unless a hosted socket URL is configured.
+    const isVercelHost = window.location.hostname.endsWith(".vercel.app");
+    if (isVercelHost && !import.meta.env.VITE_SOCKET_URL) {
+      setLiveStatus("Auto refresh active");
+      const refreshInterval = window.setInterval(() => {
+        void router.invalidate();
+      }, 15_000);
+
+      return () => window.clearInterval(refreshInterval);
+    }
+
     const socket = io(getSocketUrl(), {
       auth: {
         userId: data.viewer.id,
