@@ -115,9 +115,14 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
   }
 
   const usesPostgres = /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
-  const dashboard = usesPostgres
-    ? await getPostgresAdminDashboardSnapshot()
-    : getAdminDashboardSnapshot();
+  let dashboard = getAdminDashboardSnapshot();
+  if (usesPostgres) {
+    try {
+      dashboard = await getPostgresAdminDashboardSnapshot();
+    } catch (error) {
+      console.error("Unable to load the PostgreSQL admin dashboard:", error);
+    }
+  }
 
   return {
     viewer,

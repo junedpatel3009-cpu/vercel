@@ -338,9 +338,6 @@ export async function getPostgresAdminDashboardSnapshot(): Promise<AdminDashboar
     draftJobs,
     closedJobs,
     todayJobs,
-    completedTransactions,
-    todayTransactions,
-    transactions,
     recentJobs,
   ] = await Promise.all([
     prisma.user.count(),
@@ -354,15 +351,25 @@ export async function getPostgresAdminDashboardSnapshot(): Promise<AdminDashboar
     prisma.clientJob.count({ where: { status: "DRAFT" } }),
     prisma.clientJob.count({ where: { status: "CLOSED" } }),
     prisma.clientJob.count({ where: { createdAt: { gte: todayStart } } }),
-    prisma.projectTransaction.count({ where: { status: "COMPLETED" } }),
-    prisma.projectTransaction.count({ where: { status: "COMPLETED", createdAt: { gte: todayStart } } }),
-    prisma.projectTransaction.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
     prisma.clientJob.findMany({
       take: 8,
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       include: { user: { select: { firstName: true, lastName: true, email: true } } },
     }),
   ]);
+  let transactions: Array<{
+    id: number; amount: number; currency: string; type: string; status: string; description: string;
+    createdAt: Date; clientId: number; professionalId: number;
+  }> = [];
+  try {
+    transactions = await prisma.projectTransaction.findMany({
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+  } catch (error) {
+    console.warn("Admin dashboard transactions are unavailable:", error instanceof Error ? error.message : error);
+  }
+  const completedTransactions = transactions.filter((item) => item.status === "COMPLETED").length;
+  const todayTransactions = transactions.filter((item) => item.status === "COMPLETED" && item.createdAt >= todayStart).length;
   const people = await prisma.user.findMany({
     where: { id: { in: [...new Set(transactions.flatMap((item) => [item.clientId, item.professionalId]))] } },
     select: { id: true, firstName: true, lastName: true },
