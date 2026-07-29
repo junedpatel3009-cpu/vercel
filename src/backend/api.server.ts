@@ -1972,7 +1972,11 @@ async function route(request: Request, url: URL): Promise<Response> {
 </html>`;
 
         const puppeteer = await import("puppeteer-core");
+        const executablePath =
+          process.env.PUPPETEER_EXECUTABLE_PATH ||
+          (process.platform === "win32" ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" : undefined);
         const browser = await puppeteer.launch({
+          executablePath,
           args: ["--no-sandbox", "--disable-setuid-sandbox"],
         });
         const pageP = await browser.newPage();

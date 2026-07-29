@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { BriefcaseBusiness, CalendarDays, CircleDollarSign, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { BriefcaseBusiness, CalendarDays, CircleDollarSign, Download, RefreshCw, ShieldCheck, Users } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,43 @@ function ReportsPage() {
   const reportColumns = data?.columns ?? [];
   const reportRows = data?.rows ?? [];
   const reportSummary = data?.summary ?? { total: 0 };
+
+  function downloadCsv() {
+    if (!reportColumns.length) return;
+    const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const csv = [
+      reportColumns.join(","),
+      ...reportRows.map((row) => reportColumns.map((column) => escape(row[column])).join(",")),
+    ].join("\n");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    link.download = `${report}-${range === "all" ? "all-time" : `${range}-days`}-report.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  function downloadPdf() {
+    const popup = window.open("", "_blank");
+    if (!popup) {
+      setError("Allow pop-ups to export this report as a PDF.");
+      return;
+    }
+    const escape = (value: unknown) => String(value ?? "—").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+    const headers = reportColumns.map((column) => `<th>${escape(humanize(column))}</th>`).join("");
+    const tableRows = reportRows.map((row) => `<tr>${reportColumns.map((column) => `<td>${escape(formatCell(row[column], column))}</td>`).join("")}</tr>`).join("");
+    const documentUrl = URL.createObjectURL(
+      new Blob(
+        [`<!doctype html><html><head><title>${escape(report)} report</title><style>@page{size:landscape;margin:14mm}body{font:12px Arial;color:#172554}h1{margin:0}p{color:#475569}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#1d4ed8;color:#fff;text-align:left}th,td{border:1px solid #cbd5e1;padding:7px;vertical-align:top}tr:nth-child(even){background:#f8fafc}</style></head><body><h1>Servio ${escape(REPORTS.find((item) => item.id === report)?.label)} Report</h1><p>${escape(dateLabel)} · ${reportRows.length} records · Generated ${escape(new Date().toLocaleString())}</p><table><thead><tr>${headers}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`],
+        { type: "text/html" },
+      ),
+    );
+    popup.location.href = documentUrl;
+    window.setTimeout(() => {
+      popup.focus();
+      popup.print();
+      URL.revokeObjectURL(documentUrl);
+    }, 700);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,7 +128,7 @@ function ReportsPage() {
           <Metric label={report === "verifications" ? "Pending verification" : "Date filter"} value={report === "verifications" ? reportSummary.pending ?? 0 : dateLabel} />
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="font-semibold text-slate-900">{REPORTS.find((item) => item.id === report)?.label} table</h2><p className="text-sm text-slate-500">{data?.total ?? 0} records matching {dateLabel.toLowerCase()}</p></div>{loading && <RefreshCw className="h-5 w-5 animate-spin text-sky-700" />}</div>{error ? <p className="p-6 text-sm text-red-700">{error}</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{reportColumns.map((column) => <th className="whitespace-nowrap px-5 py-3 font-semibold" key={column}>{humanize(column)}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{reportRows.map((row, index) => <tr key={`${String(row.id ?? index)}`} className="hover:bg-slate-50">{reportColumns.map((column) => <td className="max-w-72 px-5 py-3 text-slate-700" key={column}>{formatCell(row[column], column)}</td>)}</tr>)}{!loading && !reportRows.length && <tr><td className="px-5 py-12 text-center text-slate-500" colSpan={Math.max(reportColumns.length, 1)}>No records found for this period.</td></tr>}</tbody></table></div>}</section>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="font-semibold text-slate-900">{REPORTS.find((item) => item.id === report)?.label} table</h2><p className="text-sm text-slate-500">{data?.total ?? 0} records matching {dateLabel.toLowerCase()}</p></div><div className="flex items-center gap-3"><Button size="sm" variant="outline" onClick={downloadPdf} disabled={!reportRows.length} className="gap-2"><Download className="h-4 w-4" />Download PDF</Button><Button size="sm" onClick={downloadCsv} disabled={!reportRows.length} className="gap-2"><Download className="h-4 w-4" />Download CSV</Button>{loading && <RefreshCw className="h-5 w-5 animate-spin text-sky-700" />}</div></div>{error ? <p className="p-6 text-sm text-red-700">{error}</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{reportColumns.map((column) => <th className="whitespace-nowrap px-5 py-3 font-semibold" key={column}>{humanize(column)}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{reportRows.map((row, index) => <tr key={`${String(row.id ?? index)}`} className="hover:bg-slate-50">{reportColumns.map((column) => <td className="max-w-72 px-5 py-3 text-slate-700" key={column}>{formatCell(row[column], column)}</td>)}</tr>)}{!loading && !reportRows.length && <tr><td className="px-5 py-12 text-center text-slate-500" colSpan={Math.max(reportColumns.length, 1)}>No records found for this period.</td></tr>}</tbody></table></div>}</section>
       </main>
     </AppShell>
   );
@@ -99,5 +136,5 @@ function ReportsPage() {
 
 function Metric({ label, value }: { label: string; value: string | number }) { return <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-2xl font-bold text-slate-900">{typeof value === "number" ? value.toLocaleString() : value}</p></div>; }
 function humanize(value: string) { return value.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase()); }
-function formatMoney(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value); }
-function formatCell(value: unknown, column: string) { if (value === null || value === undefined || value === "") return "—"; if (typeof value === "boolean") return value ? "Yes" : "No"; if (/amount|earnings/i.test(column) && typeof value === "number") return formatMoney(value); if (/date|at$/i.test(column) && typeof value === "string") { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); } return String(value); }
+function formatMoney(value: number) { return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value); }
+function formatCell(value: unknown, column: string) { if (value === null || value === undefined || value === "") return "—"; if (typeof value === "boolean") return value ? "Yes" : "No"; if (/amount|earnings|budget/i.test(column) && typeof value === "number") return formatMoney(value); if (/date|at$/i.test(column) && typeof value === "string") { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString(); } return String(value); }
