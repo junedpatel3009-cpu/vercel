@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "node:path";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
+import { prisma } from "@/lib/prisma";
 import type { Database as BetterSqlite3Database } from "better-sqlite3";
 
 export type AdminDashboardSnapshot = {
@@ -317,6 +318,64 @@ export function getAdminDashboardSnapshot(): AdminDashboardSnapshot {
       clientEmail: job.clientEmail,
     })),
     recentTransactions: getRecentTransactions(db),
+  };
+}
+
+/** Production dashboard snapshot. Vercel uses Postgres, so it must not read the
+ * temporary SQLite compatibility database. */
+export async function getPostgresAdminDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [
+    users,
+    activeUsers,
+    clients,
+    professionals,
+    admins,
+    todayUsers,
+    totalJobs,
+    openJobs,
+    draftJobs,
+    closedJobs,
+    todayJobs,
+    completedTransactions,
+    todayTransactions,
+    transactions,
+    recentJobs,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { role: "CLIENT" } }),
+    prisma.user.count({ where: { role: "PROFESSIONAL" } }),
+    prisma.user.count({ where: { role: "ADMIN" } }),
+    prisma.user.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.clientJob.count(),
+    prisma.clientJob.count({ where: { status: "OPEN" } }),
+    prisma.clientJob.count({ where: { status: "DRAFT" } }),
+    prisma.clientJob.count({ where: { status: "CLOSED" } }),
+    prisma.clientJob.count({ where: { createdAt: { gte: todayStart } } }),
+    prisma.projectTransaction.count({ where: { status: "COMPLETED" } }),
+    prisma.projectTransaction.count({ where: { status: "COMPLETED", createdAt: { gte: todayStart } } }),
+    prisma.projectTransaction.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
+    prisma.clientJob.findMany({
+      take: 8,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      include: { user: { select: { firstName: true, lastName: true, email: true } } },
+    }),
+  ]);
+  const people = await prisma.user.findMany({
+    where: { id: { in: [...new Set(transactions.flatMap((item) => [item.clientId, item.professionalId]))] } },
+    select: { id: true, firstName: true, lastName: true },
+  });
+  const names = new Map(people.map((person) => [person.id, `${person.firstName} ${person.lastName}`.trim()]));
+  const totalRevenue = transactions.filter((item) => item.status === "COMPLETED").reduce((sum, item) => sum + item.amount, 0);
+  const todayRevenue = transactions.filter((item) => item.status === "COMPLETED" && item.createdAt >= todayStart).reduce((sum, item) => sum + item.amount, 0);
+
+  return {
+    generatedAt: now.toISOString(),
+    stats: { totalUsers: users, clients, professionals, admins, activeUsers, todayUsers, totalJobs, openJobs, draftJobs, closedJobs, todayJobs, pendingRequests: 0, activeProjects: 0, completedTransactions, todayTransactions, totalRevenue, todayRevenue, openDisputes: 0 },
+    recentJobs: recentJobs.map((job) => ({ id: job.id, title: job.title, category: job.category, status: job.status, budgetMin: job.budgetMin, budgetMax: job.budgetMax, createdAt: job.createdAt.toISOString(), clientName: `${job.user.firstName} ${job.user.lastName}`.trim() || "Unknown client", clientEmail: job.user.email })),
+    recentTransactions: transactions.slice(0, 8).map((item) => ({ id: item.id, amount: item.amount, currency: item.currency, type: item.type, status: item.status, description: item.description, createdAt: item.createdAt.toISOString(), projectTitle: item.description || "Project payment", clientName: names.get(item.clientId) || "Client", professionalName: names.get(item.professionalId) || "Professional" })),
   };
 }
 

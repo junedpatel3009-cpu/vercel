@@ -59,6 +59,7 @@ import {
   getAdminDisputeRecords,
   getAdminPaymentTransactions,
   getAdminDashboardSnapshot,
+  getPostgresAdminDashboardSnapshot,
   updateAdminDisputeStatus,
   type AdminDisputeRecord,
   type AdminJobRecord,
@@ -113,11 +114,16 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
     };
   }
 
+  const usesPostgres = /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
+  const dashboard = usesPostgres
+    ? await getPostgresAdminDashboardSnapshot()
+    : getAdminDashboardSnapshot();
+
   return {
     viewer,
     users: getAdminUsers(),
     stats: getAdminUserStats(),
-    dashboard: getAdminDashboardSnapshot(),
+    dashboard,
     jobRecords: getAdminJobRecords(),
     disputeRecords: getAdminDisputeRecords(),
     paymentTransactions: getAdminPaymentTransactions(),
