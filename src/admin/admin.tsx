@@ -116,23 +116,60 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
 
   const usesPostgres =
     Boolean(process.env.VERCEL) && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
-  let dashboard = getAdminDashboardSnapshot();
+  let dashboard: AdminDashboardSnapshot;
   if (usesPostgres) {
     try {
       dashboard = await getPostgresAdminDashboardSnapshot();
     } catch (error) {
       console.error("Unable to load the PostgreSQL admin dashboard:", error);
+      dashboard = {
+        generatedAt: new Date().toISOString(),
+        stats: {
+          totalUsers: 0,
+          clients: 0,
+          professionals: 0,
+          admins: 0,
+          activeUsers: 0,
+          todayUsers: 0,
+          totalJobs: 0,
+          openJobs: 0,
+          draftJobs: 0,
+          closedJobs: 0,
+          todayJobs: 0,
+          pendingRequests: 0,
+          activeProjects: 0,
+          completedTransactions: 0,
+          todayTransactions: 0,
+          totalRevenue: 0,
+          todayRevenue: 0,
+          openDisputes: 0,
+        },
+        recentJobs: [],
+        recentTransactions: [],
+      };
     }
+  } else {
+    dashboard = getAdminDashboardSnapshot();
   }
 
   return {
     viewer,
-    users: getAdminUsers(),
-    stats: getAdminUserStats(),
+    users: usesPostgres ? [] : getAdminUsers(),
+    stats: usesPostgres
+      ? {
+          totalUsers: dashboard.stats.totalUsers,
+          activeUsers: dashboard.stats.activeUsers,
+          inactiveUsers: dashboard.stats.totalUsers - dashboard.stats.activeUsers,
+          admins: dashboard.stats.admins,
+          clients: dashboard.stats.clients,
+          professionals: dashboard.stats.professionals,
+          pendingVerifications: 0,
+        }
+      : getAdminUserStats(),
     dashboard,
-    jobRecords: getAdminJobRecords(),
-    disputeRecords: getAdminDisputeRecords(),
-    paymentTransactions: getAdminPaymentTransactions(),
+    jobRecords: usesPostgres ? [] : getAdminJobRecords(),
+    disputeRecords: usesPostgres ? [] : getAdminDisputeRecords(),
+    paymentTransactions: usesPostgres ? [] : getAdminPaymentTransactions(),
   };
 });
 
