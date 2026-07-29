@@ -106,9 +106,16 @@ function ReportsPage() {
         rows: Number(table.rows ?? 0),
         primaryKey: table.primaryKey || "id",
       }));
-      setTables(tableList);
-      if (!selectedTable && tableList.length > 0) {
-        setSelectedTable(tableList[0].name);
+      const availableTables = tableList.length
+        ? tableList
+        : [
+            { name: "User", rows: 0, primaryKey: "id" },
+            { name: "ClientJob", rows: 0, primaryKey: "id" },
+            { name: "ProjectTransaction", rows: 0, primaryKey: "id" },
+          ];
+      setTables(availableTables);
+      if (!selectedTable && availableTables.length > 0) {
+        setSelectedTable(availableTables[0].name);
       }
     } catch (err: any) {
       setError(`Failed to fetch tables: ${err.message}`);

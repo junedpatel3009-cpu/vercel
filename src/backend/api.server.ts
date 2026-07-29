@@ -1594,6 +1594,32 @@ async function route(request: Request, url: URL): Promise<Response> {
       );
 
       const table = String(payload.table);
+      if (process.env.VERCEL && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "")) {
+        const page = Number(payload.page || 1);
+        const pageSize = Number(payload.pageSize || 50);
+        const skip = (page - 1) * pageSize;
+        const filters = payload.filters || {};
+        const from = filters.from ? new Date(String(filters.from)) : undefined;
+        const to = filters.to ? new Date(`${String(filters.to)}T23:59:59.999Z`) : undefined;
+        const search = String(filters.search || "").trim();
+        const createdAt = from || to ? { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } : undefined;
+
+        if (table === "User") {
+          const where: any = { ...(createdAt ? { createdAt } : {}), ...(search ? { OR: [{ firstName: { contains: search, mode: "insensitive" } }, { lastName: { contains: search, mode: "insensitive" } }, { email: { contains: search, mode: "insensitive" } }] } : {}) };
+          const [total, rows] = await Promise.all([prisma.user.count({ where }), prisma.user.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" }, select: { id: true, role: true, firstName: true, lastName: true, email: true, isActive: true, isVerified: true, createdAt: true } })]);
+          return json({ columns: ["id", "role", "firstName", "lastName", "email", "isActive", "isVerified", "createdAt"], rows: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })), total, page, pageSize, status: "success" });
+        }
+        if (table === "ClientJob") {
+          const where: any = { ...(createdAt ? { createdAt } : {}), ...(search ? { OR: [{ title: { contains: search, mode: "insensitive" } }, { category: { contains: search, mode: "insensitive" } }] } : {}) };
+          const [total, rows] = await Promise.all([prisma.clientJob.count({ where }), prisma.clientJob.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" }, include: { user: { select: { email: true } } } })]);
+          return json({ columns: ["id", "title", "category", "status", "budgetMin", "budgetMax", "createdAt", "clientEmail"], rows: rows.map((row) => ({ id: row.id, title: row.title, category: row.category, status: row.status, budgetMin: row.budgetMin, budgetMax: row.budgetMax, createdAt: row.createdAt.toISOString(), clientEmail: row.user.email })), total, page, pageSize, status: "success" });
+        }
+        if (table === "ProjectTransaction") {
+          const where: any = { ...(createdAt ? { createdAt } : {}), ...(search ? { description: { contains: search, mode: "insensitive" } } : {}) };
+          const [total, rows] = await Promise.all([prisma.projectTransaction.count({ where }), prisma.projectTransaction.findMany({ where, skip, take: pageSize, orderBy: { createdAt: "desc" } })]);
+          return json({ columns: ["id", "amount", "currency", "type", "status", "description", "createdAt"], rows: rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })), total, page, pageSize, status: "success" });
+        }
+      }
       const allTables = getRealDatabaseTables();
 
       let querySource = `"${table}"`;
