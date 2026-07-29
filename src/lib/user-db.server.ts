@@ -1045,6 +1045,36 @@ export function getAdminUsers() {
   );
 }
 
+export async function getPostgresAdminUsers(): Promise<AdminUserRecord[]> {
+  const users = await prisma.user.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] });
+  return users.map((user) => ({
+    id: user.id,
+    role: user.role,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    phone: user.phone,
+    avatarUrl: user.avatarUrl,
+    companyName: user.companyName,
+    industry: user.industry,
+    professionalCategory: user.professionalCategory,
+    professionalCity: user.professionalCity,
+    experienceYears: user.experienceYears,
+    hourlyRate: user.hourlyRate,
+    fixedRate: user.fixedRate,
+    availabilityStatus: user.availabilityStatus,
+    averageRating: user.averageRating,
+    reviewCount: user.reviewCount,
+    authProvider: user.authProvider === "GOOGLE" ? "GOOGLE" : "LOCAL",
+    hasPassword: Boolean(user.passwordHash),
+    isActive: user.isActive,
+    isVerified: user.isVerified,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  }));
+}
+
 export function recordUserLogin(userId: number) {
   const db = getDatabase();
   const timestamp = new Date().toISOString();

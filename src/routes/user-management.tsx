@@ -48,6 +48,7 @@ import {
 import { getCurrentUser } from "@/lib/current-user.server";
 import {
   getAdminUsers,
+  getPostgresAdminUsers,
   updateProfessionalVerifiedStatusByAdmin,
   updateUserActiveStatusByAdmin,
   updateUserPasswordByAdmin,
@@ -65,14 +66,15 @@ const getUserManagementData = createServerFn({ method: "GET" }).handler(async ()
     };
   }
 
-  const users = getAdminUsers().filter(
+  const usePostgres = Boolean(process.env.VERCEL) && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
+  const users = (usePostgres ? await getPostgresAdminUsers() : getAdminUsers()).filter(
     (user) => user.role === "CLIENT" || user.role === "PROFESSIONAL",
   );
 
   return {
     viewer,
     users,
-    userDetails: getAdminManagedUserDetails(
+    userDetails: usePostgres ? {} : getAdminManagedUserDetails(
       users.map((user) => ({ id: user.id, role: user.role as "CLIENT" | "PROFESSIONAL" })),
     ),
   };
