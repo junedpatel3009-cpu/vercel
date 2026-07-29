@@ -17,6 +17,10 @@ import {
   Search,
   ShieldCheck,
   TrendingUp,
+  UserRound,
+  KeyRound,
+  Eye,
+  EyeOff,
   UserCog,
   Users,
   Zap,
@@ -26,7 +30,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
-import { verifyPassword } from "@/lib/password.server";
+import { hashPassword, verifyPassword } from "@/lib/password.server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,8 +69,10 @@ import { createSessionCookie } from "@/lib/auth-session.server";
 import { getCurrentUser } from "@/lib/current-user.server";
 import {
   findUserByEmail,
+  createUserRecord,
   getAdminUsers,
   getAdminUserStats,
+  updateUserPasswordByEmail,
   updateUserActiveStatusByAdmin,
   updateUserRoleByAdmin,
   type AdminUserRecord,
@@ -76,7 +82,9 @@ import {
 } from "@/lib/user-db.server";
 import { cn } from "@/lib/utils";
 
-const ADMIN_USERNAME = "";
+const ADMIN_USERNAME = "juned";
+const ADMIN_PASSWORD = "2412";
+const ADMIN_ACCOUNT_EMAIL = "juned@admin.local";
 
 const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
@@ -119,9 +127,36 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
 const submitAdminLogin = createServerFn({ method: "POST" })
   .inputValidator((input: { username: string; password: string }) => input)
   .handler(async ({ data }) => {
-    const email = data.username.trim().toLowerCase();
-    const existingAdmin = findUserByEmail(email);
-    const passwordCheck = await verifyPassword(data.password, existingAdmin?.passwordHash ?? null);
+    const username = data.username.trim().toLowerCase();
+
+    if (username !== ADMIN_USERNAME || data.password !== ADMIN_PASSWORD) {
+      return {
+        ok: false as const,
+        formError: "Incorrect name or password.",
+      };
+    }
+
+    let existingAdmin = findUserByEmail(ADMIN_ACCOUNT_EMAIL);
+
+    if (!existingAdmin) {
+      createUserRecord({
+        role: "ADMIN",
+        firstName: "Juned",
+        lastName: "Admin",
+        email: ADMIN_ACCOUNT_EMAIL,
+        phone: null,
+        passwordHash: hashPassword(ADMIN_PASSWORD),
+      });
+      existingAdmin = findUserByEmail(ADMIN_ACCOUNT_EMAIL);
+    }
+
+    let passwordCheck = await verifyPassword(ADMIN_PASSWORD, existingAdmin?.passwordHash ?? null);
+
+    if (existingAdmin && !passwordCheck.valid) {
+      updateUserPasswordByEmail(ADMIN_ACCOUNT_EMAIL, hashPassword(ADMIN_PASSWORD));
+      existingAdmin = findUserByEmail(ADMIN_ACCOUNT_EMAIL);
+      passwordCheck = await verifyPassword(ADMIN_PASSWORD, existingAdmin?.passwordHash ?? null);
+    }
 
     if (
       !existingAdmin ||
@@ -131,7 +166,7 @@ const submitAdminLogin = createServerFn({ method: "POST" })
     ) {
       return {
         ok: false as const,
-        formError: "Invalid admin username or password.",
+        formError: "Admin access is unavailable. Please try again.",
       };
     }
 
@@ -246,17 +281,6 @@ function Admin() {
   function selectTab(nextTab: ShortcutKey) {
     setOverviewResult(null);
     setTab(nextTab);
-  }
-
-  function showOverviewResult(result: OverviewResult) {
-    setOverviewResult(result);
-    setQuery("");
-    setJobQuery("");
-    setDisputeQuery("");
-    setPaymentQuery("");
-    setTab(
-      result === "total-users" ? "users" : result === "today-transactions" ? "payments" : "jobs",
-    );
   }
 
   useEffect(() => {
@@ -549,18 +573,7 @@ function Admin() {
         </AdminSection>
 
         <div className="flex flex-col gap-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9 h-11 rounded-2xl shadow-sm border-border bg-background"
-                placeholder={
-                  tab === "users" ? "Search users by name or email..." : "Quick search..."
-                }
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
+          <div className="flex flex-wrap items-center justify-end gap-4">
             <div className="flex gap-2">
               <Button
                 asChild
@@ -577,7 +590,7 @@ function Admin() {
 
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             {tab === "overview" && (
-              <Overview dashboard={data.dashboard} onSelectResult={showOverviewResult} />
+              <Overview dashboard={data.dashboard} />
             )}
             {tab === "users" && (
               <div className="space-y-6">
@@ -1166,8 +1179,9 @@ function PaymentsTable({
 
 function AdminLogin() {
   const router = useRouter();
-  const [username, setUsername] = useState(ADMIN_USERNAME);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1193,55 +1207,58 @@ function AdminLogin() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-muted/30 px-4">
-      <div className="w-full max-w-sm rounded-3xl border border-border bg-card p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-        <div className="mb-8">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-            <ShieldCheck className="h-7 w-7" />
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-slate-950 px-4 py-10">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.2),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(99,102,241,0.18),_transparent_40%)]" />
+      <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/15 bg-white p-7 shadow-2xl shadow-black/30 sm:p-10 animate-in zoom-in-95 duration-300">
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500" />
+        <div className="mb-9 text-center">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-300">
+            <ShieldCheck className="h-8 w-8" />
           </div>
-          <h1 className="mt-6 text-3xl font-bold tracking-tight text-foreground">Admin Login</h1>
-          <p className="mt-2 text-sm text-muted-foreground font-medium">
-            Authorized administrative access only.
-          </p>
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.22em] text-sky-600">Secure access</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">Admin portal</h1>
+          <p className="mt-2 text-sm text-slate-500">Sign in to manage your workspace.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label
-              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-              htmlFor="admin-username"
-            >
-              Username / Email
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative">
+            <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <Input
-              id="admin-username"
+              id="admin-name"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               autoComplete="username"
-              className="h-12 rounded-xl bg-background border-border shadow-sm focus:ring-2 focus:ring-primary/20"
-              placeholder="admin@servio.com"
+              className="h-14 rounded-2xl border-slate-200 bg-slate-50 pl-12 text-base text-slate-950 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
+              placeholder="Name"
+              aria-label="Name"
+              required
             />
           </div>
-          <div className="space-y-2">
-            <label
-              className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-              htmlFor="admin-password"
-            >
-              Security Password
-            </label>
+          <div className="relative">
+            <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <Input
               id="admin-password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete="current-password"
-              className="h-12 rounded-xl bg-background border-border shadow-sm focus:ring-2 focus:ring-primary/20"
-              placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+              className="h-14 rounded-2xl border-slate-200 bg-slate-50 pl-12 pr-12 text-base text-slate-950 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
+              placeholder="Password"
+              aria-label="Password"
+              required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
           </div>
 
           {formError && (
-            <div className="rounded-xl bg-rose-50 p-4 border border-rose-100 flex items-center gap-2 text-rose-700 text-sm font-bold animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm font-medium text-rose-700 animate-in fade-in slide-in-from-top-1 duration-200">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {formError}
             </div>
@@ -1249,10 +1266,10 @@ function AdminLogin() {
 
           <Button
             type="submit"
-            className="w-full h-12 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95"
+            className="mt-2 h-14 w-full rounded-2xl bg-slate-950 font-bold text-white shadow-lg shadow-slate-300 transition-all hover:bg-slate-800 hover:shadow-xl active:scale-[0.98]"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "AUTHORIZING..." : "ENTER ADMIN PANEL"}
+            {isSubmitting ? "SIGNING IN..." : "SIGN IN"}
           </Button>
         </form>
       </div>
@@ -1260,51 +1277,11 @@ function AdminLogin() {
   );
 }
 
-function Overview({
-  dashboard,
-  onSelectResult,
-}: {
-  dashboard: AdminDashboardSnapshot;
-  onSelectResult: (result: OverviewResult) => void;
-}) {
+function Overview({ dashboard }: { dashboard: AdminDashboardSnapshot }) {
   const stats = dashboard.stats;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <AdminSummaryCard
-          icon={Users}
-          label="Total Registered Users"
-          value={stats.totalUsers}
-          caption={`${stats.activeUsers} active accounts \u00b7 ${stats.todayUsers} new today`}
-          onClick={() => onSelectResult("total-users")}
-        />
-        <AdminSummaryCard
-          icon={ClipboardList}
-          label="Jobs Posted Today"
-          value={stats.todayJobs}
-          caption={`${stats.openJobs} currently open work posts`}
-          variant="primary"
-          onClick={() => onSelectResult("today-jobs")}
-        />
-        <AdminSummaryCard
-          icon={DollarSign}
-          label="Today Gross Revenue"
-          value={formatMoney(stats.todayRevenue)}
-          caption={`${stats.todayTransactions} successful transactions`}
-          variant="success"
-          onClick={() => onSelectResult("today-transactions")}
-        />
-        <AdminSummaryCard
-          icon={AlertTriangle}
-          label="Open Disputed Issues"
-          value={stats.openDisputes}
-          caption={`${stats.pendingRequests} project requests pending`}
-          variant="destructive"
-          onClick={() => onSelectResult("open-disputes")}
-        />
-      </div>
-
       <div className="grid gap-8 xl:grid-cols-2">
         <div className="rounded-3xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
           <div className="border-b border-border bg-muted/20 px-8 py-6">
