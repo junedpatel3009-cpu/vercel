@@ -698,7 +698,73 @@ async function route(request: Request, url: URL): Promise<Response> {
 
     let rows: Array<Record<string, unknown>> = [];
     let columns: string[] = [];
-    if (report === "users") {
+    const usePostgres =
+      Boolean(process.env.VERCEL) && /^(postgres|postgresql):\/\//.test(process.env.DATABASE_URL || "");
+    if (usePostgres) {
+      const dateWhere = start ? { createdAt: { gte: start, lte: end } } : {};
+      if (report === "users") {
+        const accounts = await prisma.user.findMany({ where: dateWhere, orderBy: { createdAt: "desc" } });
+        rows = accounts.map((account) => ({
+          id: account.id,
+          name: `${account.firstName} ${account.lastName}`.trim(),
+          email: account.email,
+          role: account.role,
+          active: account.isActive,
+          verified: account.isVerified,
+          createdAt: account.createdAt.toISOString(),
+        }));
+        columns = ["id", "name", "email", "role", "active", "verified", "createdAt"];
+      } else if (report === "verifications") {
+        const accounts = await prisma.user.findMany({
+          where: { role: "PROFESSIONAL", ...(start ? { updatedAt: { gte: start, lte: end } } : {}) },
+          orderBy: { updatedAt: "desc" },
+        });
+        rows = accounts.map((account) => ({
+          id: account.id,
+          professional: `${account.firstName} ${account.lastName}`.trim(),
+          email: account.email,
+          category: account.professionalCategory,
+          status: account.isVerified ? "VERIFIED" : "PENDING",
+          active: account.isActive,
+          updatedAt: account.updatedAt.toISOString(),
+        }));
+        columns = ["id", "professional", "email", "category", "status", "active", "updatedAt"];
+      } else if (report === "jobs") {
+        const jobs = await prisma.clientJob.findMany({
+          where: dateWhere,
+          include: { user: { select: { firstName: true, lastName: true, email: true } } },
+          orderBy: { createdAt: "desc" },
+        });
+        rows = jobs.map((job) => ({
+          id: job.id,
+          title: job.title,
+          category: job.category,
+          client: `${job.user.firstName} ${job.user.lastName}`.trim(),
+          clientEmail: job.user.email,
+          status: job.status,
+          budget: job.budgetMax ?? job.budgetMin,
+          createdAt: job.createdAt.toISOString(),
+        }));
+        columns = ["id", "title", "category", "client", "clientEmail", "status", "budget", "createdAt"];
+      } else {
+        const payments = await prisma.projectTransaction.findMany({ where: dateWhere, orderBy: { createdAt: "desc" } });
+        const accountIds = [...new Set(payments.flatMap((payment) => [payment.clientId, payment.professionalId]))];
+        const accounts = await prisma.user.findMany({ where: { id: { in: accountIds } }, select: { id: true, firstName: true, lastName: true } });
+        const names = new Map(accounts.map((account) => [account.id, `${account.firstName} ${account.lastName}`.trim()]));
+        rows = payments.map((payment) => ({
+          id: payment.id,
+          job: payment.description || "Project payment",
+          client: names.get(payment.clientId) || "Unknown client",
+          professional: names.get(payment.professionalId) || "Unknown professional",
+          amount: payment.amount,
+          currency: payment.currency,
+          type: payment.type,
+          status: payment.status,
+          dateTime: payment.createdAt.toISOString(),
+        }));
+        columns = ["id", "job", "client", "professional", "amount", "currency", "type", "status", "dateTime"];
+      }
+    } else if (report === "users") {
       rows = getAdminUsers()
         .filter((account) => inPeriod(account.createdAt))
         .map((account) => ({ id: account.id, name: `${account.firstName} ${account.lastName}`.trim(), email: account.email, role: account.role, active: account.isActive, verified: account.isVerified, createdAt: account.createdAt }));
