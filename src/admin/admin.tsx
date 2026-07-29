@@ -463,7 +463,13 @@ function Admin() {
       refresh(payload?.reason || "notification activity");
     });
 
+    // Keep the dashboard current even when a job-post notification is missed.
+    const refreshInterval = window.setInterval(() => {
+      void router.invalidate();
+    }, 15_000);
+
     return () => {
+      window.clearInterval(refreshInterval);
       socket.disconnect();
     };
   }, [data?.viewer, router]);
@@ -529,7 +535,7 @@ function Admin() {
       <div className="space-y-8">
         <AdminSection
           title="Dashboard Shortcuts"
-          description="Pick a shortcut to load its summary cards instantly. Use Ctrl/Cmd + 1\u20134 for fast navigation."
+          description="Pick a shortcut to load its summary cards instantly. Use Ctrl/Cmd + 1–4 for fast navigation."
           icon={Zap}
           actions={
             <div className="flex flex-wrap gap-2">
@@ -1065,7 +1071,7 @@ function JobsTable({
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground font-medium uppercase tracking-widest flex items-center gap-2">
                   <MapPin className="h-3 w-3" />
-                  {formatEnum(job.workMode)} \u00b7 Deadline {formatDate(job.deadline)}
+                  {formatEnum(job.workMode)} · Deadline {formatDate(job.deadline)}
                   {job.locationLabel ? ` \u00b7 ${job.locationLabel}` : ""}
                 </p>
               </div>
@@ -1150,7 +1156,7 @@ function PaymentsTable({
                       {payment.jobTitle}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                      {formatEnum(payment.paymentType)} \u00b7 {formatDateTime(payment.dateTime)}
+                      {formatEnum(payment.paymentType)} · {formatDateTime(payment.dateTime)}
                     </p>
                   </div>
                 </div>
@@ -1318,9 +1324,9 @@ function Overview({ dashboard }: { dashboard: AdminDashboardSnapshot }) {
                       <span className="text-primary/60 font-bold">
                         {job.clientName || "Unknown Client"}
                       </span>
-                      <span>\u00b7</span>
+                      <span>·</span>
                       <span>{job.category}</span>
-                      <span>\u00b7</span>
+                      <span>·</span>
                       <span>{formatDateTime(job.createdAt)}</span>
                     </p>
                   </div>
@@ -1375,7 +1381,7 @@ function Overview({ dashboard }: { dashboard: AdminDashboardSnapshot }) {
                         {transaction.projectTitle}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                        {formatEnum(transaction.type)} \u00b7{" "}
+                        {formatEnum(transaction.type)} ·{" "}
                         {formatDateTime(transaction.createdAt)}
                       </p>
                     </div>

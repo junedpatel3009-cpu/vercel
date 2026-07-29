@@ -886,7 +886,7 @@ function PayoutList({
 
               <p className="mt-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-2">
                 <CalendarRange className="h-3 w-3" />
-                Requested {formatDateTime(payout.createdAt)} \u00b7 Updated{" "}
+                Requested {formatDateTime(payout.createdAt)} · Updated{" "}
                 {formatDateTime(payout.updatedAt)}
               </p>
             </div>
