@@ -713,7 +713,7 @@ function ProfessionalStats() {
       )}
 
       {showAllStatsSections || activeStatsFilter === "completed" ? (
-        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-4 shadow-soft sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Completed projects</h2>
@@ -820,7 +820,7 @@ function ProfessionalStats() {
           </div>
 
           {reviewedCompletedProjects.length ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
               {reviewedCompletedProjects.map((project) => (
                 <div key={`rating-${project.id}`} className="rounded-lg border border-border p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -1096,7 +1096,7 @@ function ProfessionalStats() {
       ) : null}
 
       {showAllStatsSections || activeStatsFilter === "hire-requests" ? (
-        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-6 shadow-soft">
+        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-4 shadow-soft sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Direct hire requests</h2>
@@ -1120,7 +1120,7 @@ function ProfessionalStats() {
           ) : null}
 
           {visibleHireRequests.length ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
               {visibleHireRequests.map((request) => {
                 const negotiationHistory = hireNegotiations.filter(
                   (negotiation) => negotiation.contractId === request.contractId,
@@ -1141,7 +1141,7 @@ function ProfessionalStats() {
                 return (
                   <div
                     key={request.contractId}
-                    className={`overflow-hidden rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                    className={`overflow-hidden rounded-xl border bg-card p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
                       request.status === "pending"
                         ? "border-primary/35 ring-1 ring-primary/5"
                         : "border-border/80"
@@ -1166,7 +1166,7 @@ function ProfessionalStats() {
                             <Badge variant="outline">{negotiationHistory.length} offers</Badge>
                           ) : null}
                         </div>
-                        <h3 className="mt-3 line-clamp-2 text-lg font-semibold tracking-tight">{request.title}</h3>
+                        <h3 className="mt-2 line-clamp-1 text-base font-semibold tracking-tight">{request.title}</h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Client: {request.clientName || `Client ${request.clientId}`}
                         </p>
@@ -1177,10 +1177,10 @@ function ProfessionalStats() {
                           `https://i.pravatar.cc/100?u=hire-client-${request.clientId}`
                         }
                         alt=""
-                        className="h-12 w-12 rounded-2xl border border-border object-cover shadow-sm"
+                        className="h-10 w-10 rounded-xl border border-border object-cover shadow-sm"
                       />
                     </div>
-                    <div className="mt-5 grid gap-3 rounded-xl bg-muted/45 p-3.5 text-sm text-muted-foreground sm:grid-cols-2">
+                    <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 rounded-lg bg-muted/45 p-3 text-xs text-muted-foreground">
                       <span>
                         Budget:{" "}
                         {formatMoney(
@@ -1188,34 +1188,34 @@ function ProfessionalStats() {
                         )}
                       </span>
                       <span>Work mode: {formatEnum(request.workMode || "both")}</span>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-4 w-4" />
-                        Sent {formatDateTime(request.createdAt)}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">Sent {formatDate(request.createdAt)}</span>
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4" />
-                        Updated {request.updatedAt ? formatDateTime(request.updatedAt) : "Not set"}
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                        Updated {request.updatedAt ? formatDate(request.updatedAt) : "Not set"}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <CalendarDays className="h-4 w-4" />
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                         Deadline {request.deadline ? formatDate(request.deadline) : "Not set"}
                       </span>
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <MapPin className="h-4 w-4 shrink-0" />
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">{request.location || "Location not set"}</span>
                       </span>
                     </div>
-                    <p className="mt-4 line-clamp-3 border-l-2 border-primary/25 pl-3 text-sm leading-6 text-muted-foreground">
+                    <p className="mt-3 line-clamp-2 border-l-2 border-primary/25 pl-2.5 text-sm leading-5 text-muted-foreground">
                       {workDescription || (!clientNote ? "No work description added." : "No work description added.")}
                     </p>
                     {clientNote ? (
-                      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm">
                         <p className="font-semibold text-amber-900">Client note</p>
-                        <p className="mt-1 leading-6 text-amber-800">{clientNote}</p>
+                        <p className="mt-1 line-clamp-2 leading-5 text-amber-800">{clientNote}</p>
                       </div>
                     ) : null}
                     {latestNegotiation ? (
-                      <div className="mt-4 rounded-xl border border-border/80 bg-muted/30 p-3.5">
+                      <div className="mt-3 rounded-lg border border-border/80 bg-muted/30 p-3">
                         <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
                           <Handshake className="h-4 w-4 text-primary" />
                           <span>Latest negotiation offer</span>
@@ -1238,7 +1238,7 @@ function ProfessionalStats() {
                       </p>
                     ) : null}
                     {request.status === "pending" ? (
-                      <div className="mt-5 flex flex-wrap gap-2 border-t border-border/70 pt-4">
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-border/70 pt-3">
                         <Button
                           size="sm"
                           onClick={() => handleHireStatus(request.contractId, "accepted")}
@@ -1274,7 +1274,7 @@ function ProfessionalStats() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="mt-5 flex flex-wrap gap-2 border-t border-border/70 pt-4">
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-border/70 pt-3">
                         <Button size="sm" variant="outline" asChild>
                           <Link to="/professional-messages">Message client</Link>
                         </Button>
