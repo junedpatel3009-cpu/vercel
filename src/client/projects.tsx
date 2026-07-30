@@ -887,20 +887,11 @@ function RunningDirectHireCard({
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {request.trackingId ? (
-          <Button size="sm" asChild>
-            <Link
-              to="/project-track/$trackingId"
-              params={{ trackingId: String(request.trackingId) }}
-            >
-              Track project
-            </Link>
-          </Button>
-        ) : (
-          <Button size="sm" disabled>
+        <Button size="sm" asChild>
+          <Link to="/hire-track/$contractId" params={{ contractId: request.contractId }}>
             Track project
-          </Button>
-        )}
+          </Link>
+        </Button>
         {request.clientProjectId ? (
           <Button size="sm" variant="outline" asChild>
             <Link to="/project/$projectId" params={{ projectId: String(request.clientProjectId) }}>

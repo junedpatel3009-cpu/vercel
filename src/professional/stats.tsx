@@ -615,21 +615,21 @@ function ProfessionalStats() {
       userRole="Professional"
       userAvatarUrl={profile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary via-[#174fb9] to-[#0a2f7a] px-6 py-7 text-primary-foreground shadow-lg shadow-primary/15 sm:px-8">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-[#123b86] px-6 py-8 text-primary-foreground shadow-xl shadow-slate-950/20 sm:px-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-400/15 blur-2xl" />
         <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-100">Professional workspace</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em]">Your work, at a glance</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-blue-100">Track active work, client requests, reviews, and earnings from one clear workspace.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Servio / professional desk</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-[-0.03em]">Work command center</h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Review requests, monitor live work, and keep every client conversation moving.</p>
           </div>
-          <Button variant="secondary" asChild className="shrink-0 rounded-xl bg-white text-primary hover:bg-blue-50">
+          <Button variant="secondary" asChild className="shrink-0 rounded-lg bg-blue-400 text-slate-950 hover:bg-blue-300">
             <Link to="/professional-profile">View profile</Link>
           </Button>
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <StatBox
           icon={Briefcase}
           label="Projects"
@@ -693,7 +693,7 @@ function ProfessionalStats() {
       </div>
 
       {activeStatsFilterLabel ? (
-        <div className="mt-6 flex flex-col justify-between gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] px-5 py-4 sm:flex-row sm:items-center">
+        <div className="mt-6 flex flex-col justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 sm:flex-row sm:items-center">
           <p className="text-sm font-medium">
             Showing only {activeStatsFilterLabel.toLowerCase()}.
           </p>
@@ -707,13 +707,13 @@ function ProfessionalStats() {
           </Button>
         </div>
       ) : (
-        <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/20 px-5 py-4 text-sm text-muted-foreground">
+        <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-4 text-sm text-muted-foreground">
           Select a summary card above to view its records.
         </div>
       )}
 
       {showAllStatsSections || activeStatsFilter === "completed" ? (
-        <div className="mt-6 rounded-2xl border border-border/80 bg-card p-4 shadow-soft sm:p-5">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-lg font-semibold">Completed projects</h2>
@@ -1062,6 +1062,11 @@ function ProfessionalStats() {
                     </span>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" asChild>
+                      <Link to="/hire-track/$contractId" params={{ contractId: request.contractId }}>
+                        Track project
+                      </Link>
+                    </Button>
                     <Button size="sm" variant="outline" asChild>
                       <Link to="/professional-messages">
                         <MessageSquare className="h-4 w-4" />
@@ -1141,10 +1146,10 @@ function ProfessionalStats() {
                 return (
                   <div
                     key={request.contractId}
-                    className={`overflow-hidden rounded-xl border bg-card p-3.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${
+                    className={`overflow-hidden rounded-lg border border-l-4 bg-white p-3.5 shadow-none transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${
                       request.status === "pending"
-                        ? "border-primary/35 ring-1 ring-primary/5"
-                        : "border-border/80"
+                        ? "border-l-primary border-primary/35"
+                        : "border-l-slate-300 border-slate-200"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -1832,7 +1837,7 @@ function StatBox({
     return (
       <Link
         to={to as never}
-        className="block rounded-2xl border border-border/80 bg-card p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+        className="block bg-card p-4 transition-colors hover:bg-slate-50"
       >
         {content}
       </Link>
@@ -1845,8 +1850,8 @@ function StatBox({
         type="button"
         onClick={onClick}
         aria-pressed={isActive}
-        className={`rounded-2xl border p-5 text-left shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md ${
-          isActive ? "border-primary bg-primary/[0.07] shadow-primary/10" : "border-border/80 bg-card"
+        className={`p-4 text-left transition-colors hover:bg-slate-50 ${
+          isActive ? "bg-blue-50 ring-2 ring-inset ring-primary" : "bg-card"
         }`}
       >
         {content}
@@ -1854,7 +1859,7 @@ function StatBox({
     );
   }
 
-  return <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft">{content}</div>;
+  return <div className="bg-card p-4">{content}</div>;
 }
 
 function getProfessionalStatsFilterLabel(filter: ProfessionalStatsFilter) {

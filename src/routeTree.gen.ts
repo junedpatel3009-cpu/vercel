@@ -57,6 +57,7 @@ import { Route as ProfessionalStatsSectionRouteImport } from './routes/professio
 import { Route as ProProIdRouteImport } from './routes/pro.$proId'
 import { Route as JobJobIdRouteImport } from './routes/job.$jobId'
 import { Route as HireProIdRouteImport } from './routes/hire.$proId'
+import { Route as HireTrackContractIdRouteImport } from './routes/hire-track.$contractId'
 
 const WebsiteCmsRoute = WebsiteCmsRouteImport.update({
   id: '/website-cms',
@@ -299,6 +300,11 @@ const HireProIdRoute = HireProIdRouteImport.update({
   path: '/hire/$proId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HireTrackContractIdRoute = HireTrackContractIdRouteImport.update({
+  id: '/hire-track/$contractId',
+  path: '/hire-track/$contractId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -343,6 +349,7 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/web-editor': typeof WebEditorRoute
   '/website-cms': typeof WebsiteCmsRoute
+  '/hire-track/$contractId': typeof HireTrackContractIdRoute
   '/hire/$proId': typeof HireProIdRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/pro/$proId': typeof ProProIdRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/web-editor': typeof WebEditorRoute
   '/website-cms': typeof WebsiteCmsRoute
+  '/hire-track/$contractId': typeof HireTrackContractIdRoute
   '/hire/$proId': typeof HireProIdRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/pro/$proId': typeof ProProIdRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/web-editor': typeof WebEditorRoute
   '/website-cms': typeof WebsiteCmsRoute
+  '/hire-track/$contractId': typeof HireTrackContractIdRoute
   '/hire/$proId': typeof HireProIdRoute
   '/job/$jobId': typeof JobJobIdRoute
   '/pro/$proId': typeof ProProIdRoute
@@ -496,6 +505,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/web-editor'
     | '/website-cms'
+    | '/hire-track/$contractId'
     | '/hire/$proId'
     | '/job/$jobId'
     | '/pro/$proId'
@@ -546,6 +556,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/web-editor'
     | '/website-cms'
+    | '/hire-track/$contractId'
     | '/hire/$proId'
     | '/job/$jobId'
     | '/pro/$proId'
@@ -596,6 +607,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/web-editor'
     | '/website-cms'
+    | '/hire-track/$contractId'
     | '/hire/$proId'
     | '/job/$jobId'
     | '/pro/$proId'
@@ -647,6 +659,7 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   WebEditorRoute: typeof WebEditorRoute
   WebsiteCmsRoute: typeof WebsiteCmsRoute
+  HireTrackContractIdRoute: typeof HireTrackContractIdRoute
   HireProIdRoute: typeof HireProIdRoute
   JobJobIdRoute: typeof JobJobIdRoute
   ProProIdRoute: typeof ProProIdRoute
@@ -992,6 +1005,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HireProIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hire-track/$contractId': {
+      id: '/hire-track/$contractId'
+      path: '/hire-track/$contractId'
+      fullPath: '/hire-track/$contractId'
+      preLoaderRoute: typeof HireTrackContractIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1049,6 +1069,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyRoute: VerifyRoute,
   WebEditorRoute: WebEditorRoute,
   WebsiteCmsRoute: WebsiteCmsRoute,
+  HireTrackContractIdRoute: HireTrackContractIdRoute,
   HireProIdRoute: HireProIdRoute,
   JobJobIdRoute: JobJobIdRoute,
   ProProIdRoute: ProProIdRoute,
