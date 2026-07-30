@@ -7,6 +7,24 @@ import { seedTestJobs } from "@/lib/seed-jobs.server";
 
 const usesPostgres = () => (process.env.DATABASE_URL || "").startsWith("postgres");
 
+/**
+ * Sessions created before the PostgreSQL migration can retain the old local
+ * user ID. Resolve the account by its stable email before accessing migrated
+ * project records.
+ */
+async function getProjectOwnerId(viewer: { id: number; email: string }) {
+  if (!usesPostgres()) {
+    return viewer.id;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: viewer.email },
+    select: { id: true },
+  });
+
+  return user?.id ?? viewer.id;
+}
+
 export const checkProjectAuth = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
 
@@ -39,9 +57,11 @@ export const getProjectData = createServerFn({ method: "GET" })
       return null;
     }
 
+    const ownerId = await getProjectOwnerId(viewer);
+
     let job = usesPostgres()
       ? (await prisma.clientJob.findFirst({
-          where: { id: numericId, userId: viewer.id },
+          where: { id: numericId, userId: ownerId },
           include: { attachments: true },
         }).then((record) => (record ? {
           ...record,
@@ -58,14 +78,14 @@ export const getProjectData = createServerFn({ method: "GET" })
 
     // For development/testing: create test job if it doesn't exist
     if (!job && numericId === 1) {
-      const testJobId = seedTestJobs(viewer.id) as number;
+      const testJobId = seedTestJobs(ownerId) as number;
       if (testJobId) {
-        job = getClientJobById(viewer.id, testJobId);
+        job = getClientJobById(ownerId, testJobId);
       }
     }
 
     const tracking = !usesPostgres() && job
-      ? (getProjectTrackingDetailsByJob(viewer.id, job.id) ?? null)
+      ? (getProjectTrackingDetailsByJob(ownerId, job.id) ?? null)
       : null;
 
     return { viewer, job, tracking };
@@ -80,12 +100,14 @@ export const deleteProject = createServerFn({ method: "POST" })
       throw new Error("Only clients can delete projects.");
     }
 
+    const ownerId = await getProjectOwnerId(viewer);
+
     if (usesPostgres()) {
       const result = await prisma.clientJob.deleteMany({
-        where: { id: data.projectId, userId: viewer.id },
+        where: { id: data.projectId, userId: ownerId },
       });
       return result.count > 0;
     }
 
-    return deleteClientJob(viewer.id, data.projectId);
+    return deleteClientJob(ownerId, data.projectId);
   });

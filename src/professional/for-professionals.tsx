@@ -39,6 +39,7 @@ export const Route = createFileRoute("/for-professionals")({
   head: () => ({
     meta: [
       { title: "For Professionals — Grow your business | Servio" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       {
         name: "description",
         content: "Find quality jobs near you, get paid safely, and grow your business with Servio.",
