@@ -55,6 +55,7 @@ import {
 } from "@/lib/project-request-db.server";
 
 const REQUIRED_PROJECT_MILESTONES = 5;
+type DirectTrackingDetails = ProjectTrackingDetailsRecord & { directContractId?: string };
 
 const getTrackingPageData = createServerFn({ method: "GET" })
   .inputValidator((trackingKey: string) => trackingKey)
@@ -99,8 +100,9 @@ const getTrackingPageData = createServerFn({ method: "GET" })
             coverLetter: directHire.job.description || "", attachmentsJson: null, requestStatus: "ACCEPTED", requestCreatedAt: directHire.job.createdAt.toISOString(), requestUpdatedAt: timestamp,
             reviewRating: null, reviewComment: null, reviewResponse: null, reviewResponseAt: null, reviewCreatedAt: null, reviewRequestedAt: null, reviewRequestNote: null,
             workUploads: [], revisionRequests: [], completionRequests: [], transactions: [], disputes: [],
+            directContractId: directHire.id,
             milestones: directHire.milestones.map((milestone, index) => ({ id: syntheticId + index + 1, trackingId: syntheticId, clientId: Number(directHire.clientId), professionalId: Number(directHire.professionalId), title: milestone.title || "Project milestone", description: null, amount: milestone.amount, dueDate: milestone.dueDate?.toISOString() ?? null, status: milestone.status.toUpperCase() === "COMPLETED" ? "PAID" : "PENDING", createdAt: timestamp, updatedAt: timestamp })),
-          } as ProjectTrackingDetailsRecord,
+          } as DirectTrackingDetails,
         };
       }
       return {
@@ -188,12 +190,70 @@ const addProjectMilestone = createServerFn({ method: "POST" })
       description?: string | null;
       amount?: number | null;
       dueDate?: string | null;
+      directContractId?: string | null;
     }) => input,
   )
   .handler(async ({ data }) => {
     const viewer = getCurrentUser();
 
-    if (!viewer || viewer.role !== "CLIENT") {
+    if (!viewer) {
+      throw new Error("Only clients can add milestones.");
+    }
+
+    // The session can retain an old role after switching accounts. Resolve the
+    // current account from PostgreSQL before authorizing a direct-hire change.
+    const account = await prisma.user.findUnique({
+      where: { email: viewer.email },
+      select: { id: true, role: true },
+    });
+
+    if (data.directContractId) {
+      if (account?.role !== "CLIENT") {
+        throw new Error("Only the client who started this project can add milestones.");
+      }
+
+      const contract = await prisma.hireContract.findFirst({
+        where: { id: data.directContractId, clientId: String(account.id) },
+        include: { job: { select: { deadline: true } }, milestones: true },
+      });
+
+      if (!contract) {
+        throw new Error("Only the client who started this project can add milestones.");
+      }
+      if (contract.milestones.length >= REQUIRED_PROJECT_MILESTONES) {
+        throw new Error("This project already has the required 5 milestones.");
+      }
+
+      const dueDate = data.dueDate?.trim();
+      if (!dueDate) {
+        throw new Error("Choose a due date for this milestone.");
+      }
+      const parsedDueDate = new Date(`${dueDate}T12:00:00.000Z`);
+      if (Number.isNaN(parsedDueDate.getTime())) {
+        throw new Error("Choose a valid due date.");
+      }
+      if (contract.job.deadline && parsedDueDate > contract.job.deadline) {
+        throw new Error("Milestone due date cannot be after the project deadline.");
+      }
+
+      const title = data.title.trim();
+      if (title.length < 3) {
+        throw new Error("Add a milestone title.");
+      }
+
+      return prisma.hireMilestone.create({
+        data: {
+          id: `milestone-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          contractId: contract.id,
+          title,
+          amount: data.amount ?? null,
+          dueDate: parsedDueDate,
+          status: "pending",
+        },
+      });
+    }
+
+    if (account?.role !== "CLIENT" && viewer.role !== "CLIENT") {
       throw new Error("Only clients can add milestones.");
     }
 
@@ -671,6 +731,11 @@ function ProjectTrack() {
       return;
     }
 
+    if (!milestoneDueDate) {
+      setMilestoneError("Choose a due date for this milestone.");
+      return;
+    }
+
     if (
       milestoneDueDate &&
       scheduleStartInput &&
@@ -699,7 +764,8 @@ function ProjectTrack() {
           title,
           description: milestoneDescription || null,
           amount: requiredMilestoneAmount || null,
-          dueDate: milestoneDueDate || null,
+          dueDate: milestoneDueDate,
+          directContractId: (tracking as DirectTrackingDetails).directContractId ?? null,
         },
       });
       setMilestoneTitle("");
