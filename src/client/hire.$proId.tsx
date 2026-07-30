@@ -24,7 +24,21 @@ import { getCurrentUser, requireCurrentUserRole } from "@/lib/current-user.serve
 import { createHireContract, type HireContractInput } from "@/lib/hire-db.server";
 import { getClientJobsByUserId, type ClientJobRecord } from "@/lib/job-db.server";
 import { formatApproximateLocation } from "@/lib/location-privacy";
+import { prisma } from "@/lib/prisma";
 import { getProfessionalProfileByUserId } from "@/lib/user-db.server";
+
+async function getDataUserId(viewer: { id: number; email: string }) {
+  if (!(process.env.DATABASE_URL || "").startsWith("postgres")) {
+    return viewer.id;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: viewer.email },
+    select: { id: true },
+  });
+
+  return user?.id ?? viewer.id;
+}
 
 const getHireDetails = createServerFn({ method: "GET" })
   .inputValidator((id: string) => id)
@@ -42,10 +56,12 @@ const getHireDetails = createServerFn({ method: "GET" })
       return null;
     }
 
+    const dataUserId = viewer?.role === "CLIENT" ? await getDataUserId(viewer) : null;
+
     return {
       viewer,
       profile,
-      projects: viewer?.role === "CLIENT" ? await getClientJobsByUserId(viewer.id) : [],
+      projects: dataUserId ? await getClientJobsByUserId(dataUserId) : [],
     };
   });
 
@@ -53,7 +69,7 @@ const saveHireContract = createServerFn({ method: "POST" })
   .inputValidator((data: HireContractInput) => data)
   .handler(async ({ data }) => {
     const viewer = requireCurrentUserRole("CLIENT");
-    const result = await createHireContract(viewer.id, data);
+    const result = await createHireContract(await getDataUserId(viewer), data);
 
     return {
       ok: true as const,
