@@ -28,6 +28,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/current-user.server";
+import { prisma } from "@/lib/prisma";
 import {
   createProjectRevisionRequest,
   createProjectMilestone,
@@ -49,6 +50,7 @@ import {
   type ProjectMilestoneRecord,
   type ProjectMilestoneStatus,
   type ProjectRevisionRequestRecord,
+  type ProjectTrackingDetailsRecord,
   type ProjectWorkUploadRecord,
 } from "@/lib/project-request-db.server";
 
@@ -65,6 +67,42 @@ const getTrackingPageData = createServerFn({ method: "GET" })
     }
 
     if (!Number.isInteger(trackingKey) || trackingKey <= 0) {
+      const account = await prisma.user.findUnique({ where: { email: viewer.email }, select: { id: true } });
+      const directHire = await prisma.hireContract.findFirst({
+        where: { id: data, OR: [{ clientId: String(account?.id ?? viewer.id) }, { professionalId: String(account?.id ?? viewer.id) }] },
+        include: { job: true, milestones: { orderBy: { dueDate: "asc" } } },
+      });
+      if (directHire) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: [Number(directHire.clientId), Number(directHire.professionalId)] } },
+          select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true, professionalCategory: true },
+        });
+        const client = users.find((user) => user.id === Number(directHire.clientId));
+        const professional = users.find((user) => user.id === Number(directHire.professionalId));
+        const syntheticId = [...data].reduce((value, char) => (value * 31 + char.charCodeAt(0)) % 1000000000, 1);
+        const timestamp = directHire.updatedAt.toISOString();
+        return {
+          viewer,
+          tracking: {
+            id: syntheticId, requestId: syntheticId, jobId: directHire.clientProjectId ?? syntheticId,
+            clientId: Number(directHire.clientId), professionalId: Number(directHire.professionalId), status: "ACTIVE",
+            acceptedAt: timestamp, createdAt: directHire.job.createdAt.toISOString(), updatedAt: timestamp,
+            projectTitle: directHire.job.title, projectCategory: "Direct hire", projectDescription: directHire.job.description || "",
+            projectBudgetMin: directHire.job.budgetMin, projectBudgetMax: directHire.job.budgetMax, projectTimingType: "FIXED",
+            projectUrgency: directHire.job.urgency || "MEDIUM", projectJobDate: directHire.job.jobDate?.toISOString() ?? null,
+            projectDeadline: directHire.job.deadline?.toISOString() ?? timestamp, projectWorkMode: directHire.job.jobType || "BOTH",
+            projectLocationLabel: directHire.job.city, projectLocationAddress: directHire.job.city,
+            clientName: client ? `${client.firstName} ${client.lastName}`.trim() : "Client", clientAvatarUrl: client?.avatarUrl ?? null,
+            professionalName: professional ? `${professional.firstName} ${professional.lastName}`.trim() : "Professional", professionalAvatarUrl: professional?.avatarUrl ?? null,
+            professionalCategory: professional?.professionalCategory ?? null, professionalEmail: professional?.email ?? "",
+            bidAmount: directHire.totalAmount ?? directHire.job.budgetMax ?? directHire.job.budgetMin, duration: null,
+            coverLetter: directHire.job.description || "", attachmentsJson: null, requestStatus: "ACCEPTED", requestCreatedAt: directHire.job.createdAt.toISOString(), requestUpdatedAt: timestamp,
+            reviewRating: null, reviewComment: null, reviewResponse: null, reviewResponseAt: null, reviewCreatedAt: null, reviewRequestedAt: null, reviewRequestNote: null,
+            workUploads: [], revisionRequests: [], completionRequests: [], transactions: [], disputes: [],
+            milestones: directHire.milestones.map((milestone, index) => ({ id: syntheticId + index + 1, trackingId: syntheticId, clientId: Number(directHire.clientId), professionalId: Number(directHire.professionalId), title: milestone.title || "Project milestone", description: null, amount: milestone.amount, dueDate: milestone.dueDate?.toISOString() ?? null, status: milestone.status.toUpperCase() === "COMPLETED" ? "PAID" : "PENDING", createdAt: timestamp, updatedAt: timestamp })),
+          } as ProjectTrackingDetailsRecord,
+        };
+      }
       return {
         viewer,
         tracking: null,

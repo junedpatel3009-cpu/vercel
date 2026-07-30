@@ -1063,7 +1063,10 @@ function ProfessionalStats() {
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button size="sm" asChild>
-                      <Link to="/hire-track/$contractId" params={{ contractId: request.contractId }}>
+                      <Link
+                        to="/project-track/$trackingId"
+                        params={{ trackingId: String(request.trackingId ?? request.contractId) }}
+                      >
                         Track project
                       </Link>
                     </Button>
