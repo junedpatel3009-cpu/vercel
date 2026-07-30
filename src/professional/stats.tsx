@@ -58,10 +58,27 @@ import {
   type ProfessionalTrackedProjectRecord,
 } from "@/lib/project-request-db.server";
 import { formatApproximateLocation } from "@/lib/location-privacy";
+import { prisma } from "@/lib/prisma";
 import { getProfessionalProfileByUserId } from "@/lib/user-db.server";
 
 type ProfessionalStatsFilter =
   "running" | "completed" | "project-requests" | "hire-requests" | "ratings" | "earnings";
+
+// Cookies issued before the PostgreSQL migration can contain a local user ID.
+// Direct-hire contracts use PostgreSQL IDs, so resolve the signed-in account
+// by its stable email before reading or updating those contracts.
+async function getDataUserId(viewer: { id: number; email: string }) {
+  if (!(process.env.DATABASE_URL || "").startsWith("postgres")) {
+    return viewer.id;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: viewer.email },
+    select: { id: true },
+  });
+
+  return user?.id ?? viewer.id;
+}
 
 export const getProfessionalStatsData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
@@ -85,6 +102,7 @@ export const getProfessionalStatsData = createServerFn({ method: "GET" }).handle
   }
 
   const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  const dataUserId = await getDataUserId(viewer);
   const postgresOnlyData = usesPostgres
     ? {
         projectRequests: [],
@@ -103,9 +121,9 @@ export const getProfessionalStatsData = createServerFn({ method: "GET" }).handle
 
   return {
     viewer,
-    profile: await getProfessionalProfileByUserId(viewer.id),
+    profile: await getProfessionalProfileByUserId(dataUserId),
     favoriteJobs: await getFavoriteJobsByUserId(viewer.id),
-    hireRequests: await getProfessionalHireRequests(viewer.id),
+    hireRequests: await getProfessionalHireRequests(dataUserId),
     ...postgresOnlyData,
   };
 });
@@ -135,7 +153,7 @@ const updateHireRequestStatus = createServerFn({ method: "POST" })
     }
 
     const updated = await updateProfessionalHireContractStatus(
-      viewer.id,
+      await getDataUserId(viewer),
       data.contractId,
       data.status,
     );
@@ -184,7 +202,7 @@ const cancelProfessionalDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only professionals can cancel direct hire projects from this page.");
     }
 
-    return await cancelHireProject(viewer.id, data.contractId);
+    return await cancelHireProject(await getDataUserId(viewer), data.contractId);
   });
 
 const deleteProfessionalRejectedDirectHire = createServerFn({ method: "POST" })
@@ -198,7 +216,7 @@ const deleteProfessionalRejectedDirectHire = createServerFn({ method: "POST" })
       );
     }
 
-    return await deleteRejectedHireRequest(viewer.id, data.contractId);
+    return await deleteRejectedHireRequest(await getDataUserId(viewer), data.contractId);
   });
 
 const saveReviewResponse = createServerFn({ method: "POST" })
