@@ -64,7 +64,7 @@ const getEarningsReportsData = createServerFn({ method: "GET" }).handler(async (
 
   return {
     viewer,
-    report: getAdminEarningsReport(),
+    report: await getAdminEarningsReport(),
   };
 });
 

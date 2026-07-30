@@ -1413,9 +1413,12 @@ export function updateAdminDisputeStatus(
   return { id: disputeId, status, updatedAt: timestamp };
 }
 
-export function getAdminEarningsReport(): AdminEarningsReport {
+export async function getAdminEarningsReport(): Promise<AdminEarningsReport> {
   const db = getDatabase();
-  const transactions = getAdminEarningsTransactions(db);
+  const transactions = [
+    ...getAdminEarningsTransactions(db),
+    ...(await getDirectHireEarningsTransactions()),
+  ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
   const payouts = getAdminPayoutRecords(db);
   const professionals = getProfessionalEarningsSummaries(transactions, payouts);
   const totals = professionals.reduce(
@@ -1466,6 +1469,66 @@ export function getAdminEarningsReport(): AdminEarningsReport {
     payouts,
     professionals,
   };
+}
+
+async function getDirectHireEarningsTransactions(): Promise<AdminEarningsTransactionRecord[]> {
+  const contracts = await prisma.hireContract.findMany({
+    where: { status: { in: ["accepted", "started"] } },
+    include: { job: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  if (!contracts.length) {
+    return [];
+  }
+
+  const accountIds = [...new Set(contracts.flatMap((contract) => [
+    Number(contract.clientId),
+    Number(contract.professionalId),
+  ]).filter(Number.isFinite))];
+  const accounts = await prisma.user.findMany({
+    where: { id: { in: accountIds } },
+    select: { id: true, firstName: true, lastName: true, email: true },
+  });
+  const accountsById = new Map(accounts.map((account) => [account.id, account]));
+
+  return contracts.map((contract, index) => {
+    const client = accountsById.get(Number(contract.clientId));
+    const professional = accountsById.get(Number(contract.professionalId));
+    const amount = contract.totalAmount ?? contract.job.budgetMax ?? contract.job.budgetMin ?? 0;
+    const commissionAmount = contract.platformFee ?? Math.round(amount * PLATFORM_COMMISSION_RATE * 100) / 100;
+    const numericId = [...contract.id].reduce(
+      (value, character) => (value * 31 + character.charCodeAt(0)) % 1000000000,
+      index + 1,
+    );
+
+    return {
+      id: numericId,
+      trackingId: contract.trackingId ?? numericId,
+      milestoneId: null,
+      completionId: null,
+      jobTitle: contract.job.title || "Direct hire project",
+      projectCategory: "Direct hire",
+      clientName: client ? `${client.firstName} ${client.lastName}`.trim() : "Unknown client",
+      clientEmail: client?.email ?? "Unknown email",
+      professionalName: professional
+        ? `${professional.firstName} ${professional.lastName}`.trim()
+        : "Unknown professional",
+      professionalEmail: professional?.email ?? "Unknown email",
+      professionalId: Number(contract.professionalId),
+      amount,
+      currency: "USD",
+      paymentType: "DIRECT_HIRE",
+      // Accepted and started contracts represent committed direct-hire revenue.
+      status: "COMPLETED",
+      description: `Direct hire contract (${contract.status})`,
+      dateTime: contract.updatedAt.toISOString(),
+      grossAmount: amount,
+      commissionAmount,
+      netPayoutAmount: Math.max(0, amount - commissionAmount),
+      platformShareRate: PLATFORM_COMMISSION_RATE,
+    } satisfies AdminEarningsTransactionRecord;
+  });
 }
 
 export function updateAdminPayoutStatus(

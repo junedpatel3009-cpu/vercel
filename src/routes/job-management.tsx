@@ -103,15 +103,30 @@ const getJobManagementData = createServerFn({ method: "GET" }).handler(async () 
       jobs: [],
       disputes: [],
       dashboard: null,
+      loadError: null as string | null,
     };
   }
 
-  return {
-    viewer,
-    jobs: getAdminJobRecords(),
-    disputes: getAdminDisputeRecords(),
-    dashboard: getAdminDashboardSnapshot(),
-  };
+  // The dashboard's legacy SQLite tables are optional in serverless deployments.
+  // A missing table must not make the entire administration page unavailable.
+  try {
+    return {
+      viewer,
+      jobs: getAdminJobRecords(),
+      disputes: getAdminDisputeRecords(),
+      dashboard: getAdminDashboardSnapshot(),
+      loadError: null as string | null,
+    };
+  } catch (error) {
+    console.error("Unable to load job-management records", error);
+    return {
+      viewer,
+      jobs: [],
+      disputes: [],
+      dashboard: null,
+      loadError: "Job records are not available yet. Refresh after the database is connected.",
+    };
+  }
 });
 
 const updateDisputeReviewStatus = createServerFn({ method: "POST" })
@@ -226,6 +241,12 @@ function JobManagement() {
           </>
         }
       />
+
+      {data.loadError ? (
+        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {data.loadError}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <AdminSummaryCard
