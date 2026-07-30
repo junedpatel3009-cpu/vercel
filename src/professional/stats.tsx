@@ -615,6 +615,7 @@ function ProfessionalStats() {
       userRole="Professional"
       userAvatarUrl={profile?.avatarUrl || viewer.avatarUrl}
     >
+      <div className="project-board-theme">
       <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-950 via-slate-900 to-[#123b86] px-6 py-8 text-primary-foreground shadow-xl shadow-slate-950/20 sm:px-8">
         <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-400/15 blur-2xl" />
         <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
@@ -1786,6 +1787,7 @@ function ProfessionalStats() {
           )}
         </div>
       ) : null}
+      </div>
     </AppShell>
   );
 }

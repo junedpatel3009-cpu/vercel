@@ -571,6 +571,102 @@
   color: #fff;
 }
 
+/* Project tracking workspace */
+.project-track-theme {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.project-track-theme section {
+  border-color: #dbe5f3 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(15, 53, 112, 0.07) !important;
+}
+
+.project-track-theme section > div:first-child > h2 {
+  letter-spacing: -0.02em;
+}
+
+.project-track-theme aside section {
+  background: linear-gradient(145deg, #ffffff, #f6f9ff) !important;
+}
+
+.project-track-theme input,
+.project-track-theme textarea,
+.project-track-theme select {
+  border-color: #cfdaeb !important;
+  border-radius: 12px !important;
+  background: #fbfdff !important;
+}
+
+.project-track-theme input:focus,
+.project-track-theme textarea:focus,
+.project-track-theme select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.13) !important;
+}
+
+.project-track-theme [class*="border-dashed"] {
+  border-color: #b9c9df !important;
+  background: #f6f9fd !important;
+}
+
+.project-track-theme section .rounded-lg.border,
+.project-track-theme section .rounded-xl.border {
+  border-color: #e0e8f3 !important;
+  border-radius: 15px !important;
+  background: #ffffff !important;
+}
+
+.project-track-theme section .bg-muted {
+  background: #f4f7fc !important;
+}
+
+.project-track-theme section button {
+  border-radius: 10px;
+}
+
+/* Client and professional project boards */
+.project-board-theme {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.project-board-theme section,
+.project-board-theme > div > section {
+  border-color: #dbe5f3 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 12px 30px rgba(15, 53, 112, 0.07) !important;
+}
+
+.project-board-theme section .rounded-lg.border,
+.project-board-theme section .rounded-xl.border,
+.project-board-theme section .rounded-2xl.border {
+  border-color: #e0e8f3 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.project-board-theme section .bg-muted,
+.project-board-theme section .bg-muted\/20,
+.project-board-theme section .bg-muted\/30 {
+  background: #f4f7fc !important;
+}
+
+.project-board-theme input,
+.project-board-theme textarea,
+.project-board-theme select {
+  border-color: #cfdaeb !important;
+  border-radius: 12px !important;
+  background: #fbfdff !important;
+}
+
+.project-board-theme [class*="border-dashed"] {
+  border-color: #b9c9df !important;
+  background: #f6f9fd !important;
+}
+
 @media (max-width: 900px) {
   .cms-hero-grid,
   .cms-grid,

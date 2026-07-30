@@ -911,31 +911,33 @@ function ProjectTrack() {
       userRole={isProfessional ? "Professional" : "Client"}
       userAvatarUrl={viewer.avatarUrl}
     >
-      <div className="mb-5">
+      <div className="project-track-theme">
+      <div className="mb-4 flex items-center justify-between">
         <Link
           to={isProfessional ? "/professional-stats" : "/projects"}
-          className="text-sm text-primary hover:underline"
+          className="inline-flex rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-primary/5"
         >
           Back to {isProfessional ? "my stats" : "projects"}
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+      <div className="relative mb-6 overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary via-[#174fb9] to-[#0b2f76] px-6 py-7 text-primary-foreground shadow-xl shadow-primary/15 lg:flex lg:flex-row lg:items-end lg:justify-between">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
         <div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary">{tracking.projectCategory}</Badge>
-            <Badge>{formatEnum(tracking.status)}</Badge>
-            <Badge variant="outline">Request {formatEnum(tracking.requestStatus)}</Badge>
+          <div className="relative flex flex-wrap gap-2">
+            <Badge className="bg-white/15 text-white hover:bg-white/20">{tracking.projectCategory}</Badge>
+            <Badge className="bg-emerald-400 text-emerald-950 hover:bg-emerald-300">{formatEnum(tracking.status)}</Badge>
+            <Badge variant="outline" className="border-white/30 text-white">Request {formatEnum(tracking.requestStatus)}</Badge>
           </div>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight">{tracking.projectTitle}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="relative mt-3 text-3xl font-bold tracking-tight">{tracking.projectTitle}</h1>
+          <p className="relative mt-1 text-sm text-blue-100">
             {isProfessional
               ? `Client: ${tracking.clientName}`
               : `Professional: ${tracking.professionalName}`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
+        <div className="relative mt-5 flex flex-wrap gap-2 lg:mt-0">
+          <Button variant="secondary" asChild className="bg-white text-primary hover:bg-blue-50">
             <Link to={isProfessional ? "/professional-messages" : "/messages"}>
               <MessageSquare className="h-4 w-4" />
               Message
@@ -944,7 +946,7 @@ function ProjectTrack() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={DollarSign} label="Project value" value={formatMoney(projectValue)} />
         <Stat icon={Clock} label="Expected duration" value={tracking.duration || "Not set"} />
         <Stat
@@ -955,9 +957,9 @@ function ProjectTrack() {
         <Stat icon={DollarSign} label="Remaining money" value={formatMoney(remainingAmount)} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft sm:p-6">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <h2 className="text-lg font-semibold">Project timeline</h2>
@@ -981,7 +983,7 @@ function ProjectTrack() {
             />
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft sm:p-6">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <h2 className="text-lg font-semibold">Milestones</h2>
@@ -1028,7 +1030,7 @@ function ProjectTrack() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft sm:p-6">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <div className="flex items-center gap-2">
@@ -1074,7 +1076,7 @@ function ProjectTrack() {
             ) : null}
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-6 shadow-soft">
+          <section className="rounded-2xl border border-border/80 bg-card p-5 shadow-soft sm:p-6">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <h2 className="text-lg font-semibold">Project details</h2>
@@ -1437,6 +1439,7 @@ function ProjectTrack() {
             </div>
           </section>
         </aside>
+      </div>
       </div>
     </AppShell>
   );
@@ -2467,10 +2470,10 @@ function Stat({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
-      <Icon className="h-5 w-5 text-primary" />
-      <p className="mt-4 text-2xl font-semibold">{value}</p>
-      <p className="text-sm text-muted-foreground">{label}</p>
+    <div className="group rounded-2xl border border-border/80 bg-card p-4 shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md">
+      <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
+      <p className="mt-4 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -2494,8 +2497,8 @@ function InfoLine({
 
 function ProgressBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border/80 bg-muted/25 p-4">
+      <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
       <p className="mt-2 font-semibold">{value}</p>
     </div>
   );

@@ -470,7 +470,7 @@ function Projects() {
       userRole="Client"
       userAvatarUrl={clientProfile?.avatarUrl || viewer.avatarUrl}
     >
-      <div className="mx-auto max-w-7xl space-y-6 pb-8">
+      <div className="project-board-theme mx-auto max-w-7xl space-y-6 pb-8">
         {actionError ? (
           <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {actionError}
