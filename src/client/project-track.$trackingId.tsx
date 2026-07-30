@@ -1999,44 +1999,27 @@ function MilestoneForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form className="mt-5 rounded-lg border border-border bg-muted/20 p-4" onSubmit={onSubmit}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <Badge variant="secondary">
+    <form className="mt-5 rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-background p-4 shadow-sm sm:p-5" onSubmit={onSubmit}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <Badge variant="secondary" className="bg-primary/10 text-primary">
           Milestone {milestoneNumber}/{requiredCount}
-        </Badge>
-        <span className="text-sm font-medium">Amount: {amountLabel}</span>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <input
-          value={title}
-          onChange={(event) => onTitleChange(event.target.value)}
-          placeholder={`Milestone ${milestoneNumber}/${requiredCount} title`}
-          className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
-        <div className="flex h-10 items-center rounded-lg border border-input bg-muted px-3 text-sm font-medium text-muted-foreground">
-          {amountLabel}
+          </Badge>
+          <p className="mt-2 text-sm font-medium">Add the next delivery checkpoint</p>
         </div>
-        <input
-          value={dueDate}
-          onChange={(event) => onDueDateChange(event.target.value)}
-          type="date"
-          min={minDate}
-          max={maxDate}
-          className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
-        <div className="flex items-center justify-end">
-          <Button type="submit" disabled={isSaving}>
+        <span className="rounded-full bg-card px-3 py-1.5 text-sm font-semibold shadow-sm">Amount {amountLabel}</span>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-12">
+        <label className="grid gap-1.5 lg:col-span-7"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Milestone title</span><input value={title} onChange={(event) => onTitleChange(event.target.value)} placeholder={`Milestone ${milestoneNumber} title`} className="h-11 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+        <label className="grid gap-1.5 lg:col-span-5"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Due date</span><input value={dueDate} onChange={(event) => onDueDateChange(event.target.value)} type="date" min={minDate} max={maxDate} className="h-11 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+        <label className="grid gap-1.5 lg:col-span-8"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Delivery details</span><textarea value={description} onChange={(event) => onDescriptionChange(event.target.value)} placeholder="Describe the expected result for this milestone" className="min-h-24 w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+        <div className="flex items-end lg:col-span-4">
+          <Button type="submit" className="h-11 w-full rounded-xl" disabled={isSaving}>
             <CheckCircle2 className="h-4 w-4" />
             {isSaving ? "Saving" : "Add milestone"}
           </Button>
         </div>
       </div>
-      <textarea
-        value={description}
-        onChange={(event) => onDescriptionChange(event.target.value)}
-        placeholder="Milestone details"
-        className="mt-3 min-h-20 w-full resize-y rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-      />
       {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
     </form>
   );
