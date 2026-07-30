@@ -57,6 +57,19 @@ import { getClientProfileByUserId } from "@/lib/user-db.server";
 
 type ProjectBucketFilter = "running" | "completed" | "requests" | "direct-hires";
 
+async function getDataUserId(viewer: { id: number; email: string }) {
+  if (!(process.env.DATABASE_URL || "").startsWith("postgres")) {
+    return viewer.id;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: viewer.email },
+    select: { id: true },
+  });
+
+  return user?.id ?? viewer.id;
+}
+
 const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () => {
   const viewer = getCurrentUser();
 
@@ -79,10 +92,7 @@ const getProjectsPageData = createServerFn({ method: "GET" }).handler(async () =
   // Project-request tracking is still a legacy SQLite workflow. Direct hires
   // are persisted in PostgreSQL too, so they must always be loaded here.
   const usesPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
-  const postgresViewer = usesPostgres
-    ? await prisma.user.findUnique({ where: { email: viewer.email }, select: { id: true } })
-    : null;
-  const dataUserId = postgresViewer?.id ?? viewer.id;
+  const dataUserId = await getDataUserId(viewer);
   const legacyProjectData = usesPostgres
     ? {
         projectRequests: [] as ClientProjectRequestRecord[],
@@ -203,7 +213,7 @@ const startDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only clients can start direct hire projects.");
     }
 
-    return await startClientHireProject(viewer.id, data.contractId);
+    return await startClientHireProject(await getDataUserId(viewer), data.contractId);
   });
 
 const cancelTrackedProject = createServerFn({ method: "POST" })
@@ -227,7 +237,7 @@ const cancelDirectHireProject = createServerFn({ method: "POST" })
       throw new Error("Only clients can cancel direct hire projects from this page.");
     }
 
-    return await cancelHireProject(viewer.id, data.contractId);
+    return await cancelHireProject(await getDataUserId(viewer), data.contractId);
   });
 
 const deleteRejectedDirectHire = createServerFn({ method: "POST" })
@@ -239,7 +249,7 @@ const deleteRejectedDirectHire = createServerFn({ method: "POST" })
       throw new Error("Only clients can delete rejected direct hire requests from this page.");
     }
 
-    return await deleteRejectedHireRequest(viewer.id, data.contractId);
+    return await deleteRejectedHireRequest(await getDataUserId(viewer), data.contractId);
   });
 
 export const Route = createFileRoute("/projects")({
@@ -271,6 +281,7 @@ function Projects() {
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [expandedTimelineId, setExpandedTimelineId] = useState<number | null>(null);
   const [ratingDrafts, setRatingDrafts] = useState<
     Record<number, { rating: number; comment: string }>
@@ -405,10 +416,13 @@ function Projects() {
   async function handleStartDirectHire(request: ClientHireRequestRecord) {
     const actionKey = `start-direct-hire-${request.contractId}`;
     setPendingAction(actionKey);
+    setActionError(null);
 
     try {
       await startDirectHireProject({ data: { contractId: request.contractId } });
       await router.invalidate();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not start this direct hire.");
     } finally {
       setPendingAction(null);
     }
@@ -457,6 +471,11 @@ function Projects() {
       userAvatarUrl={clientProfile?.avatarUrl || viewer.avatarUrl}
     >
       <div className="mx-auto max-w-7xl space-y-6 pb-8">
+        {actionError ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {actionError}
+          </div>
+        ) : null}
         <section className="relative overflow-hidden rounded-3xl border border-primary/10 bg-gradient-to-br from-primary/[0.10] via-card to-card px-6 py-7 shadow-lg shadow-primary/[0.04] sm:px-8">
           <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
           <div className="relative flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
