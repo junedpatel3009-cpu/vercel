@@ -1,0 +1,41 @@
+name: servio_flutter
+description: Flutter reproduction of the Servio UI from the React project.
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5
+  go_router: any
+  google_fonts: ^6.0.0
+  flutter_svg: ^2.0.7
+  cached_network_image: ^3.2.3
+  shared_preferences: ^2.1.1
+  intl: ^0.18.0
+  http: ^1.2.2
+  image_picker: ^0.8.7+4
+  flutter_screenutil: ^5.8.4
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  sqflite_common_ffi: ^2.3.0+2
+  sqlite3_flutter_libs: ^0.5.24
+  local_auth: ^3.0.1
+  google_sign_in: ^7.2.0
+  pinput: ^6.0.2
+  smart_auth: ^3.2.0
+  mailer: ^6.1.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
