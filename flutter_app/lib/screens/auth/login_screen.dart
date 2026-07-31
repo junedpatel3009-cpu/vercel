@@ -37,7 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _showError('Please enter a valid email address and password.');
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       final user = await AuthService().login(
@@ -104,8 +107,19 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const SiteHeaderWidget(),
-      body: SingleChildScrollView(
-        child: Column(
+      body: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+        tween: Tween(begin: 0, end: 1),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
           children: [
             Container(
               constraints: const BoxConstraints(minHeight: 600),
@@ -171,6 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SiteFooterWidget(),
           ],
+          ),
         ),
       ),
     );

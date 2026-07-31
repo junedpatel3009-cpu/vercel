@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import 'package:flutter/services.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/api/api_client.dart';
 import '../../widgets/site_drawer.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -40,11 +41,13 @@ class _LandingScreenState extends State<LandingScreen> {
 
     if (user != null) {
       if (user['role'] == 'professional') {
-        jobs = await db.getJobs(status: 'active');
+        jobs = await ApiClient.instance.getList('/api/v1/jobs');
         stats = await db.getProfessionalStats(user['id']);
         focus = await db.getJobs(status: 'assigned'); // Jobs assigned to this pro
       } else {
-        pros = await db.searchProfessionals();
+        pros = _mapProfessionals(
+          await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+        );
         stats = await db.getClientStats(user['id']);
         focus = await db.getJobs(clientId: user['id'], status: 'active');
       }
@@ -53,7 +56,9 @@ class _LandingScreenState extends State<LandingScreen> {
       if (notifications.isNotEmpty) update = notifications.first;
     } else {
       // Public landing: show some random pros or categories
-      pros = await db.searchProfessionals();
+      pros = _mapProfessionals(
+        await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+      );
     }
 
     if (mounted) {
@@ -313,9 +318,14 @@ class _LandingScreenState extends State<LandingScreen> {
       );
     }
     return Column(
-      children: _availableJobs.take(3).map((job) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: GestureDetector(
+      children: _availableJobs.take(3).toList().asMap().entries.map((entry) {
+        final index = entry.key;
+        final job = entry.value;
+        return _StaggeredReveal(
+          index: index,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: GestureDetector(
           onTap: () => context.push('/job/${job['id']}'),
           child: Container(
             padding: const EdgeInsets.all(20),
@@ -330,7 +340,9 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
         ),
-      )).toList(),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -350,9 +362,11 @@ class _LandingScreenState extends State<LandingScreen> {
         separatorBuilder: (context, index) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final pro = _recommendedPros[index];
-          return GestureDetector(
-            onTap: () => context.push('/pro/${pro['user_id']}'),
-            child: Container(
+          return _StaggeredReveal(
+            index: index,
+            child: GestureDetector(
+              onTap: () => context.push('/pro/${pro['user_id']}'),
+              child: Container(
               width: 260,
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
               child: Column(
@@ -374,6 +388,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     ),
                   )
                 ],
+              ),
               ),
             ),
           );
@@ -518,3 +533,43 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 }
+
+/// Adds a light staggered entrance without changing the page layout or cards.
+class _StaggeredReveal extends StatelessWidget {
+  const _StaggeredReveal({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = (index * 0.12).clamp(0.0, 0.72).toDouble();
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 560),
+      curve: Interval(start, 1, curve: Curves.easeOutCubic),
+      tween: Tween(begin: 0, end: 1),
+      child: child,
+      builder: (context, value, animatedChild) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, 18 * (1 - value)),
+          child: animatedChild,
+        ),
+      ),
+    );
+  }
+
+}
+
+List<Map<String, dynamic>> _mapProfessionals(List<Map<String, dynamic>> rows) => rows
+    .map(
+      (pro) => <String, dynamic>{
+        'user_id': pro['id'],
+        'full_name': '${pro['firstName'] ?? ''} ${pro['lastName'] ?? ''}'.trim(),
+        'profession': pro['professionalCategory'] ?? 'Service Professional',
+        'profile_photo': pro['avatarUrl'],
+        'average_rating': pro['averageRating'] ?? 0,
+        'total_reviews': pro['reviewCount'] ?? 0,
+      },
+    )
+    .toList();

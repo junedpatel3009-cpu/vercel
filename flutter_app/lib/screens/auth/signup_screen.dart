@@ -165,7 +165,10 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _showFriendlySnackBar('Please complete all required fields correctly.');
+      return;
+    }
     if (!_emailVerified) {
       _showFriendlySnackBar('Please verify your email address first.');
       return;
@@ -263,7 +266,18 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: Colors.white,
       appBar: const SiteHeaderWidget(),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
+          tween: Tween(begin: 0, end: 1),
+          builder: (context, value, child) => Opacity(
+            opacity: value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - value)),
+              child: child,
+            ),
+          ),
+          child: SingleChildScrollView(
           child: Column(
             children: [
               Padding(
@@ -356,6 +370,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SiteFooterWidget(),
             ],
+          ),
           ),
         ),
       ),

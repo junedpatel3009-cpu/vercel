@@ -77,7 +77,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _showFriendlyMsg('Please complete all required fields correctly.');
+      return;
+    }
     
     setState(() => _isSaving = true);
     try {

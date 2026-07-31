@@ -50,11 +50,17 @@ import {
 } from "@/lib/admin-dashboard-db.server";
 import {
   getAdminUsers,
+  getProfessionalUsers,
   updateProfessionalVerifiedStatusByAdmin,
   updateUserActiveStatusByAdmin,
 } from "@/lib/user-db.server";
 
 const API_PREFIX = "/api/v1";
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization, content-type, accept",
+  "access-control-allow-methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+};
 const email = z
   .string()
   .trim()
@@ -172,11 +178,13 @@ function escapeHtml(value: unknown) {
 export async function handleBackendApi(request: Request): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(API_PREFIX)) return null;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
   const startedAt = Date.now();
   const requestId = request.headers.get("x-request-id") || randomUUID();
   try {
     const response = await route(request, url);
     response.headers.set("x-request-id", requestId);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) response.headers.set(key, value);
     console.info(
       JSON.stringify({
         level: "info",
@@ -189,7 +197,9 @@ export async function handleBackendApi(request: Request): Promise<Response | nul
     );
     return response;
   } catch (error) {
-    return errorResponse(error, requestId);
+    const response = errorResponse(error, requestId);
+    for (const [key, value] of Object.entries(CORS_HEADERS)) response.headers.set(key, value);
+    return response;
   }
 }
 
@@ -334,6 +344,25 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "GET" && pathname === `${API_PREFIX}/services`) {
     return json(db.prepare(`SELECT * FROM "Service" WHERE isActive=1 ORDER BY id DESC`).all());
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/professionals`) {
+    const professionals = await getProfessionalUsers();
+    return json(
+      professionals.map((professional) => ({
+        id: professional.id,
+        firstName: professional.firstName,
+        lastName: professional.lastName,
+        avatarUrl: professional.avatarUrl,
+        companyDescription: professional.companyDescription,
+        professionalCategory: professional.professionalCategory,
+        professionalCity: professional.professionalCity,
+        hourlyRate: professional.hourlyRate,
+        averageRating: professional.averageRating,
+        reviewCount: professional.reviewCount,
+        isVerified: Boolean(professional.isVerified),
+        availabilityStatus: professional.availabilityStatus,
+      })),
+    );
   }
   if (method === "GET" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);

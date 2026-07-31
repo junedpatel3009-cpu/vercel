@@ -23,6 +23,22 @@ class AppTheme {
       background: bgLight,
       outline: const Color(0xFFE2E8F0),
     ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+      },
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: surfaceWhite,
+      foregroundColor: brandNavy,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      centerTitle: false,
+    ),
     
     // Modern Card Design
     cardTheme: CardThemeData(
@@ -39,6 +55,7 @@ class AppTheme {
       filled: true,
       fillColor: surfaceWhite,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -90,10 +107,25 @@ class AppTheme {
         backgroundColor: brandBlue,
         foregroundColor: Colors.white,
         elevation: 0,
+        minimumSize: const Size(0, 52),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        animationDuration: const Duration(milliseconds: 180),
         textStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
       ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: brandNavy,
+      contentTextStyle: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 70,
+      labelTextStyle: WidgetStateProperty.all(
+        GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700),
+      ),
+      indicatorColor: brandBlue.withValues(alpha: 0.12),
     ),
   );
 
