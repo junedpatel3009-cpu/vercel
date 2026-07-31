@@ -419,7 +419,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 controller: _emailController,
                 readOnly: _emailVerified,
                 decoration: InputDecoration(
-                  hintText: 'name@example.com',
+                  hintText: 'name@gmail.com',
                   prefixIcon: const Icon(Icons.email_outlined, size: 20),
                   suffixIcon: _emailVerified ? const Icon(Icons.check_circle, color: Colors.green) : null,
                 ),

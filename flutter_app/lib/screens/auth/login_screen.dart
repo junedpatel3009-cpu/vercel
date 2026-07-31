@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 8),
                         const Text('Enter your details to sign in to your account'),
                         const SizedBox(height: 32),
-                        _buildField('Email Address', _emailController, 'name@example.com', icon: Icons.email_outlined),
+                        _buildField('Email Address', _emailController, 'name@gmail.com', icon: Icons.email_outlined),
                         const SizedBox(height: 20),
                         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Password', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)), TextButton(onPressed: () => context.push('/forgot-password'), child: const Text('Forgot password?', style: TextStyle(fontSize: 13)))]),
                         const SizedBox(height: 8),
