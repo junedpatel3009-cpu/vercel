@@ -18,6 +18,7 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   Map<String, dynamic>? _currentUser;
   List<Map<String, dynamic>> _availableJobs = [];
+  List<Map<String, dynamic>> _publicJobs = [];
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _recommendedPros = [];
   List<Map<String, dynamic>> _focusItems = [];
@@ -34,10 +35,14 @@ class _LandingScreenState extends State<LandingScreen> {
     final db = DatabaseHelper();
     
     List<Map<String, dynamic>> jobs = [];
+    List<Map<String, dynamic>> publicJobs = [];
     List<Map<String, dynamic>> pros = [];
     List<Map<String, dynamic>> focus = [];
     Map<String, dynamic> stats = {};
     Map<String, dynamic>? update;
+
+    // Jobs are marketplace content, so every home view can show them.
+    publicJobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
 
     if (user != null) {
       if (user['role'] == 'professional') {
@@ -49,7 +54,7 @@ class _LandingScreenState extends State<LandingScreen> {
           await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
         );
         stats = await db.getClientStats(user['id']);
-        focus = await db.getJobs(clientId: user['id'], status: 'active');
+        focus = await ApiClient.instance.getList('/api/v1/client/jobs');
       }
       
       final notifications = await db.getNotifications(user['id']);
@@ -65,6 +70,7 @@ class _LandingScreenState extends State<LandingScreen> {
       setState(() {
         _currentUser = user;
         _availableJobs = jobs;
+        _publicJobs = publicJobs;
         _recommendedPros = pros;
         _stats = stats;
         _focusItems = focus;
@@ -110,6 +116,12 @@ class _LandingScreenState extends State<LandingScreen> {
                       _buildDynamicListHeader(context),
                       const SizedBox(height: 16),
                       _currentUser?['role'] == 'professional' ? _buildJobsList(context) : _buildRecommendedList(context),
+                      if (_currentUser?['role'] != 'professional') ...[
+                        const SizedBox(height: 40),
+                        _buildLatestJobsHeader(context),
+                        const SizedBox(height: 16),
+                        _buildPublicJobsList(context),
+                      ],
                       const SizedBox(height: 40),
                       const Text('Current Focus', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                       const SizedBox(height: 24),
@@ -167,24 +179,30 @@ class _LandingScreenState extends State<LandingScreen> {
               ],
             )
           else
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'logout') {
-                  await AuthService().logout();
-                  setState(() => _currentUser = null);
-                  if (mounted) context.go('/login');
-                } else if (value == 'profile') {
-                  context.push('/profile');
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(value: 'profile', child: Text('Profile')),
-                const PopupMenuItem(value: 'logout', child: Text('Logout')),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/profile'),
+                  icon: const Icon(Icons.person_outline, size: 17),
+                  label: const Text('Profile'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1E40AF),
+                    side: const BorderSide(color: Color(0xFFBFDBFE)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    await AuthService().logout();
+                    if (!mounted) return;
+                    setState(() => _currentUser = null);
+                    context.go('/');
+                  },
+                  icon: const Icon(Icons.logout, size: 17),
+                  label: const Text('Log out'),
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF1E40AF)),
+                ),
               ],
-              child: CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(_currentUser!['profile_photo'] ?? 'https://i.pravatar.cc/100?u=user'),
-              ),
             ),
         ],
       ),
@@ -196,7 +214,9 @@ class _LandingScreenState extends State<LandingScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _currentUser != null ? 'Hello, ${_currentUser!['full_name'].split(' ')[0]}' : 'Welcome to Servio',
+          _currentUser != null
+              ? 'Hello, ${(_currentUser!['full_name'] ?? _currentUser!['firstName'] ?? 'there').toString().split(' ')[0]}'
+              : 'Welcome to Servio',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
@@ -309,8 +329,9 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildJobsList(BuildContext context) {
-    if (_availableJobs.isEmpty) {
+  Widget _buildJobsList(BuildContext context, [List<Map<String, dynamic>>? jobs]) {
+    final jobRows = jobs ?? _availableJobs;
+    if (jobRows.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
@@ -318,7 +339,7 @@ class _LandingScreenState extends State<LandingScreen> {
       );
     }
     return Column(
-      children: _availableJobs.take(3).toList().asMap().entries.map((entry) {
+      children: jobRows.take(3).toList().asMap().entries.map((entry) {
         final index = entry.key;
         final job = entry.value;
         return _StaggeredReveal(
@@ -374,7 +395,23 @@ class _LandingScreenState extends State<LandingScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: Image.network(pro['profile_photo'] ?? 'https://i.pravatar.cc/300?u=${pro['user_id']}', height: 150, width: double.infinity, fit: BoxFit.cover),
+                    child: pro['profile_photo'] == null
+                        ? Container(
+                            height: 150,
+                            width: double.infinity,
+                            color: const Color(0xFFEEF2FF),
+                            child: const Icon(Icons.person_outline, size: 52, color: Color(0xFF1E40AF)),
+                          )
+                        : Image.network(
+                            pro['profile_photo'],
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFFEEF2FF),
+                              child: const Icon(Icons.person_outline, size: 52, color: Color(0xFF1E40AF)),
+                            ),
+                          ),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -430,25 +467,47 @@ class _LandingScreenState extends State<LandingScreen> {
       {'name': 'Categories', 'icon': Icons.grid_view_outlined, 'route': '/services'},
       {'name': 'Saved', 'icon': Icons.dashboard, 'route': '/dashboard'},
     ];
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 1.5),
-      itemCount: 4,
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () => context.push(actions[index]['route'] as String),
-        child: Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: Color(0xFFEEF2FF), shape: BoxShape.circle), child: Icon(actions[index]['icon'] as IconData, color: const Color(0xFF1E40AF), size: 20)),
-              const SizedBox(height: 12),
-              Text(actions[index]['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 880 ? 4 : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 14,
+            mainAxisSpacing: 14,
+            childAspectRatio: columns == 4 ? 2.1 : 1.7,
           ),
-        ),
-      ),
+          itemCount: actions.length,
+          itemBuilder: (context, index) => InkWell(
+            onTap: () => context.push(actions[index]['route'] as String),
+            borderRadius: BorderRadius.circular(18),
+            child: Ink(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE7EDF6)),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x0D0F172A), blurRadius: 18, offset: Offset(0, 7)),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(color: Color(0xFFEEF2FF), shape: BoxShape.circle),
+                    child: Icon(actions[index]['icon'] as IconData, color: const Color(0xFF1E40AF), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(actions[index]['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -532,33 +591,77 @@ class _LandingScreenState extends State<LandingScreen> {
       ),
     );
   }
+
+  Widget _buildLatestJobsHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Latest Jobs',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+        ),
+        TextButton.icon(
+          onPressed: () => context.push('/jobs'),
+          icon: const Text('View all', style: TextStyle(color: Color(0xFF1E40AF), fontWeight: FontWeight.bold)),
+          label: const Icon(Icons.open_in_new, size: 14, color: Color(0xFF1E40AF)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPublicJobsList(BuildContext context) {
+    if (_publicJobs.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFF1F5F9))),
+        child: const Center(child: Text('No open jobs yet.')),
+      );
+    }
+    return _buildJobsList(context, _publicJobs);
+  }
 }
 
 /// Adds a light staggered entrance without changing the page layout or cards.
-class _StaggeredReveal extends StatelessWidget {
+class _StaggeredReveal extends StatefulWidget {
   const _StaggeredReveal({required this.index, required this.child});
 
   final int index;
   final Widget child;
 
   @override
+  State<_StaggeredReveal> createState() => _StaggeredRevealState();
+}
+
+class _StaggeredRevealState extends State<_StaggeredReveal> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final start = (index * 0.12).clamp(0.0, 0.72).toDouble();
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 560),
+    final start = (widget.index * 0.12).clamp(0.0, 0.72).toDouble();
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: TweenAnimationBuilder<double>(
+      duration: Duration(milliseconds: 650 + widget.index * 80),
       curve: Interval(start, 1, curve: Curves.easeOutCubic),
       tween: Tween(begin: 0, end: 1),
-      child: child,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        scale: _isHovered ? 1.025 : 1,
+        child: widget.child,
+      ),
       builder: (context, value, animatedChild) => Opacity(
         opacity: value,
         child: Transform.translate(
-          offset: Offset(0, 18 * (1 - value)),
+          offset: Offset(0, 28 * (1 - value)),
           child: animatedChild,
         ),
       ),
+      ),
     );
   }
-
 }
 
 List<Map<String, dynamic>> _mapProfessionals(List<Map<String, dynamic>> rows) => rows

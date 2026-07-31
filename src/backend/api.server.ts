@@ -336,7 +336,6 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
 
   if (method === "GET" && pathname === `${API_PREFIX}/jobs`) {
-    currentUser(request);
     return json(await getOpenClientJobs());
   }
   if (method === "GET" && pathname === `${API_PREFIX}/categories`) {
