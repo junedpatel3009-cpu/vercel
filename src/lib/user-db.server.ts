@@ -67,6 +67,9 @@ export type PublicUser = {
   teamSize?: string | null;
   companyDescription?: string | null;
   address?: string | null;
+  professionalCategory?: string | null;
+  professionalCity?: string | null;
+  hourlyRate?: number | null;
   authProvider: AuthProvider;
 };
 

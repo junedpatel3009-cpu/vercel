@@ -182,6 +182,7 @@ class _SignupScreenState extends State<SignupScreen> {
       // For consistency with user request, we'll keep it robust.
 
       final email = _emailController.text.trim();
+      final phone = _phoneController.text.trim();
       final user = {
         'role': _userRole,
         'full_name': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',

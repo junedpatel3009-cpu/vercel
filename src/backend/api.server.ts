@@ -91,8 +91,36 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
 
 function publicAccount(user: ReturnType<typeof findUserByEmail> | PublicUser) {
   if (!user) return null;
-  const { id, role, firstName, lastName, email, phone, avatarUrl, authProvider } = user;
-  return { id, role, firstName, lastName, email, phone, avatarUrl, authProvider };
+  const {
+    id,
+    role,
+    firstName,
+    lastName,
+    email,
+    phone,
+    avatarUrl,
+    authProvider,
+    companyName,
+    address,
+    professionalCategory,
+    professionalCity,
+    hourlyRate,
+  } = user;
+  return {
+    id,
+    role,
+    firstName,
+    lastName,
+    email,
+    phone,
+    avatarUrl,
+    authProvider,
+    companyName,
+    address,
+    professionalCategory,
+    professionalCity,
+    hourlyRate,
+  };
 }
 
 function currentUser(request: Request, roles?: UserRole[]) {
