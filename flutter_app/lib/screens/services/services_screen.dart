@@ -13,7 +13,7 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> {
   List<Map<String, dynamic>> _categories = [];
-  Map<int, List<Map<String, dynamic>>> _subcategories = {};
+  final Map<int, List<Map<String, dynamic>>> _subcategories = {};
   bool _isLoading = true;
 
   @override

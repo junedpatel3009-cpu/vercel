@@ -50,18 +50,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         if (mounted) {
           setState(() {
             _profileData = profile;
-            if (profile != null) {
-              _fullNameController.text =
+            _fullNameController.text =
                   '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim();
               _emailController.text = profile['email'] ?? '';
               _phoneController.text = profile['phone'] ?? '';
               _addressController.text = profile['address'] ?? '';
               _cityController.text = profile['professionalCity'] ?? '';
               if (widget.role == 'professional') {
-                _professionController.text = profile['professionalCategory'] ?? '';
+              _professionController.text = profile['professionalCategory'] ?? '';
                 _hourlyRateController.text = profile['hourlyRate']?.toString() ?? '';
               }
-            }
             _isLoading = false;
           });
         }

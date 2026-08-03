@@ -91,7 +91,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: AppTheme.bgLight, shape: BoxShape.circle),
+            decoration: const BoxDecoration(color: AppTheme.bgLight, shape: BoxShape.circle),
             child: Icon(_getIcon(note['type']), color: AppTheme.brandBlue, size: 20),
           ),
           const SizedBox(width: 16),

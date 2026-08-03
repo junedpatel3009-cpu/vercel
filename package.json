@@ -9,9 +9,9 @@
   "scripts": {
     "editor:sync-pages": "node scripts/sync-web-editor-pages.mjs",
     "admin:create": "node scripts/create-admin.mjs",
-    "dev": "vite dev --host 0.0.0.0",
-    "backend:dev": "vite dev --host 0.0.0.0",
-    "backend:api": "vite dev --host 0.0.0.0",
+    "dev": "vite dev --host 0.0.0.0 --port 5173 --strictPort",
+    "backend:dev": "vite dev --host 0.0.0.0 --port 5173 --strictPort",
+    "backend:api": "vite dev --host 0.0.0.0 --port 5173 --strictPort",
     "backend:socket": "node server/socket-server.mjs",
     "backend:health": "node -e \"fetch('http://localhost:5173/api/health').then(async r => { console.log(r.status); console.log(await r.text()); }).catch(error => { console.error(error.message); process.exit(1); })\"",
     "socket": "node server/socket-server.mjs",
