@@ -4,8 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../core/theme/app_theme.dart';
+// Read-only: category/subcategory lookups and legacy draft-loading still use
+// the on-device database. Actual job creation below goes through the
+// backend API instead — the backend is now the source of truth for jobs.
 import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/api/api_client.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
@@ -162,61 +166,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
     super.dispose();
   }
 
-  Future<void> _saveDraft() async {
-    if (_currentUser == null) return;
-    
-    setState(() => _isSaving = true);
-    final data = {
-      if (_currentJobId != null) 'id': _currentJobId,
-      'client_id': _currentUser!['id'],
-      'title': _titleController.text,
-      'category_id': _selectedCategoryId,
-      'subcategory_id': _selectedSubcategoryId,
-      'description': _descriptionController.text,
-      'service_type': _serviceType,
-      'priority': _priority,
-      'address': _addressController.text,
-      'city': _cityController.text,
-      'state': _stateController.text,
-      'country': _countryController.text,
-      'pincode': _pincodeController.text,
-      'latitude': double.tryParse(_latitudeController.text),
-      'longitude': double.tryParse(_longitudeController.text),
-      'is_remote': _isRemote ? 1 : 0,
-      'start_date': _startDateController.text,
-      'start_time': _startTimeController.text,
-      'duration': _durationController.text,
-      'deadline': _deadlineController.text,
-      'flexible_schedule': _isFlexible ? 1 : 0,
-      'budget_type': _budgetType,
-      'min_budget': double.tryParse(_minBudgetController.text),
-      'max_budget': double.tryParse(_maxBudgetController.text),
-      'currency': _currency,
-      'special_instructions': _specialInstructionsController.text,
-      'required_skills': _skillsController.text,
-      'professionals_required': int.tryParse(_prosRequiredController.text) ?? 1,
-      'status': 'draft',
-    };
-
-    try {
-      _currentJobId = await DatabaseHelper().saveJob(data);
-      if (_images.isNotEmpty) {
-        await DatabaseHelper().saveJobImages(_currentJobId!, _images.map((e) => e.path).toList());
-      }
-      if (_documents.isNotEmpty) {
-        await DatabaseHelper().saveJobDocuments(_currentJobId!, _documents.map((e) => {
-          'name': p.basename(e.path),
-          'url': e.path
-        }).toList());
-      }
-    } catch (e) {
-      debugPrint('Draft save error: $e');
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
-  void _nextStep() async {
+  // Wizard steps 1-5 used to persist a partial row to the on-device
+  // "jobs" table on every "Continue" tap (DatabaseHelper.saveJob /
+  // saveJobImages / saveJobDocuments). The backend has no draft endpoint
+  // wired up yet (POST /api/v1/client/jobs only accepts the fully-valid
+  // clientJobSchema), so there is nothing to sync partial state to. Form
+  // state simply lives in the controllers/fields above across steps, and
+  // the job is created on the backend exactly once, on final submit.
+  void _nextStep() {
     if (_formKey.currentState!.validate()) {
       if (_currentStep == 3) {
         // Additional validation for Step 3
@@ -243,26 +200,171 @@ class _PostJobScreenState extends State<PostJobScreen> {
         }
       }
 
-      await _saveDraft();
       if (_currentStep < 6) {
         setState(() => _currentStep++);
       }
     }
   }
 
+  /// Uploads every picked image/document through the backend's generic file
+  /// endpoint (`POST /api/v1/files`), then resolves each stored file to a
+  /// signed preview link (`GET /api/v1/files/:id/access`). The resulting
+  /// list matches the shape `clientJobSchema.attachments` expects.
+  Future<List<Map<String, dynamic>>> _uploadAttachments() async {
+    final uploaded = <Map<String, dynamic>>[];
+    for (final file in [..._images, ..._documents]) {
+      final purpose = _images.contains(file) ? 'client_job_image' : 'client_job_document';
+      final stored = await ApiClient.instance.uploadFile(file, purpose: purpose);
+      final previewUrl = await ApiClient.instance.getFileAccessUrl(stored['id'] as int);
+      uploaded.add({
+        'fileName': stored['fileName'],
+        'fileType': stored['mimeType'],
+        'fileSize': stored['sizeBytes'],
+        'previewUrl': previewUrl,
+      });
+    }
+    return uploaded;
+  }
+
+  /// Maps this screen's wizard fields onto the backend's `clientJobSchema`
+  /// (src/lib/validation/client-job.ts). Fields with no equivalent Prisma
+  /// column (job type, start time, duration, flexible flag, skills,
+  /// professionals required, currency, special instructions) are folded
+  /// into the description instead of being silently dropped.
+  Map<String, dynamic> _buildJobPayload(List<Map<String, dynamic>> attachments) {
+    final categoryName = (_categories.firstWhere(
+      (c) => c['id'] == _selectedCategoryId,
+      orElse: () => const {'name': ''},
+    )['name'] as String?) ?? '';
+    final subcategoryName = (_subcategories.firstWhere(
+      (s) => s['id'] == _selectedSubcategoryId,
+      orElse: () => const {'name': ''},
+    )['name'] as String?) ?? '';
+    final category = subcategoryName.isEmpty ? categoryName : '$categoryName - $subcategoryName';
+
+    final urgency = switch (_priority) {
+      'Low' => 'LOW',
+      'High' => 'HIGH',
+      'Urgent' => 'HIGH', // backend has no URGENT level; Urgent is treated as HIGH.
+      _ => 'MEDIUM',
+    };
+    final timingType = _budgetType == 'Hourly' ? 'HOURLY' : 'FIXED';
+    final budgetMin = double.tryParse(_minBudgetController.text)?.round();
+    final budgetMax = double.tryParse(_maxBudgetController.text)?.round();
+
+    final fullAddress = [
+      _addressController.text,
+      _cityController.text,
+      _stateController.text,
+      _countryController.text,
+      _pincodeController.text,
+    ].where((part) => part.trim().isNotEmpty).join(', ');
+
+    final extraDetails = <String, String>{
+      if (_serviceType.isNotEmpty) 'Job type': _serviceType,
+      if (_startTimeController.text.isNotEmpty) 'Preferred start time': _startTimeController.text,
+      if (_durationController.text.isNotEmpty) 'Estimated duration': _durationController.text,
+      if (_isFlexible) 'Flexible schedule': 'Yes',
+      if (_skillsController.text.isNotEmpty) 'Required skills': _skillsController.text,
+      'Professionals required': _prosRequiredController.text,
+      'Currency': _currency,
+      if (_specialInstructionsController.text.isNotEmpty)
+        'Special instructions': _specialInstructionsController.text,
+    };
+    final extraDetailsText = extraDetails.entries.map((e) => '${e.key}: ${e.value}').join('\n');
+    final description = extraDetailsText.isEmpty
+        ? _descriptionController.text.trim()
+        : '${_descriptionController.text.trim()}\n\n---\n$extraDetailsText';
+
+    return {
+      'category': category,
+      'title': _titleController.text.trim(),
+      'description': description,
+      'attachments': attachments,
+      if (budgetMin != null) 'budgetMin': budgetMin,
+      if (budgetMax != null) 'budgetMax': budgetMax,
+      'urgency': urgency,
+      'timingType': timingType,
+      if (timingType == 'HOURLY' && budgetMin != null) 'hourlyRate': budgetMin,
+      if (_startDateController.text.isNotEmpty) 'jobDate': _startDateController.text,
+      'deadline': _deadlineController.text,
+      'workMode': _isRemote ? 'REMOTE' : 'ON_SITE',
+      if (!_isRemote && _cityController.text.isNotEmpty)
+        'locationLabel': '${_cityController.text}, ${_stateController.text}',
+      if (!_isRemote) 'locationAddress': fullAddress,
+      if (!_isRemote) 'locationLat': double.tryParse(_latitudeController.text),
+      if (!_isRemote) 'locationLng': double.tryParse(_longitudeController.text),
+      'status': 'OPEN',
+    };
+  }
+
+  /// Best-effort refresh of the client's job list from the backend
+  /// (GET /api/v1/client/jobs) so the newly created job is reflected from
+  /// the same source of truth the website reads from. The result isn't
+  /// rendered on this screen; job-listing screens will read from this same
+  /// endpoint directly in a later phase. Failure here must not undo the
+  /// fact that the job was already created successfully.
+  Future<void> _refreshJobList() async {
+    try {
+      await ApiClient.instance.getList('/api/v1/client/jobs');
+    } catch (e) {
+      debugPrint('Job list refresh failed: $e');
+    }
+  }
+
+  String _validationMessage(ApiException e) {
+    final details = e.details;
+    if (details is Map) {
+      final fieldErrors = details['fieldErrors'];
+      if (fieldErrors is Map && fieldErrors.isNotEmpty) {
+        final first = fieldErrors.entries.first;
+        final messages = (first.value as List).join(', ');
+        return '${first.key}: $messages';
+      }
+      final formErrors = details['formErrors'];
+      if (formErrors is List && formErrors.isNotEmpty) {
+        return formErrors.join(', ');
+      }
+    }
+    return e.message;
+  }
+
   Future<void> _handlePostJob() async {
     if (!_formKey.currentState!.validate()) return;
-    
+    if (_currentUser == null) return;
+
     setState(() => _isSaving = true);
     try {
-      final data = {
-        'id': _currentJobId,
-        'client_id': _currentUser!['id'],
-        'status': 'active',
-      };
-      await DatabaseHelper().saveJob(data);
+      final attachments = await _uploadAttachments();
+      final payload = _buildJobPayload(attachments);
+      // The backend is the source of truth for jobs: this call is what
+      // makes the job visible on the website for the same logged-in user.
+      final created = await ApiClient.instance.post('/api/v1/client/jobs', data: payload);
+      _currentJobId = created['id'] as int?;
+      await _refreshJobList();
       if (mounted) {
         _showSuccessDialog();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 401) {
+        await AuthService().logout();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please log in again.')),
+          );
+          context.go('/login');
+        }
+      } else if (e.statusCode == 422) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_validationMessage(e))),
+        );
+      } else if (e.statusCode == null) {
+        // ApiClient already produces a friendly "unable to reach server"
+        // message for network/connection failures.
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (e) {
       if (mounted) {
