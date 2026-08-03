@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
+import '../../widgets/motion.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -47,14 +48,17 @@ class _ServicesScreenState extends State<ServicesScreen> {
         title: Text('Service Categories', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
       ),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
+        ? const AnimatedLoadingIndicator(color: AppTheme.brandBlue)
         : ListView.builder(
             padding: const EdgeInsets.all(24),
             itemCount: _categories.length,
             itemBuilder: (context, index) {
               final cat = _categories[index];
               final subs = _subcategories[cat['id']] ?? [];
-              return _buildCategorySection(cat, subs);
+              return FadeSlideIn(
+                delay: Duration(milliseconds: index < 8 ? index * 45 : 360),
+                child: _buildCategorySection(cat, subs),
+              );
             },
           ),
     );
@@ -88,7 +92,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
           itemCount: subs.length,
           itemBuilder: (context, index) {
             final sub = subs[index];
-            return GestureDetector(
+            return FadeSlideIn(
+              delay: Duration(milliseconds: index < 6 ? index * 35 : 210),
+              child: GestureDetector(
               onTap: () => context.push('/discover?category=${cat['id']}&subcategory=${sub['id']}'),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -100,6 +106,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
+              ),
               ),
             );
           },

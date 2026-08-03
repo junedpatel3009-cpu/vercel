@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
+import '../../widgets/motion.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -52,13 +53,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ],
       ),
       body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
+        ? const AnimatedLoadingIndicator(color: AppTheme.brandBlue)
         : _notifications.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
               padding: const EdgeInsets.all(24),
               itemCount: _notifications.length,
-              itemBuilder: (context, index) => _buildNotificationItem(_notifications[index]),
+              itemBuilder: (context, index) => FadeSlideIn(
+                delay: Duration(milliseconds: index < 8 ? index * 45 : 360),
+                child: _buildNotificationItem(_notifications[index]),
+              ),
             ),
     );
   }

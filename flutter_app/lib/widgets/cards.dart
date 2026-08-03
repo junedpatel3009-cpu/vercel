@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'motion.dart';
 
 class AppCard extends StatelessWidget {
   final Widget child;
@@ -11,10 +12,14 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      elevation: 2,
-      child: Padding(padding: padding, child: child),
+    return FadeSlideIn(
+      child: Pressable(
+        child: Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          elevation: 2,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
     );
   }
 }

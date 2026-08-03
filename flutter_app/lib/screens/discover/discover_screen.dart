@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
+import '../../widgets/motion.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -54,7 +55,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       body: Stack(
         children: [
           _isLoading 
-            ? const Center(child: CircularProgressIndicator())
+            ? const AnimatedLoadingIndicator(color: AppTheme.brandBlue)
             : SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
@@ -201,7 +202,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       );
     }
     return Column(
-      children: _results.map((job) => _buildJobCard(context, job)).toList(),
+      children: _results.asMap().entries.map((entry) => FadeSlideIn(
+        delay: Duration(milliseconds: entry.key < 8 ? entry.key * 45 : 360),
+        child: _buildJobCard(context, entry.value),
+      )).toList(),
     );
   }
 
@@ -267,7 +271,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       );
     }
     return Column(
-      children: _results.map((pro) => _buildProCard(context, pro)).toList(),
+      children: _results.asMap().entries.map((entry) => FadeSlideIn(
+        delay: Duration(milliseconds: entry.key < 8 ? entry.key * 45 : 360),
+        child: _buildProCard(context, entry.value),
+      )).toList(),
     );
   }
 

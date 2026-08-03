@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'motion.dart';
 
 class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
@@ -16,7 +17,9 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    return Pressable(
+      enabled: !isLoading && onPressed != null,
+      child: ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -26,9 +29,13 @@ class PrimaryButton extends StatelessWidget {
         disabledBackgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
       ),
       onPressed: isLoading ? null : onPressed,
-      child: isLoading 
-        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-        : child,
+        child: AnimatedSwitcher(
+          duration: AppMotion.fast,
+          child: isLoading
+              ? const SizedBox(key: ValueKey('loading'), height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : KeyedSubtree(key: const ValueKey('content'), child: child),
+        ),
+      ),
     );
   }
 }
@@ -47,15 +54,21 @@ class SecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
+    return Pressable(
+      enabled: !isLoading && onPressed != null,
+      child: OutlinedButton(
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       onPressed: isLoading ? null : onPressed,
-      child: isLoading 
-        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-        : child,
+        child: AnimatedSwitcher(
+          duration: AppMotion.fast,
+          child: isLoading
+              ? const SizedBox(key: ValueKey('loading'), height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : KeyedSubtree(key: const ValueKey('content'), child: child),
+        ),
+      ),
     );
   }
 }

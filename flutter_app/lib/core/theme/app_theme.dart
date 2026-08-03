@@ -42,7 +42,9 @@ class AppTheme {
     // Modern Card Design
     cardTheme: CardThemeData(
       color: surfaceWhite,
-      elevation: 0,
+      elevation: 1,
+      shadowColor: brandNavy.withValues(alpha: 0.08),
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: const BorderSide(color: Color(0xFFF1F5F9)),
@@ -111,7 +113,29 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         animationDuration: const Duration(milliseconds: 180),
         textStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16),
+      ).copyWith(
+        elevation: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.pressed) ? 1 : 3,
+        ),
+        shadowColor: WidgetStatePropertyAll(brandNavy.withValues(alpha: 0.22)),
+        overlayColor: const WidgetStatePropertyAll(Color(0x1FFFFFFF)),
       ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(animationDuration: const Duration(milliseconds: 180)),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(animationDuration: const Duration(milliseconds: 180)),
+    ),
+    dialogTheme: DialogThemeData(
+      elevation: 12,
+      shadowColor: brandNavy.withValues(alpha: 0.16),
+      surfaceTintColor: Colors.transparent,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      elevation: 12,
+      shadowColor: brandNavy.withValues(alpha: 0.16),
+      surfaceTintColor: Colors.transparent,
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

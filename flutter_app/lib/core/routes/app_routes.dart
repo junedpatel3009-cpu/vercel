@@ -27,6 +27,38 @@ import '../../screens/auth/setup/profile_setup_screen.dart';
 import '../auth/auth_service.dart';
 
 class AppRoutes {
+  static CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
+    return CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 340),
+      reverseTransitionDuration: const Duration(milliseconds: 260),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curve = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        return FadeTransition(
+          opacity: curve,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.025, 0.02),
+              end: Offset.zero,
+            ).animate(curve),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  static GoRoute _route(
+    String path,
+    Widget Function(BuildContext context, GoRouterState state) screen,
+  ) {
+    return GoRoute(
+      path: path,
+      pageBuilder: (context, state) => _page(state, screen(context, state)),
+    );
+  }
+
   static final GoRouter router = GoRouter(
     initialLocation: '/',
     redirect: (context, state) async {
@@ -39,18 +71,16 @@ class AppRoutes {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const LandingScreen()),
-      GoRoute(path: '/setup/:role', builder: (context, state) => ProfileSetupScreen(role: state.pathParameters['role']!)),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (context, state) => const SignupScreen()),
-      GoRoute(path: '/dashboard', builder: (context, state) => const DashboardScreen()),
-      GoRoute(path: '/services', builder: (context, state) => const ServicesScreen()),
-      GoRoute(path: '/jobs', builder: (context, state) => const DashboardScreen()),
-      GoRoute(path: '/messages', builder: (context, state) => const MessagesScreen()),
-      GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
-      GoRoute(
-        path: '/profile', 
-        builder: (context, state) {
+      _route('/', (context, state) => const LandingScreen()),
+      _route('/setup/:role', (context, state) => ProfileSetupScreen(role: state.pathParameters['role']!)),
+      _route('/login', (context, state) => const LoginScreen()),
+      _route('/signup', (context, state) => const SignupScreen()),
+      _route('/dashboard', (context, state) => const DashboardScreen()),
+      _route('/services', (context, state) => const ServicesScreen()),
+      _route('/jobs', (context, state) => const DashboardScreen()),
+      _route('/messages', (context, state) => const MessagesScreen()),
+      _route('/notifications', (context, state) => const NotificationsScreen()),
+      _route('/profile', (context, state) {
           return FutureBuilder<Map<String, dynamic>?>(
             future: AuthService().getUser(),
             builder: (context, snapshot) {
@@ -62,25 +92,24 @@ class AppRoutes {
               return ProfileSetupScreen(role: role);
             },
           );
-        },
-      ),
-      GoRoute(path: '/discover', builder: (context, state) => const DiscoverScreen()),
-      GoRoute(path: '/post-job', builder: (context, state) => const PostJobScreen()),
-      GoRoute(path: '/pricing', builder: (context, state) => const PricingScreen()),
-      GoRoute(path: '/how-it-works', builder: (context, state) => const HowItWorksScreen()),
-      GoRoute(path: '/forgot-password', builder: (context, state) => const ForgotPasswordScreen()),
-      GoRoute(path: '/faq', builder: (context, state) => const FaqScreen()),
-      GoRoute(path: '/for-clients', builder: (context, state) => const ForClientsScreen()),
-      GoRoute(path: '/for-professionals', builder: (context, state) => const ForProfessionalsScreen()),
-      GoRoute(path: '/verification', builder: (context, state) => const VerificationScreen()),
-      GoRoute(path: '/verify', builder: (context, state) => const VerifyScreen()),
-      GoRoute(path: '/admin', builder: (context, state) => const AdminScreen()),
-      GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
-      GoRoute(path: '/services/:proId', builder: (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
-      GoRoute(path: '/pro/:proId', builder: (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
-      GoRoute(path: '/project/:projectId', builder: (context, state) => ProjectScreen(projectId: state.pathParameters['projectId']!)),
-      GoRoute(path: '/job/:jobId', builder: (context, state) => JobScreen(jobId: state.pathParameters['jobId'])),
-      GoRoute(path: '/db-view', builder: (context, state) => const DatabaseViewScreen()),
+        }),
+      _route('/discover', (context, state) => const DiscoverScreen()),
+      _route('/post-job', (context, state) => const PostJobScreen()),
+      _route('/pricing', (context, state) => const PricingScreen()),
+      _route('/how-it-works', (context, state) => const HowItWorksScreen()),
+      _route('/forgot-password', (context, state) => const ForgotPasswordScreen()),
+      _route('/faq', (context, state) => const FaqScreen()),
+      _route('/for-clients', (context, state) => const ForClientsScreen()),
+      _route('/for-professionals', (context, state) => const ForProfessionalsScreen()),
+      _route('/verification', (context, state) => const VerificationScreen()),
+      _route('/verify', (context, state) => const VerifyScreen()),
+      _route('/admin', (context, state) => const AdminScreen()),
+      _route('/earnings', (context, state) => const EarningsScreen()),
+      _route('/services/:proId', (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
+      _route('/pro/:proId', (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
+      _route('/project/:projectId', (context, state) => ProjectScreen(projectId: state.pathParameters['projectId']!)),
+      _route('/job/:jobId', (context, state) => JobScreen(jobId: state.pathParameters['jobId'])),
+      _route('/db-view', (context, state) => const DatabaseViewScreen()),
     ],
   );
 }
