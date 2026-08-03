@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _loginError;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final BiometricService _biometricService = BiometricService();
@@ -41,7 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
       _showError('Please enter a valid email address and password.');
       return;
     }
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loginError = null;
+    });
     try {
       final user = await AuthService().login(
         _emailController.text.trim(), _passwordController.text.trim());
@@ -87,15 +91,16 @@ class _LoginScreenState extends State<LoginScreen> {
     final role = user['role'] ?? 'client';
     final isComplete = await AuthService().checkProfileCompletion(user['id'], role);
     if (mounted) {
-      if (isComplete) context.go('/'); else context.go('/setup/$role');
+      if (isComplete) {
+        context.go('/');
+      } else {
+        context.go('/setup/$role');
+      }
     }
   }
 
   void _showError(String msg) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    }
+    if (mounted) setState(() => _loginError = msg);
   }
 
   @override
@@ -142,6 +147,34 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text('Welcome back', style: theme.textTheme.headlineMedium),
                         const SizedBox(height: 8),
                         const Text('Enter your details to sign in to your account'),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 220),
+                          child: _loginError == null
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  key: ValueKey(_loginError),
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 20),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF7ED),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: const Color(0xFFFED7AA)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline, color: Color(0xFFC2410C), size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          _loginError!,
+                                          style: const TextStyle(color: Color(0xFF9A3412), fontSize: 13, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
                         const SizedBox(height: 32),
                         _buildField('Email Address', _emailController, 'name@gmail.com', icon: Icons.email_outlined),
                         const SizedBox(height: 20),

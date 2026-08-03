@@ -108,10 +108,9 @@ class _SiteDrawerState extends State<SiteDrawer> {
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
               onTap: () async {
                 await AuthService().logout();
-                if (mounted) {
-                  Navigator.pop(context);
-                  context.go('/login');
-                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                context.go('/login');
               },
             ),
           ],

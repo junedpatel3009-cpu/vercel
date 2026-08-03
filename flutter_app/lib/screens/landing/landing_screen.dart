@@ -194,7 +194,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 TextButton.icon(
                   onPressed: () async {
                     await AuthService().logout();
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     setState(() => _currentUser = null);
                     context.go('/');
                   },

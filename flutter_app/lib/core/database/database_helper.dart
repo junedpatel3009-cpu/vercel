@@ -32,10 +32,6 @@ class DatabaseHelper {
     );
   }
 
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Migration logic will go here in production
-  }
-
   Future _onCreate(Database db, int version) async {
     // 1. users
     await db.execute('''
@@ -320,11 +316,17 @@ class DatabaseHelper {
     for (var cat in categories) {
       int catId = await db.insert('categories', cat);
       List<String> subs = [];
-      if (cat['name'] == 'Home Services') subs = ['Plumbing', 'Electrical', 'Cleaning', 'Carpentry'];
-      else if (cat['name'] == 'Tech & IT') subs = ['Web Development', 'Mobile Development', 'Data Science', 'DevOps'];
-      else if (cat['name'] == 'Design') subs = ['Graphic Design', 'UI/UX Design', 'Logo Design', 'Illustration'];
-      else if (cat['name'] == 'Writing & Marketing') subs = ['Content Writing', 'SEO', 'Social Media Marketing', 'Copywriting'];
-      else if (cat['name'] == 'Personal Care') subs = ['Personal Trainer', 'Yoga Instructor', 'Nutritionist', 'Massage Therapy'];
+      if (cat['name'] == 'Home Services') {
+        subs = ['Plumbing', 'Electrical', 'Cleaning', 'Carpentry'];
+      } else if (cat['name'] == 'Tech & IT') {
+        subs = ['Web Development', 'Mobile Development', 'Data Science', 'DevOps'];
+      } else if (cat['name'] == 'Design') {
+        subs = ['Graphic Design', 'UI/UX Design', 'Logo Design', 'Illustration'];
+      } else if (cat['name'] == 'Writing & Marketing') {
+        subs = ['Content Writing', 'SEO', 'Social Media Marketing', 'Copywriting'];
+      } else if (cat['name'] == 'Personal Care') {
+        subs = ['Personal Trainer', 'Yoga Instructor', 'Nutritionist', 'Massage Therapy'];
+      }
 
       for (var sub in subs) {
         await db.insert('subcategories', {'category_id': catId, 'name': sub});

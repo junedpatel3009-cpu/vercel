@@ -127,9 +127,8 @@ class _SiteHeaderWidgetState extends State<SiteHeaderWidget> {
                 onSelected: (value) async {
                   if (value == 'logout') {
                     await AuthService().logout();
-                    if (mounted) {
-                      context.go('/login');
-                    }
+                    if (!context.mounted) return;
+                    context.go('/login');
                   } else if (value == 'profile') {
                     context.push('/profile');
                   }

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../widgets/site_header.dart';
@@ -110,6 +109,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (confirm != true) return;
+    if (!mounted) return;
 
     final type = await showModalBottomSheet<String>(
       context: context,
@@ -140,6 +140,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (type == null) return;
+    if (!mounted) return;
 
     // Check if the specific biometric type is available if possible
     final available = await BiometricService().getAvailableBiometrics();
@@ -149,6 +150,7 @@ class _SignupScreenState extends State<SignupScreen> {
     // We will proceed but give a better message if it fails.
 
     final success = await BiometricService().authenticate();
+    if (!mounted) return;
     if (success) {
       setState(() {
         _biometricEnabled = true;

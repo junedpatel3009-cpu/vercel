@@ -20,7 +20,6 @@ class AppTheme {
       primary: brandBlue,
       secondary: brandOrange,
       surface: surfaceWhite,
-      background: bgLight,
       outline: const Color(0xFFE2E8F0),
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
