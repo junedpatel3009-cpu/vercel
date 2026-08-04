@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/motion.dart';
 
@@ -16,6 +17,7 @@ class _JobsScreenState extends State<JobsScreen> {
   List<Map<String, dynamic>> _jobs = [];
   bool _loading = true;
   String _query = '';
+  bool _isClient = false;
 
   List<Map<String, dynamic>> get _visibleJobs {
     final query = _query.trim().toLowerCase();
@@ -43,8 +45,13 @@ class _JobsScreenState extends State<JobsScreen> {
 
   Future<void> _loadJobs() async {
     try {
-      final jobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
-      if (mounted) setState(() => _jobs = jobs);
+      final user = await AuthService().getUser();
+      final isClient = user?['role'].toString().toLowerCase() == 'client';
+      final jobs = await ApiClient.instance.getList(
+        isClient ? '/api/v1/client/jobs' : '/api/v1/jobs',
+        authenticated: isClient,
+      );
+      if (mounted) setState(() { _jobs = jobs; _isClient = isClient; });
     } on ApiException catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
     } finally {
@@ -57,7 +64,7 @@ class _JobsScreenState extends State<JobsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
-        title: const Text('Jobs'),
+        title: Text(_isClient ? 'My projects' : 'Jobs'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           tooltip: 'Back',
@@ -97,7 +104,7 @@ class _JobsScreenState extends State<JobsScreen> {
                         ? ListView(
                             children: [
                               const SizedBox(height: 220),
-                              Center(child: Text(_query.isEmpty ? 'No open jobs right now.' : 'No jobs match your search.')),
+                              Center(child: Text(_query.isEmpty ? (_isClient ? 'You have not posted a project yet.' : 'No open jobs right now.') : 'No jobs match your search.')),
                             ],
                           )
                         : ListView.builder(

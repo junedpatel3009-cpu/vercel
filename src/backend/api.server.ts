@@ -650,6 +650,28 @@ async function route(request: Request, url: URL): Promise<Response> {
       .all(user.id);
     return json({ wallet, transactions });
   }
+  if (method === "GET" && pathname === `${API_PREFIX}/client/finance`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const payments = db
+      .prepare(
+        `SELECT Payment.*, COALESCE(ClientJob.title, 'Project payment') AS jobTitle
+         FROM "Payment" AS Payment
+         LEFT JOIN "ClientJob" AS ClientJob ON ClientJob.id = Payment.jobId
+         WHERE Payment.clientId=?
+         ORDER BY datetime(Payment.createdAt) DESC, Payment.id DESC`,
+      )
+      .all(user.id);
+    const totals = db
+      .prepare(
+        `SELECT
+          COALESCE(SUM(amount), 0) AS committed,
+          COALESCE(SUM(CASE WHEN status='COMPLETED' THEN amount ELSE 0 END), 0) AS paid,
+          COALESCE(SUM(CASE WHEN status='PENDING' THEN amount ELSE 0 END), 0) AS pending
+         FROM "Payment" WHERE clientId=?`,
+      )
+      .get(user.id);
+    return json({ payments, totals });
+  }
   if (method === "POST" && pathname === `${API_PREFIX}/payments`) {
     const user = currentUser(request, ["CLIENT"]);
     const input = parse(

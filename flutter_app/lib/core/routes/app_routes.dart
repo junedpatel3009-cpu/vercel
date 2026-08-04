@@ -4,6 +4,7 @@ import '../../screens/landing/landing_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/signup_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
+import '../../screens/dashboard/client_reports_screen.dart';
 import '../../screens/services/services_screen.dart';
 import '../../screens/messages/messages_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
@@ -28,6 +29,7 @@ import '../../screens/misc/database_view_screen.dart';
 import '../../screens/auth/setup/profile_setup_screen.dart';
 import '../../screens/auth/welcome_screen.dart';
 import '../auth/auth_service.dart';
+import '../../widgets/client_workspace_menu.dart';
 
 class AppRoutes {
   static CustomTransitionPage<void> _page(GoRouterState state, Widget child) {
@@ -58,7 +60,13 @@ class AppRoutes {
   ) {
     return GoRoute(
       path: path,
-      pageBuilder: (context, state) => _page(state, screen(context, state)),
+      pageBuilder: (context, state) => _page(
+        state,
+        ClientWorkspaceMenu(
+          location: state.matchedLocation,
+          child: screen(context, state),
+        ),
+      ),
     );
   }
 
@@ -90,6 +98,7 @@ class AppRoutes {
       _route('/login', (context, state) => const LoginScreen()),
       _route('/signup', (context, state) => const SignupScreen()),
       _route('/dashboard', (context, state) => const DashboardScreen()),
+      _route('/reports', (context, state) => const ClientReportsScreen()),
       _route('/services', (context, state) => const ServicesScreen()),
       _route('/jobs', (context, state) => const JobsScreen()),
       _route('/saved-jobs', (context, state) => const SavedJobsScreen()),
@@ -108,6 +117,9 @@ class AppRoutes {
               }
               final user = snapshot.data;
               final role = user?['role'] ?? 'client';
+              if (role.toString().toLowerCase() == 'client') {
+                return const DashboardScreen();
+              }
               return ProfileSetupScreen(role: role);
             },
           );

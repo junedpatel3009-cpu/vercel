@@ -8,7 +8,6 @@ import '../../core/database/database_helper.dart';
 import 'package:flutter/services.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/api/api_client.dart';
-import '../../widgets/site_drawer.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -25,6 +24,7 @@ class _LandingScreenState extends State<LandingScreen> {
   List<Map<String, dynamic>> _recommendedPros = [];
   List<Map<String, dynamic>> _focusItems = [];
   Map<String, dynamic>? _latestUpdate;
+  bool _isSessionLoading = true;
 
   @override
   void initState() {
@@ -34,6 +34,15 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Future<void> _loadData() async {
     final user = await AuthService().getUser();
+    // Resolve the local session first. Remote dashboard requests can be slow
+    // or fail, but neither case means that the user has been logged out.
+    if (mounted) {
+      setState(() {
+        _currentUser = user;
+        _isSessionLoading = false;
+      });
+    }
+
     final db = DatabaseHelper();
     
     List<Map<String, dynamic>> jobs = [];
@@ -43,49 +52,44 @@ class _LandingScreenState extends State<LandingScreen> {
     Map<String, dynamic> stats = {};
     Map<String, dynamic>? update;
 
-    // Jobs are marketplace content, so every home view can show them.
-    publicJobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
+    try {
+      // Jobs are marketplace content, so every home view can show them.
+      publicJobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
 
-    if (user != null) {
-      if (user['role'] == 'professional') {
-        jobs = await ApiClient.instance.getList('/api/v1/jobs');
-        stats = await db.getProfessionalStats(user['id']);
-        focus = await db.getJobs(status: 'assigned'); // Jobs assigned to this pro
+      if (user != null) {
+        if (user['role'] == 'professional') {
+          jobs = await ApiClient.instance.getList('/api/v1/jobs');
+          stats = await db.getProfessionalStats(user['id']);
+          focus = await db.getJobs(status: 'assigned');
+        } else {
+          pros = _mapProfessionals(
+            await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+          );
+          focus = await ApiClient.instance.getList('/api/v1/client/jobs');
+          final activeJobs = focus.where((job) {
+            final status = (job['status'] ?? '').toString().toUpperCase();
+            return status == 'OPEN' || status == 'ACTIVE' || status == 'ASSIGNED' || status == 'IN_PROGRESS';
+          }).length;
+          stats = {'total_jobs_posted': focus.length, 'active_jobs': activeJobs};
+        }
+
+        final notifications = await db.getNotifications(user['id']);
+        if (notifications.isNotEmpty) update = notifications.first;
+        if (update == null && focus.isNotEmpty) {
+          final job = focus.first;
+          update = {'message': 'Your job "${job['title'] ?? 'Project'}" is ${((job['status'] ?? 'OPEN').toString()).toLowerCase()}.'};
+        }
       } else {
         pros = _mapProfessionals(
           await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
         );
-        focus = await ApiClient.instance.getList('/api/v1/client/jobs');
-        // Client jobs are created in the server database. Calculate the home
-        // totals from that same source, not from the phone's local SQLite cache.
-        final activeJobs = focus.where((job) {
-          final status = (job['status'] ?? '').toString().toUpperCase();
-          return status == 'OPEN' || status == 'ACTIVE' || status == 'ASSIGNED' || status == 'IN_PROGRESS';
-        }).length;
-        stats = {
-          'total_jobs_posted': focus.length,
-          'active_jobs': activeJobs,
-        };
       }
-      
-      final notifications = await db.getNotifications(user['id']);
-      if (notifications.isNotEmpty) update = notifications.first;
-      if (update == null && focus.isNotEmpty) {
-        final job = focus.first;
-        update = {
-          'message': 'Your job "${job['title'] ?? 'Project'}" is ${((job['status'] ?? 'OPEN').toString()).toLowerCase()}.',
-        };
-      }
-    } else {
-      // Public landing: show some random pros or categories
-      pros = _mapProfessionals(
-        await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
-      );
+    } on ApiException {
+      // Keep the signed-in UI visible if the server is temporarily offline.
     }
 
     if (mounted) {
       setState(() {
-        _currentUser = user;
         _availableJobs = jobs;
         _publicJobs = publicJobs;
         _recommendedPros = pros;
@@ -106,13 +110,14 @@ class _LandingScreenState extends State<LandingScreen> {
       },
       child: Scaffold(
         backgroundColor: AppTheme.bgLight,
-        endDrawer: const SiteDrawer(),
         body: SafeArea(
           child: Column(
             children: [
               _buildAppBar(context),
               Expanded(
-                child: _currentUser == null
+                child: _isSessionLoading
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E40AF)))
+                    : _currentUser == null
                     ? _buildGuestWelcome(context)
                     : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -316,7 +321,11 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           if (_currentUser != null)
             InkWell(
-              onTap: () => context.push('/profile'),
+              // Clients open their workspace dashboard from the avatar. Profile
+              // setup is an edit action, not the first screen they should see.
+              onTap: () => context.push(
+                _currentUser?['role'] == 'client' ? '/dashboard' : '/profile',
+              ),
               borderRadius: BorderRadius.circular(24),
               child: CircleAvatar(
                 radius: 21,
