@@ -579,6 +579,17 @@ class DatabaseHelper {
     return existing.isNotEmpty;
   }
 
+  Future<List<Map<String, dynamic>>> getSavedJobs(int userId) async {
+    final db = await database;
+    return db.rawQuery('''
+      SELECT jobs.*
+      FROM saved_jobs
+      INNER JOIN jobs ON jobs.id = saved_jobs.job_id
+      WHERE saved_jobs.user_id = ?
+      ORDER BY saved_jobs.id DESC
+    ''', [userId]);
+  }
+
   Future<void> toggleFavouriteProfessional(int userId, int professionalId) async {
     Database db = await database;
     final existing = await db.query('favourite_professionals', where: 'user_id = ? AND professional_id = ?', whereArgs: [userId, professionalId]);

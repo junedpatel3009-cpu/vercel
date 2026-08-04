@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/app_theme.dart';
+
+import '../../core/api/api_client.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/theme/app_theme.dart';
 
 class ProScreen extends StatefulWidget {
   final String proId;
@@ -13,238 +17,230 @@ class ProScreen extends StatefulWidget {
 
 class _ProScreenState extends State<ProScreen> {
   Map<String, dynamic>? _pro;
-  List<Map<String, dynamic>> _reviews = [];
-  List<Map<String, dynamic>> _portfolio = [];
-  bool _isLoading = true;
+  Map<String, dynamic>? _user;
+  bool _loading = true;
+  bool _saved = false;
+
+  int get _professionalId => int.tryParse(widget.proId.replaceFirst(RegExp(r'^p'), '')) ?? 0;
 
   @override
   void initState() {
     super.initState();
-    _loadProData();
+    _loadProfile();
   }
 
-  Future<void> _loadProData() async {
-    final db = DatabaseHelper();
-    int userId = int.tryParse(widget.proId) ?? 0;
-    if (userId == 0 && widget.proId.startsWith('p')) {
-        // Fallback for legacy mock IDs p1, p2...
-        userId = int.tryParse(widget.proId.substring(1)) ?? 0;
-    }
-
-    final pro = await db.getProfessionalProfile(userId);
-    if (pro != null) {
-      final user = await db.database.then((d) => d.query('users', where: 'id = ?', whereArgs: [userId]));
-      if (user.isNotEmpty) {
-        final reviews = await db.getReviews(userId);
-        final portfolio = await db.getPortfolio(userId);
-        if (mounted) {
-          setState(() {
-            _pro = {...user.first, ...pro};
-            _reviews = reviews;
-            _portfolio = portfolio;
-            _isLoading = false;
-          });
-        }
-        return;
+  Future<void> _loadProfile() async {
+    try {
+      _user = await AuthService().getUser();
+      final pro = await ApiClient.instance.get('/api/v1/professionals/$_professionalId', authenticated: false);
+      final userId = _user?['id'] is int ? _user!['id'] as int : int.tryParse('${_user?['id']}');
+      if (userId != null) {
+        _saved = await DatabaseHelper().isProfessionalFavourite(userId, _professionalId);
       }
+      if (mounted) setState(() => _pro = pro);
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    
-    if (mounted) setState(() => _isLoading = false);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (_pro == null) return const Scaffold(body: Center(child: Text('Professional not found')));
-
-    return Scaffold(
-      backgroundColor: AppTheme.bgLight,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildProfileHeader(),
-                  const SizedBox(height: 32),
-                  _buildAboutSection(),
-                  const SizedBox(height: 32),
-                  _buildSkillsSection(),
-                  const SizedBox(height: 32),
-                  _buildPortfolioSection(),
-                  const SizedBox(height: 32),
-                  _buildReviewsSection(),
-                  const SizedBox(height: 100),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomSheet: _buildBottomAction(),
+  Future<void> _toggleSaved() async {
+    final userId = _user?['id'] is int ? _user!['id'] as int : int.tryParse('${_user?['id']}');
+    if (userId == null) {
+      context.push('/login');
+      return;
+    }
+    await DatabaseHelper().toggleFavouriteProfessional(userId, _professionalId);
+    if (!mounted) return;
+    setState(() => _saved = !_saved);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_saved ? 'Professional saved' : 'Removed from saved professionals')),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 300,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Image.network(
-          _pro!['profile_photo'] ?? 'https://i.pravatar.cc/600?u=${_pro!['id']}',
-          fit: BoxFit.cover,
-        ),
-      ),
+  void _message() {
+    if (_user == null) {
+      context.push('/login');
+      return;
+    }
+    context.push('/messages');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Start a conversation with ${_pro!['fullName']} from Messages.')),
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Row(
-      children: [
-        Expanded(
+  Future<void> _hire() async {
+    if (_user == null) {
+      context.push('/login');
+      return;
+    }
+    if (_user!['role'].toString().toLowerCase() != 'client') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only client accounts can hire professionals.')));
+      return;
+    }
+    final title = TextEditingController(text: 'Project with ${_pro!['fullName']}');
+    final description = TextEditingController();
+    final price = TextEditingController(text: (_pro!['hourlyRate'] ?? 0).toString());
+    final formKey = GlobalKey<FormState>();
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.viewInsetsOf(sheetContext).bottom + 24),
+        child: Form(
+          key: formKey,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_pro!['full_name'] ?? '', style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w800, color: AppTheme.brandNavy)),
-              Text(_pro!['profession'] ?? '', style: const TextStyle(fontSize: 16, color: AppTheme.textGray)),
+              Text('Hire ${_pro!['fullName']}', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              const Text('Send a direct hire request. The professional can review it before starting.'),
+              const SizedBox(height: 18),
+              TextFormField(controller: title, decoration: const InputDecoration(labelText: 'Project title'), validator: _required),
+              const SizedBox(height: 12),
+              TextFormField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Work description'), validator: _required),
+              const SizedBox(height: 12),
+              TextFormField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fixed budget'), validator: _required),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) Navigator.pop(sheetContext, true);
+                  },
+                  child: const Text('Send hire request'),
+                ),
+              ),
             ],
           ),
         ),
-        Column(
-          children: [
-            Text('\$${_pro!['hourly_rate'] ?? 0}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: AppTheme.brandBlue)),
-            const Text('/hr', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
-          ],
-        )
-      ],
+      ),
+    );
+    if (submitted != true) return;
+    try {
+      await ApiClient.instance.post('/api/v1/client/hire', data: {
+        'professionalId': _professionalId,
+        'hiringTeam': '',
+        'contractTitle': title.text.trim(),
+        'workDescription': description.text.trim(),
+        'jobDate': '',
+        'deadline': '',
+        'workMode': 'remote',
+        'location': '',
+        'paymentOption': 'fixed',
+        'hourlyRate': null,
+        'fixedPrice': num.tryParse(price.text.trim()) ?? 0,
+        'paymentSchedule': 'whole',
+        'acceptedTerms': true,
+        'attachments': [],
+        'milestones': [],
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hire request sent successfully.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
+  String? _required(String? value) => value == null || value.trim().isEmpty ? 'This field is required' : null;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_pro == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('Professional not found')));
+    final photo = _pro!['avatarUrl']?.toString() ?? '';
+    return Scaffold(
+      backgroundColor: AppTheme.bgLight,
+      appBar: AppBar(
+        title: const Text('Professional profile'),
+        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : context.go('/discover')),
+        actions: [IconButton(onPressed: _toggleSaved, icon: Icon(_saved ? Icons.bookmark : Icons.bookmark_border, color: _saved ? AppTheme.brandBlue : null))],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: CircleAvatar(radius: 54, backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null, child: photo.startsWith('http') ? null : const Icon(Icons.person, size: 52))),
+          const SizedBox(height: 18),
+          Center(child: Text(_pro!['fullName'] ?? 'Professional', style: GoogleFonts.plusJakartaSans(fontSize: 25, fontWeight: FontWeight.w800, color: AppTheme.brandNavy))),
+          const SizedBox(height: 6),
+          Center(child: Text(_pro!['professionalCategory'] ?? 'Service professional', style: const TextStyle(color: AppTheme.textGray, fontSize: 16))),
+          const SizedBox(height: 12),
+          Center(child: Wrap(spacing: 8, children: [
+            if (_pro!['isVerified'] == true) _chip(Icons.verified, 'Verified', const Color(0xFF0F49A7)),
+            _chip(Icons.star_rounded, '${_pro!['averageRating'] ?? 0} (${_pro!['reviewCount'] ?? 0} reviews)', const Color(0xFFF59E0B)),
+          ])),
+          const SizedBox(height: 24),
+          _summaryCard(),
+          const SizedBox(height: 26),
+          _section('About', _pro!['companyDescription']?.toString().trim().isNotEmpty == true ? _pro!['companyDescription'] : 'This professional has not added an introduction yet.'),
+          const SizedBox(height: 26),
+          _skillsSection(),
+          const SizedBox(height: 26),
+          _detailsSection(),
+          const SizedBox(height: 26),
+          _portfolioSection(),
+        ]),
+      ),
+      bottomNavigationBar: SafeArea(child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFE5E7EB)))),
+        child: Row(children: [
+          OutlinedButton.icon(onPressed: _message, icon: const Icon(Icons.chat_bubble_outline), label: const Text('Message')),
+          const SizedBox(width: 10),
+          Expanded(child: ElevatedButton.icon(onPressed: _hire, icon: const Icon(Icons.handshake_outlined), label: const Text('Hire professional'))),
+        ]),
+      )),
     );
   }
 
-  Widget _buildAboutSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('About', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        Text(_pro!['about'] ?? 'No bio provided.', style: const TextStyle(color: AppTheme.textGray, height: 1.6)),
-      ],
-    );
+  Widget _chip(IconData icon, String label, Color color) => Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(20)), child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 15, color: color), const SizedBox(width: 4), Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: color))]));
+
+  Widget _summaryCard() => Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Row(children: [Expanded(child: _metric(Icons.payments_outlined, 'Starting at', '\$${_pro!['hourlyRate'] ?? 0}/hr')), Expanded(child: _metric(Icons.location_on_outlined, 'Location', _pro!['professionalCity']?.toString().isNotEmpty == true ? _pro!['professionalCity'] : 'Remote')), Expanded(child: _metric(Icons.circle_outlined, 'Availability', _pro!['availabilityStatus'] ?? 'Available'))]));
+
+  Widget _metric(IconData icon, String label, String value) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: AppTheme.brandBlue), const SizedBox(height: 8), Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textGray)), const SizedBox(height: 3), Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))]);
+
+  Widget _section(String title, String text) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 10), Text(text, style: const TextStyle(color: AppTheme.textGray, height: 1.55))]);
+
+  Widget _skillsSection() {
+    final skills = List<String>.from(_pro!['skills'] ?? []);
+    if (skills.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Skills & expertise', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 12), Wrap(spacing: 8, runSpacing: 8, children: skills.map((skill) => Chip(label: Text(skill))).toList())]);
   }
 
-  Widget _buildSkillsSection() {
-    if (_pro!['skills'] == null) return const SizedBox.shrink();
-    final skills = (_pro!['skills'] as String).split(',');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Skills', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: skills.map((s) => Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
-            child: Text(s.trim(), style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.brandNavy)),
-          )).toList(),
-        ),
-      ],
-    );
-  }
+  Widget _detailsSection() => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Professional details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 12), _detail(Icons.work_outline, 'Experience', '${_pro!['experienceYears'] ?? 0} years'), _detail(Icons.map_outlined, 'Service area', _pro!['serviceArea']?.toString().isNotEmpty == true ? _pro!['serviceArea'] : 'Not specified'), _detail(Icons.laptop_outlined, 'Work mode', (_pro!['workMode'] ?? 'both').toString())]);
 
-  Widget _buildPortfolioSection() {
+  Widget _detail(IconData icon, String label, String value) => Padding(padding: const EdgeInsets.only(bottom: 13), child: Row(children: [Icon(icon, size: 20, color: AppTheme.brandBlue), const SizedBox(width: 11), Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w700)), Expanded(child: Text(value, style: const TextStyle(color: AppTheme.textGray)))]));
+
+  Widget _portfolioSection() {
+    final photos = List<String>.from(_pro!['workPhotos'] ?? []);
+    if (photos.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Portfolio', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 16),
-        _portfolio.isEmpty 
-          ? const Text('No portfolio items added yet.', style: TextStyle(color: AppTheme.textGray))
-          : SizedBox(
-              height: 200,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: _portfolio.length,
-                separatorBuilder: (c, i) => const SizedBox(width: 16),
-                itemBuilder: (c, i) => Container(
-                  width: 280,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.network(_portfolio[i]['image_url'] ?? 'https://picsum.photos/400/300', fit: BoxFit.cover),
-                  ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, index) => ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                photos[index],
+                width: 210,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(
+                  width: 210,
+                  child: Center(child: Icon(Icons.image_not_supported_outlined)),
                 ),
               ),
             ),
-      ],
-    );
-  }
-
-  Widget _buildReviewsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Reviews', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-            Row(children: [const Icon(Icons.star, color: AppTheme.brandOrange, size: 20), const SizedBox(width: 4), Text('${_pro!['average_rating']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18))]),
-          ],
+          ),
         ),
-        const SizedBox(height: 16),
-        _reviews.isEmpty 
-          ? const Text('No reviews yet.', style: TextStyle(color: AppTheme.textGray))
-          : Column(
-              children: _reviews.map((r) => Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(backgroundImage: NetworkImage(r['profile_photo'] ?? 'https://i.pravatar.cc/100?u=${r['from_user_id']}')),
-                        const SizedBox(width: 12),
-                        Text(r['full_name'] ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const Spacer(),
-                        Row(children: List.generate(5, (i) => Icon(Icons.star, size: 12, color: i < r['rating'] ? AppTheme.brandOrange : Colors.grey[300]))),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(r['comment'] ?? '', style: const TextStyle(color: AppTheme.textGray)),
-                  ],
-                ),
-              )).toList(),
-            ),
       ],
-    );
-  }
-
-  Widget _buildBottomAction() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.chat_bubble_outline),
-            style: IconButton.styleFrom(padding: const EdgeInsets.all(16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Color(0xFFE2E8F0)))),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.brandNavy, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Hire Now', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

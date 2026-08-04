@@ -15,3 +15,6 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+## OpenStreetMap location picker
+
+The job form uses OpenStreetMap for free pin-drop location selection. It does not require an API key.

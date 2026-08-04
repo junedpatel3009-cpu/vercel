@@ -53,12 +53,27 @@ class _LandingScreenState extends State<LandingScreen> {
         pros = _mapProfessionals(
           await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
         );
-        stats = await db.getClientStats(user['id']);
         focus = await ApiClient.instance.getList('/api/v1/client/jobs');
+        // Client jobs are created in the server database. Calculate the home
+        // totals from that same source, not from the phone's local SQLite cache.
+        final activeJobs = focus.where((job) {
+          final status = (job['status'] ?? '').toString().toUpperCase();
+          return status == 'OPEN' || status == 'ACTIVE' || status == 'ASSIGNED' || status == 'IN_PROGRESS';
+        }).length;
+        stats = {
+          'total_jobs_posted': focus.length,
+          'active_jobs': activeJobs,
+        };
       }
       
       final notifications = await db.getNotifications(user['id']);
       if (notifications.isNotEmpty) update = notifications.first;
+      if (update == null && focus.isNotEmpty) {
+        final job = focus.first;
+        update = {
+          'message': 'Your job "${job['title'] ?? 'Project'}" is ${((job['status'] ?? 'OPEN').toString()).toLowerCase()}.',
+        };
+      }
     } else {
       // Public landing: show some random pros or categories
       pros = _mapProfessionals(
@@ -95,7 +110,9 @@ class _LandingScreenState extends State<LandingScreen> {
             children: [
               _buildAppBar(context),
               Expanded(
-                child: SingleChildScrollView(
+                child: _currentUser == null
+                    ? _buildGuestWelcome(context)
+                    : SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,6 +129,8 @@ class _LandingScreenState extends State<LandingScreen> {
                       const Text('Quick Actions', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
                       const SizedBox(height: 24),
                       _buildQuickActionsGrid(context),
+                      const SizedBox(height: 20),
+                      _buildProTip(),
                       const SizedBox(height: 40),
                       _buildDynamicListHeader(context),
                       const SizedBox(height: 16),
@@ -139,6 +158,142 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  Widget _buildGuestWelcome(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(offset: Offset(0, 20 * (1 - value)), child: child),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              height: 290,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFEAF2FF), Color(0xFFF9FBFF)],
+                ),
+                border: Border.all(color: const Color(0xFFD9E6FB)),
+                boxShadow: const [BoxShadow(color: Color(0x180F3B8A), blurRadius: 28, offset: Offset(0, 14))],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Positioned(top: 24, right: 26, child: _welcomeOrb(72, const Color(0xFFF59E0B).withValues(alpha: 0.14))),
+                  Positioned(bottom: 20, left: 18, child: _welcomeOrb(96, const Color(0xFF2563EB).withValues(alpha: 0.10))),
+                  Container(
+                    width: 210,
+                    height: 210,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(42),
+                      boxShadow: const [BoxShadow(color: Color(0x1A1E40AF), blurRadius: 22, offset: Offset(0, 10))],
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 116,
+                          height: 116,
+                          decoration: const BoxDecoration(color: Color(0xFFEEF5FF), shape: BoxShape.circle),
+                        ),
+                        const Icon(Icons.handshake_rounded, size: 86, color: Color(0xFF1649A3)),
+                        Positioned(
+                          top: 20,
+                          right: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Color(0x1A0F172A), blurRadius: 10)]),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified_rounded, size: 16, color: Color(0xFF2563EB)),
+                                SizedBox(width: 5),
+                                Text('Verified network', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF1E3A8A))),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 34),
+            Text(
+              'Work with people\nyou can trust.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(fontSize: 28, height: 1.18, fontWeight: FontWeight.w800, color: const Color(0xFF0F1F45)),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Find trusted professionals, post projects,\nand manage every step in one place.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, height: 1.55, color: AppTheme.textGray),
+            ),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/signup'),
+                icon: const Icon(Icons.arrow_forward_rounded),
+                iconAlignment: IconAlignment.end,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF123F94),
+                  foregroundColor: Colors.white,
+                  elevation: 5,
+                  shadowColor: const Color(0x55123F94),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                label: const Text('Create your account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.push('/login'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1649A3),
+                  side: const BorderSide(color: Color(0xFFBFD1F4)),
+                  padding: const EdgeInsets.symmetric(vertical: 17),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: const Text('Log in', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+            ),
+            const SizedBox(height: 26),
+            const Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 22,
+              children: [
+                Text('How it works', style: TextStyle(fontSize: 12, color: AppTheme.textGray)),
+                Text('Trust & safety', style: TextStyle(fontSize: 12, color: AppTheme.textGray)),
+                Text('Privacy', style: TextStyle(fontSize: 12, color: AppTheme.textGray)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _welcomeOrb(double size, Color color) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+
   Widget _buildAppBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -148,7 +303,7 @@ class _LandingScreenState extends State<LandingScreen> {
           GestureDetector(
             onTap: () => context.go('/'),
             child: Text(
-              _currentUser?['role'] == 'professional' ? 'ProDashboard' : 'ProConnect',
+              _currentUser?['role'] == 'professional' ? 'ProDashboard' : 'SERVIO',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -157,56 +312,28 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
             ),
           ),
-          if (_currentUser == null)
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => context.push('/login'),
-                  child: const Text('Login', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => context.push('/signup'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    backgroundColor: const Color(0xFF1E40AF),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text('Sign Up', style: TextStyle(fontSize: 12)),
-                ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => context.push('/profile'),
-                  icon: const Icon(Icons.person_outline, size: 17),
-                  label: const Text('Profile'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1E40AF),
-                    side: const BorderSide(color: Color(0xFFBFDBFE)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () async {
-                    await AuthService().logout();
-                    if (!context.mounted) return;
-                    setState(() => _currentUser = null);
-                    context.go('/');
-                  },
-                  icon: const Icon(Icons.logout, size: 17),
-                  label: const Text('Log out'),
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF1E40AF)),
-                ),
-              ],
+          if (_currentUser != null)
+            InkWell(
+              onTap: () => context.push('/profile'),
+              borderRadius: BorderRadius.circular(24),
+              child: CircleAvatar(
+                radius: 21,
+                backgroundColor: const Color(0xFFE8F0FF),
+                backgroundImage: _profileAvatar(),
+                child: _profileAvatar() == null
+                    ? const Icon(Icons.person_outline, color: Color(0xFF1E40AF))
+                    : null,
+              ),
             ),
         ],
       ),
     );
+  }
+
+  ImageProvider? _profileAvatar() {
+    final value = (_currentUser?['avatarUrl'] ?? _currentUser?['profile_image'] ?? '').toString().trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) return NetworkImage(value);
+    return null;
   }
 
   Widget _buildGreeting() {
@@ -308,6 +435,37 @@ class _LandingScreenState extends State<LandingScreen> {
             )
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProTip() {
+    const tips = [
+      'Detailed project descriptions help professionals send more relevant proposals.',
+      'Add a realistic deadline so professionals can plan and respond with confidence.',
+      'Include examples or attachments to help professionals understand the result you need.',
+      'Compare experience, reviews, and communication style before choosing a professional.',
+    ];
+    final tip = tips[DateTime.now().day % tips.length];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1649A3),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(color: Color(0x331649A3), blurRadius: 16, offset: Offset(0, 8))],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFFFFD166)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('PRO TIP', style: TextStyle(color: Color(0xFFBFD6FF), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            const SizedBox(height: 4),
+            Text(tip, style: const TextStyle(color: Colors.white, height: 1.35, fontWeight: FontWeight.w600)),
+          ])),
+        ],
       ),
     );
   }
@@ -562,6 +720,7 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildBottomNav(BuildContext context) {
+    if (_currentUser == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.only(top: 12, bottom: 24),
       decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),

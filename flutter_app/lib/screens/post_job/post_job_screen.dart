@@ -12,6 +12,7 @@ import '../../core/auth/auth_service.dart';
 import '../../core/api/api_client.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
+import 'location_picker_screen.dart';
 
 class PostJobScreen extends StatefulWidget {
   const PostJobScreen({super.key});
@@ -176,7 +177,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   void _nextStep() {
     if (_formKey.currentState!.validate()) {
       if (_currentStep == 3) {
-        // Additional validation for Step 3
+        // The website's Timing step validates the date range before continuing.
         if (_startDateController.text.isNotEmpty && _deadlineController.text.isNotEmpty) {
           DateTime start = DateFormat('yyyy-MM-dd').parse(_startDateController.text);
           DateTime deadline = DateFormat('yyyy-MM-dd').parse(_deadlineController.text);
@@ -186,8 +187,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
           }
         }
       }
-      if (_currentStep == 4) {
-        // Additional validation for Step 4
+      if (_currentStep == 2) {
+        // The website's Budget & files step validates the budget range.
         double min = double.tryParse(_minBudgetController.text) ?? 0;
         double max = double.tryParse(_maxBudgetController.text) ?? 0;
         if (min <= 0) {
@@ -200,7 +201,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         }
       }
 
-      if (_currentStep < 6) {
+      if (_currentStep < 4) {
         setState(() => _currentStep++);
       }
     }
@@ -339,8 +340,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
       final payload = _buildJobPayload(attachments);
       // The backend is the source of truth for jobs: this call is what
       // makes the job visible on the website for the same logged-in user.
+      final localDraftId = _currentJobId;
       final created = await ApiClient.instance.post('/api/v1/client/jobs', data: payload);
       _currentJobId = created['id'] as int?;
+      if (localDraftId != null) {
+        await DatabaseHelper().saveJob({'id': localDraftId, 'status': 'active'});
+      }
       await _refreshJobList();
       if (mounted) {
         _showSuccessDialog();
@@ -408,6 +413,82 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
+  Future<void> _pickMapLocation() async {
+    final latitude = double.tryParse(_latitudeController.text);
+    final longitude = double.tryParse(_longitudeController.text);
+    final picked = await Navigator.of(context).push<PickedLocation>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          initialLatitude: latitude,
+          initialLongitude: longitude,
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _latitudeController.text = picked.latitude.toStringAsFixed(6);
+      _longitudeController.text = picked.longitude.toStringAsFixed(6);
+      if (picked.address.isNotEmpty) _addressController.text = picked.address;
+      if (picked.city.isNotEmpty) _cityController.text = picked.city;
+      if (picked.state.isNotEmpty) _stateController.text = picked.state;
+      if (picked.country.isNotEmpty) _countryController.text = picked.country;
+      if (picked.pincode.isNotEmpty) _pincodeController.text = picked.pincode;
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    final userValue = _currentUser?['id'];
+    final userId = userValue is int ? userValue : int.tryParse('$userValue');
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to save a draft.')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      _currentJobId = await DatabaseHelper().saveJob({
+        if (_currentJobId != null) 'id': _currentJobId,
+        'client_id': userId,
+        'title': _titleController.text.trim(),
+        'category_id': _selectedCategoryId,
+        'subcategory_id': _selectedSubcategoryId,
+        'description': _descriptionController.text.trim(),
+        'service_type': _serviceType,
+        'priority': _priority,
+        'address': _addressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
+        'country': _countryController.text.trim(),
+        'pincode': _pincodeController.text.trim(),
+        'latitude': double.tryParse(_latitudeController.text),
+        'longitude': double.tryParse(_longitudeController.text),
+        'is_remote': _isRemote ? 1 : 0,
+        'start_date': _startDateController.text,
+        'start_time': _startTimeController.text,
+        'duration': _durationController.text,
+        'deadline': _deadlineController.text,
+        'flexible_schedule': _isFlexible ? 1 : 0,
+        'budget_type': _budgetType,
+        'min_budget': double.tryParse(_minBudgetController.text),
+        'max_budget': double.tryParse(_maxBudgetController.text),
+        'currency': _currency,
+        'special_instructions': _specialInstructionsController.text.trim(),
+        'required_skills': _skillsController.text.trim(),
+        'professionals_required': int.tryParse(_prosRequiredController.text) ?? 1,
+        'status': 'draft',
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Draft saved. You can continue editing it anytime.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -445,8 +526,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
             onPressed: () => context.pop(),
           )
         : null,
-      title: Text('ProConnect', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
+      title: Text('SERVIO', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
       actions: [
+        TextButton(
+          onPressed: _isSaving ? null : _saveDraft,
+          child: const Text('Save Draft', style: TextStyle(color: AppTheme.brandBlue)),
+        ),
         TextButton(
           onPressed: () => context.pop(),
           child: const Text('Cancel Post', style: TextStyle(color: Colors.black87)),
@@ -477,12 +562,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
           ),
           const SizedBox(height: 16),
           Row(
-            children: List.generate(6, (index) {
+            children: List.generate(4, (index) {
               final active = index < _currentStep;
               return Expanded(
                 child: Container(
                   height: 6,
-                  margin: EdgeInsets.only(right: index == 5 ? 0 : 8),
+                  margin: EdgeInsets.only(right: index == 3 ? 0 : 8),
                   decoration: BoxDecoration(
                     color: active ? AppTheme.brandBlue : const Color(0xFFE2E8F0),
                     borderRadius: BorderRadius.circular(10),
@@ -498,12 +583,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
 
   String _stepTitle() {
     switch (_currentStep) {
-      case 1: return 'Job Information';
-      case 2: return 'Location';
-      case 3: return 'Schedule';
-      case 4: return 'Budget';
-      case 5: return 'Media & Requirements';
-      case 6: return 'Review & Submit';
+      case 1: return 'Basics';
+      case 2: return 'Budget & Files';
+      case 3: return 'Timing';
+      case 4: return 'Location & Review';
       default: return '';
     }
   }
@@ -511,11 +594,23 @@ class _PostJobScreenState extends State<PostJobScreen> {
   Widget _buildCurrentStepView() {
     switch (_currentStep) {
       case 1: return _buildStep1BasicInfo();
-      case 2: return _buildStep2Location();
+      case 2:
+        return Column(
+          children: [
+            _buildStep4Budget(),
+            const SizedBox(height: 24),
+            _buildStep5Media(),
+          ],
+        );
       case 3: return _buildStep3Schedule();
-      case 4: return _buildStep4Budget();
-      case 5: return _buildStep5Media();
-      case 6: return _buildStep6Review();
+      case 4:
+        return Column(
+          children: [
+            _buildStep2Location(),
+            const SizedBox(height: 24),
+            _buildStep6Review(),
+          ],
+        );
       default: return _buildStep1BasicInfo();
     }
   }
@@ -543,7 +638,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(hintText: 'e.g. Build a modern landing page'),
-                validator: (v) => v == null || v.isEmpty ? 'Please enter a job title' : null,
+                validator: (v) => v == null || v.trim().isEmpty ? 'Please enter a job title' : null,
               ),
               const SizedBox(height: 24),
 
@@ -582,7 +677,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 controller: _descriptionController,
                 maxLines: 5, 
                 decoration: const InputDecoration(hintText: 'Describe the project scope...'),
-                validator: (v) => v == null || v.isEmpty ? 'Please enter a description' : null,
+                validator: (v) => v == null || v.trim().length < 40 ? 'Description must be at least 40 characters' : null,
               ),
               const SizedBox(height: 24),
 
@@ -704,21 +799,9 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      // Simulating Google Maps Location Picker
-                      setState(() {
-                        _latitudeController.text = '40.7128';
-                        _longitudeController.text = '-74.0060';
-                        _addressController.text = '123 Broadway, New York, NY';
-                        _cityController.text = 'New York';
-                        _stateController.text = 'NY';
-                        _countryController.text = 'USA';
-                        _pincodeController.text = '10007';
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location picked from map (Simulated)')));
-                    },
+                    onPressed: _pickMapLocation,
                     icon: const Icon(Icons.location_on),
-                    label: const Text('Pick on Google Maps'),
+                    label: const Text('Pick on Map'),
                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.brandNavy),
                   ),
                 ),
@@ -777,7 +860,12 @@ class _PostJobScreenState extends State<PostJobScreen> {
               const SizedBox(height: 16),
               _buildTimePickerField('Preferred Start Time', _startTimeController),
               const SizedBox(height: 16),
-              _buildSmallField('Estimated Duration (e.g. 3 days)', _durationController, true),
+              _buildSmallField(
+                'Estimated Duration (e.g. 3 days)',
+                _durationController,
+                true,
+                onChanged: (_) => _updateAutomaticDeadline(),
+              ),
               const SizedBox(height: 16),
               _buildDatePickerField(
                 'Deadline', 
@@ -915,7 +1003,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           if (!_isRemote) 'PIN Code': _pincodeController.text,
           'Latitude': _latitudeController.text,
           'Longitude': _longitudeController.text,
-        }, step: 2),
+        }, step: 4),
         _buildReviewSection('Schedule', {
           'Start Date': _startDateController.text,
           'Start Time': _startTimeController.text,
@@ -927,13 +1015,13 @@ class _PostJobScreenState extends State<PostJobScreen> {
           'Type': _budgetType,
           'Min Budget': '${_minBudgetController.text} $_currency',
           'Max Budget': '${_maxBudgetController.text} $_currency',
-        }, step: 4),
+        }, step: 2),
         _buildReviewSection('Requirements & Media', {
           'Skills': _skillsController.text,
           'Pros Required': _prosRequiredController.text,
           'Images': '${_images.length + _existingImageUrls.length} uploaded',
           'Documents': '${_documents.length + _existingDocuments.length} uploaded',
-        }, step: 5),
+        }, step: 2),
         const SizedBox(height: 12),
         const Text('By submitting, you agree to our Terms of Service.', style: TextStyle(color: Colors.grey, fontSize: 12)),
       ],
@@ -974,7 +1062,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  Widget _buildSmallField(String label, TextEditingController controller, bool required, {TextInputType type = TextInputType.text, String? suffix}) {
+  Widget _buildSmallField(
+    String label,
+    TextEditingController controller,
+    bool required, {
+    TextInputType type = TextInputType.text,
+    String? suffix,
+    ValueChanged<String>? onChanged,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -982,6 +1077,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         TextFormField(
           controller: controller,
           keyboardType: type,
+          onChanged: onChanged,
           decoration: InputDecoration(
             suffixText: suffix,
             suffixStyle: const TextStyle(color: AppTheme.textGray, fontWeight: FontWeight.bold),
@@ -1025,13 +1121,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
             if (date != null) {
               setState(() {
                 controller.text = DateFormat('yyyy-MM-dd').format(date);
-                // Brain Logic: If start date is changed to be after deadline, clear deadline
-                if (label == 'Preferred Start Date' && _deadlineController.text.isNotEmpty) {
-                  DateTime deadline = DateFormat('yyyy-MM-dd').parse(_deadlineController.text);
-                  if (deadline.isBefore(date)) {
-                    _deadlineController.clear();
-                  }
-                }
+                if (label == 'Preferred Start Date') _updateAutomaticDeadline();
               });
             }
           },
@@ -1039,6 +1129,17 @@ class _PostJobScreenState extends State<PostJobScreen> {
         ),
       ],
     );
+  }
+
+  void _updateAutomaticDeadline() {
+    final startText = _startDateController.text;
+    final durationMatch = RegExp(r'(\d+)\s*day', caseSensitive: false).firstMatch(_durationController.text);
+    if (startText.isEmpty || durationMatch == null) return;
+
+    final startDate = DateTime.tryParse(startText);
+    final days = int.tryParse(durationMatch.group(1) ?? '');
+    if (startDate == null || days == null) return;
+    _deadlineController.text = DateFormat('yyyy-MM-dd').format(startDate.add(Duration(days: days)));
   }
 
   Widget _buildTimePickerField(String label, TextEditingController controller) {
@@ -1192,7 +1293,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           Expanded(
             flex: 2,
             child: ElevatedButton(
-              onPressed: _isSaving ? null : (_currentStep == 6 ? _handlePostJob : _nextStep),
+              onPressed: _isSaving ? null : (_currentStep == 4 ? _handlePostJob : _nextStep),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF03358E),
                 padding: const EdgeInsets.symmetric(vertical: 18),
@@ -1203,7 +1304,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_currentStep == 6 ? 'Post My Job' : 'Continue', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(_currentStep == 4 ? 'Post Job' : 'Continue', style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
                       const Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -1220,7 +1321,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       children: [
         const Divider(color: Color(0xFFE2E8F0)),
         const SizedBox(height: 40),
-        const Text('© 2024 ProConnect Marketplace. All rights reserved.', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
+        const Text('© 2024 SERVIO Marketplace. All rights reserved.', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

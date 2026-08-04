@@ -106,6 +106,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         where: 'email = ?',
         whereArgs: [_emailController.text.trim()],
       );
+      if (!mounted) return;
       _showFriendlyMsg('Your password has been reset successfully!');
       context.go('/login');
     } catch (e) {

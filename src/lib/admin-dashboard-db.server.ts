@@ -386,6 +386,64 @@ export async function getPostgresAdminDashboardSnapshot(): Promise<AdminDashboar
   };
 }
 
+/**
+ * Returns the same job-record shape as the SQLite administration view, but
+ * from the production database. Jobs created in the mobile app are written
+ * through Prisma when DATABASE_URL is PostgreSQL, so the admin view must read
+ * through Prisma as well.
+ */
+export async function getPostgresAdminJobRecords(): Promise<AdminJobRecord[]> {
+  const jobs = await prisma.clientJob.findMany({
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    include: {
+      user: { select: { firstName: true, lastName: true, email: true } },
+      attachments: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
+    },
+  });
+
+  return jobs.map((job) => ({
+    id: job.id,
+    title: job.title,
+    description: job.description,
+    category: job.category,
+    status: job.status,
+    budgetMin: job.budgetMin,
+    budgetMax: job.budgetMax,
+    urgency: job.urgency,
+    timingType: job.timingType,
+    jobDate: job.jobDate?.toISOString() ?? null,
+    deadline: job.deadline.toISOString(),
+    workMode: job.workMode,
+    locationLabel: job.locationLabel,
+    locationAddress: job.locationAddress,
+    locationLat: job.locationLat,
+    locationLng: job.locationLng,
+    createdAt: job.createdAt.toISOString(),
+    updatedAt: job.updatedAt.toISOString(),
+    clientName: `${job.user.firstName} ${job.user.lastName}`.trim() || "Unknown client",
+    clientEmail: job.user.email,
+    trackingId: null,
+    requestId: null,
+    trackingStatus: null,
+    acceptedAt: null,
+    completedAt: null,
+    completionSubmittedAt: null,
+    professionalName: null,
+    professionalEmail: null,
+    attachments: job.attachments.map((attachment) => ({
+      id: attachment.id,
+      jobId: attachment.jobId,
+      fileName: attachment.fileName,
+      fileType: attachment.fileType,
+      fileSize: attachment.fileSize,
+      previewUrl: attachment.previewUrl,
+      createdAt: attachment.createdAt.toISOString(),
+    })),
+    requests: [],
+    workUploads: [],
+  }));
+}
+
 export function getAdminManagedUserDetails(
   users: Array<{ id: number; role: "CLIENT" | "PROFESSIONAL" }>,
 ) {

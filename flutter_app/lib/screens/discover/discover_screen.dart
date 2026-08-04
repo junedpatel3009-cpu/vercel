@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/api/api_client.dart';
 import '../../widgets/motion.dart';
 
 class DiscoverScreen extends StatefulWidget {
@@ -18,6 +19,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Map<String, dynamic>? _currentUser;
   List<Map<String, dynamic>> _results = [];
   bool _isLoading = true;
+  bool _verifiedOnly = false;
+  bool _ratingOnly = false;
 
   @override
   void initState() {
@@ -32,12 +35,34 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   Future<void> _performSearch({String? query}) async {
     setState(() => _isLoading = true);
-    final db = DatabaseHelper();
-    
-    if (_currentUser?['role'] == 'professional') {
-      _results = await db.getJobs(status: 'active', query: query);
-    } else {
-      _results = await db.searchProfessionals(query: query);
+    try {
+      if (_currentUser?['role'] == 'professional') {
+        final db = DatabaseHelper();
+        _results = await db.getJobs(status: 'active', query: query);
+      } else {
+        final rows = await ApiClient.instance.getList('/api/v1/professionals', authenticated: false);
+      final normalizedQuery = (query ?? _searchController.text).trim().toLowerCase();
+        _results = rows.map((pro) => <String, dynamic>{
+        'user_id': pro['id'],
+        'full_name': '${pro['firstName'] ?? ''} ${pro['lastName'] ?? ''}'.trim(),
+        'profession': pro['professionalCategory'] ?? 'Service Professional',
+        'profile_photo': pro['avatarUrl'],
+        'average_rating': pro['averageRating'] ?? 0,
+        'total_reviews': pro['reviewCount'] ?? 0,
+        'verification_status': pro['isVerified'] == true ? 'verified' : 'unverified',
+        'hourly_rate': pro['hourlyRate'] ?? 0,
+        'about': pro['companyDescription'] ?? '',
+        }).where((pro) {
+        final text = '${pro['full_name']} ${pro['profession']} ${pro['about']}'.toLowerCase();
+        final rating = (pro['average_rating'] as num?)?.toDouble() ?? 0;
+        return (normalizedQuery.isEmpty || text.contains(normalizedQuery)) &&
+            (!_verifiedOnly || pro['verification_status'] == 'verified') &&
+            (!_ratingOnly || rating >= 4.5);
+        }).toList();
+      }
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      _results = [];
     }
 
     if (mounted) {
@@ -103,7 +128,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           }
         },
       ),
-      title: Text('ProConnect', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
+      title: Text('SERVIO', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
       actions: [
         if (_currentUser?['role'] != 'professional')
           ElevatedButton(
@@ -139,7 +164,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: _showFilters,
                 icon: const Icon(Icons.tune, size: 18),
                 label: const Text('Filters', style: TextStyle(fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
@@ -173,16 +198,23 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _filterChip('Verified Pros', true),
-          _filterChip('Rating 4.5+', false),
-          _filterChip('Budget: \$0-200', false),
+          _filterChip('Verified Pros', _verifiedOnly, () {
+            setState(() => _verifiedOnly = !_verifiedOnly);
+            _performSearch(query: _searchController.text);
+          }),
+          _filterChip('Rating 4.5+', _ratingOnly, () {
+            setState(() => _ratingOnly = !_ratingOnly);
+            _performSearch(query: _searchController.text);
+          }),
         ],
       ),
     );
   }
 
-  Widget _filterChip(String label, bool active) {
-    return Container(
+  Widget _filterChip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(right: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -191,6 +223,43 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         border: Border.all(color: active ? AppTheme.brandBlue : const Color(0xFFE2E8F0)),
       ),
       child: Text(label, style: TextStyle(color: active ? Colors.white : AppTheme.brandNavy, fontWeight: FontWeight.bold, fontSize: 12)),
+      ),
+    );
+  }
+
+  void _showFilters() {
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Verified professionals only'),
+              value: _verifiedOnly,
+              onChanged: (value) => setState(() => _verifiedOnly = value),
+            ),
+            SwitchListTile(
+              title: const Text('Rating 4.5 and above'),
+              value: _ratingOnly,
+              onChanged: (value) => setState(() => _ratingOnly = value),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    _performSearch(query: _searchController.text);
+                  },
+                  child: const Text('Apply filters'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -392,7 +461,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       children: [
         Divider(color: Color(0xFFE2E8F0)),
         SizedBox(height: 40),
-        Text('© 2024 ProConnect Marketplace. All rights reserved.', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
+        Text('© 2024 SERVIO Marketplace. All rights reserved.', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
         SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -60,6 +60,7 @@ import {
   getAdminPaymentTransactions,
   getAdminDashboardSnapshot,
   getPostgresAdminDashboardSnapshot,
+  getPostgresAdminJobRecords,
   updateAdminDisputeStatus,
   type AdminDisputeRecord,
   type AdminJobRecord,
@@ -167,7 +168,7 @@ const getAdminPageData = createServerFn({ method: "GET" }).handler(async () => {
         }
       : getAdminUserStats(),
     dashboard,
-    jobRecords: usesPostgres ? [] : getAdminJobRecords(),
+    jobRecords: usesPostgres ? await getPostgresAdminJobRecords() : getAdminJobRecords(),
     disputeRecords: usesPostgres ? [] : getAdminDisputeRecords(),
     paymentTransactions: usesPostgres ? [] : getAdminPaymentTransactions(),
   };

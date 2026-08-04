@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
+import '../../core/api/api_client.dart';
 
 class JobScreen extends StatefulWidget {
   final String? jobId;
@@ -18,6 +20,7 @@ class _JobScreenState extends State<JobScreen> {
   Map<String, dynamic>? _job;
   List<Map<String, dynamic>> _proposals = [];
   bool _isLoading = true;
+  bool _isSavedJob = false;
 
   @override
   void initState() {
@@ -44,9 +47,41 @@ class _JobScreenState extends State<JobScreen> {
           _proposals = proposals;
           _isLoading = false;
         });
+        await _refreshSavedState(jobIdInt);
       }
     } else {
-      if (mounted) setState(() => _isLoading = false);
+      try {
+        final remoteJob = await ApiClient.instance.get('/api/v1/jobs/$jobIdInt', authenticated: false);
+        if (mounted) {
+          setState(() {
+            _job = {
+              'id': remoteJob['id'],
+              'title': remoteJob['title'],
+              'description': remoteJob['description'],
+              'status': (remoteJob['status'] ?? 'OPEN').toString().toLowerCase(),
+              'city': remoteJob['locationLabel'] ?? (remoteJob['workMode'] == 'REMOTE' ? 'Remote' : ''),
+              'country': '',
+              'created_at': remoteJob['createdAt'] ?? DateTime.now().toIso8601String(),
+              'min_budget': remoteJob['budgetMin'],
+              'max_budget': remoteJob['budgetMax'],
+               'budget_type': remoteJob['timingType'],
+               'category': remoteJob['category'],
+               'urgency': remoteJob['urgency'],
+               'work_mode': remoteJob['workMode'],
+               'address': remoteJob['locationAddress'],
+               'latitude': remoteJob['locationLat'],
+               'longitude': remoteJob['locationLng'],
+               'start_date': remoteJob['jobDate'],
+               'deadline': remoteJob['deadline'],
+               'attachments': remoteJob['attachments'],
+            };
+            _isLoading = false;
+          });
+        }
+        await _refreshSavedState(jobIdInt);
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -60,7 +95,26 @@ class _JobScreenState extends State<JobScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back',
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/jobs');
+            }
+          },
+        ),
         title: Text('Job Details', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
+        actions: [
+          TextButton.icon(
+            onPressed: _toggleSaveJob,
+            icon: Icon(_isSavedJob ? Icons.bookmark : Icons.bookmark_border),
+            label: Text(_isSavedJob ? 'Saved' : 'Save job'),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.brandBlue),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -83,8 +137,10 @@ class _JobScreenState extends State<JobScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            _buildPriceSection(),
-            const SizedBox(height: 32),
+             _buildPriceSection(),
+             const SizedBox(height: 32),
+             _buildJobInformation(),
+             const SizedBox(height: 32),
             const Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 12),
             Text(_job!['description'] ?? '', style: const TextStyle(color: AppTheme.textGray, height: 1.6)),
@@ -147,6 +203,91 @@ class _JobScreenState extends State<JobScreen> {
         ],
       ),
     );
+  }
+
+  int? get _currentUserId => _currentUser?['id'] is int
+      ? _currentUser!['id'] as int
+      : int.tryParse('${_currentUser?['id']}');
+
+  Future<void> _refreshSavedState(int jobId) async {
+    final userId = _currentUserId;
+    if (userId == null) return;
+    final saved = await DatabaseHelper().isJobSaved(userId, jobId);
+    if (mounted) setState(() => _isSavedJob = saved);
+  }
+
+  Future<void> _toggleSaveJob() async {
+    final userId = _currentUserId;
+    if (userId == null) {
+      context.push('/login');
+      return;
+    }
+    final db = DatabaseHelper();
+    final jobId = _job!['id'] as int;
+    if (!_isSavedJob && await db.getJob(jobId) == null) {
+      await (await db.database).insert('jobs', {
+        'id': jobId,
+        'title': _job!['title'],
+        'description': _job!['description'],
+        'city': _job!['city'],
+        'country': _job!['country'],
+        'address': _job!['address'],
+        'status': _job!['status'],
+        'budget_type': _job!['budget_type'],
+        'min_budget': _job!['min_budget'],
+        'max_budget': _job!['max_budget'],
+        'start_date': _job!['start_date'],
+        'deadline': _job!['deadline'],
+        'created_at': _job!['created_at'],
+      });
+    }
+    await db.toggleSavedJob(userId, jobId);
+    if (!mounted) return;
+    setState(() => _isSavedJob = !_isSavedJob);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(_isSavedJob ? 'Job saved' : 'Removed from saved jobs')),
+    );
+  }
+
+  Widget _buildJobInformation() {
+    final details = <MapEntry<String, String>>[
+      MapEntry('Category', (_job!['category'] ?? 'Not specified').toString()),
+      MapEntry('Work mode', (_job!['work_mode'] ?? (_job!['is_remote'] == 1 ? 'REMOTE' : 'ON_SITE')).toString().replaceAll('_', ' ')),
+      MapEntry('Urgency', (_job!['urgency'] ?? _job!['priority'] ?? 'MEDIUM').toString()),
+      MapEntry('Job date', _formatDate(_job!['start_date'])),
+      MapEntry('Deadline', _formatDate(_job!['deadline'])),
+      MapEntry('Address', (_job!['address'] ?? _job!['locationAddress'] ?? _job!['city'] ?? 'Not specified').toString()),
+    ];
+    final attachments = _job!['attachments'];
+    if (attachments is List) details.add(MapEntry('Attachments', '${attachments.length} file(s)'));
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Job information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 16),
+          ...details.map((detail) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 104, child: Text(detail.key, style: const TextStyle(color: AppTheme.textGray))),
+                    Expanded(child: Text(detail.value, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(dynamic value) {
+    if (value == null || value.toString().isEmpty) return 'Not specified';
+    final date = DateTime.tryParse(value.toString());
+    return date == null ? value.toString() : DateFormat.yMMMd().format(date);
   }
 
   Widget _buildProposalCard(Map<String, dynamic> proposal) {

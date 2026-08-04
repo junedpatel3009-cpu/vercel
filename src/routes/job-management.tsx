@@ -53,6 +53,7 @@ import {
   getAdminDashboardSnapshot,
   getAdminDisputeRecords,
   getAdminJobRecords,
+  getPostgresAdminJobRecords,
   updateAdminDisputeStatus,
   type AdminDisputeRecord,
   type AdminJobRecord,
@@ -112,7 +113,9 @@ const getJobManagementData = createServerFn({ method: "GET" }).handler(async () 
   try {
     return {
       viewer,
-      jobs: getAdminJobRecords(),
+      jobs: (process.env.DATABASE_URL || "").startsWith("postgres")
+        ? await getPostgresAdminJobRecords()
+        : getAdminJobRecords(),
       disputes: getAdminDisputeRecords(),
       dashboard: getAdminDashboardSnapshot(),
       loadError: null as string | null,
@@ -397,7 +400,8 @@ function JobManagement() {
           <AdminSection
             icon={BriefcaseBusiness}
             title="Posted jobs"
-            description="View client jobs, assigned professionals, budgets, deadlines, and work status."
+            description="Review client job posts, category, budget, deadline, and current work status."
+            className="rounded-xl border-slate-200 shadow-none"
             actions={
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full sm:w-64">
@@ -433,7 +437,8 @@ function JobManagement() {
               </div>
             )}
             <AdminTable
-              headers={["Job ID", "Customer", "Provider", "Status", "Actions"]}
+              headers={["Job", "Customer", "Category", "Budget", "Deadline", "Status", "Actions"]}
+              className="min-w-[1080px]"
               emptyState={
                 <AdminEmptyState
                   title="No jobs found"
@@ -442,24 +447,34 @@ function JobManagement() {
               }
             >
               {visibleJobs.map((job) => (
-                <AdminTableRow key={job.id} onClick={() => setSelectedJob(job)}>
-                  <AdminTableCell>
+                <AdminTableRow key={job.id} onClick={() => setSelectedJob(job)} className="hover:bg-primary/[0.03]">
+                  <AdminTableCell className="py-3">
                     <div className="flex flex-col">
                       <span className="font-bold text-foreground">#{job.id}</span>
-                      <span className="max-w-[160px] truncate text-xs text-muted-foreground font-medium">
+                      <span className="max-w-[190px] truncate text-xs text-muted-foreground font-medium">
                         {job.title}
                       </span>
                     </div>
                   </AdminTableCell>
-                  <AdminTableCell>
-                    <p className="font-medium text-foreground">{job.clientName}</p>
+                  <AdminTableCell className="py-3">
+                    <div>
+                      <p className="font-medium text-foreground">{job.clientName}</p>
+                      <p className="max-w-[180px] truncate text-xs text-muted-foreground">{job.clientEmail}</p>
+                    </div>
                   </AdminTableCell>
-                  <AdminTableCell>
-                    <p className="font-medium text-foreground">
-                      {job.professionalName || "Not assigned"}
-                    </p>
+                  <AdminTableCell className="py-3">
+                    <p className="max-w-[150px] truncate font-medium text-foreground">{job.category}</p>
+                    <p className="text-xs text-muted-foreground">{formatEnum(job.workMode)}</p>
                   </AdminTableCell>
-                  <AdminTableCell>
+                  <AdminTableCell className="py-3">
+                    <p className="font-semibold text-foreground">{formatBudget(job.budgetMin, job.budgetMax)}</p>
+                    <p className="text-xs text-muted-foreground">{formatEnum(job.timingType)}</p>
+                  </AdminTableCell>
+                  <AdminTableCell className="py-3">
+                    <p className="font-medium text-foreground">{formatDate(job.deadline)}</p>
+                    <p className="text-xs text-muted-foreground">Posted {formatDate(job.createdAt)}</p>
+                  </AdminTableCell>
+                  <AdminTableCell className="py-3">
                     <div className="flex flex-wrap gap-1.5">
                       {getJobStatusBadges(job).map((badge) => (
                         <Badge key={badge.label} variant={badge.variant}>
@@ -468,12 +483,12 @@ function JobManagement() {
                       ))}
                     </div>
                   </AdminTableCell>
-                  <AdminTableCell align="right">
+                  <AdminTableCell align="right" className="py-3">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="gap-2 rounded-lg"
+                      className="gap-2 rounded-lg border-slate-200 shadow-none"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedJob(job);
@@ -551,15 +566,13 @@ function JobDetailModal({ job, onClose }: { job: AdminJobRecord; onClose: () => 
                     label="Client"
                     value={`${job.clientName} / ${job.clientEmail}`}
                   />
-                  <InfoLine
-                    icon={BriefcaseBusiness}
-                    label="Assigned professional"
-                    value={
-                      job.professionalName
-                        ? `${job.professionalName} / ${job.professionalEmail}`
-                        : "Not assigned"
-                    }
-                  />
+                  {job.professionalName ? (
+                    <InfoLine
+                      icon={BriefcaseBusiness}
+                      label="Assigned professional"
+                      value={`${job.professionalName} / ${job.professionalEmail}`}
+                    />
+                  ) : null}
                   <InfoLine
                     icon={CalendarDays}
                     label="Posted"

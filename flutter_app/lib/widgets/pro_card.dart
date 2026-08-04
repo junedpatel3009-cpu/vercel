@@ -111,6 +111,7 @@ class ProCardWidget extends StatelessWidget {
         ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

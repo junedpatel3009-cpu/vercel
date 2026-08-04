@@ -34,6 +34,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _professionController = TextEditingController();
   final _experienceController = TextEditingController();
   final _hourlyRateController = TextEditingController();
+  final _companyNameController = TextEditingController();
+  final _companyWebsiteController = TextEditingController();
+  final _industryController = TextEditingController();
+  final _teamSizeController = TextEditingController();
+  final _companyDescriptionController = TextEditingController();
+  final _hiringNeedsController = TextEditingController();
 
   @override
   void initState() {
@@ -45,7 +51,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     try {
       final user = await AuthService().getUser();
       if (user != null) {
-        final profile = await ApiClient.instance.get('/api/v1/profile');
+        final profile = await ApiClient.instance.get(widget.role == 'client' ? '/api/v1/client/profile' : '/api/v1/profile');
 
         if (mounted) {
           setState(() {
@@ -54,8 +60,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim();
               _emailController.text = profile['email'] ?? '';
               _phoneController.text = profile['phone'] ?? '';
-              _addressController.text = profile['address'] ?? '';
-              _cityController.text = profile['professionalCity'] ?? '';
+               _addressController.text = profile['address'] ?? '';
+               _cityController.text = profile['professionalCity'] ?? '';
+               if (widget.role == 'client') {
+                 _companyNameController.text = profile['companyName'] ?? '';
+                 _companyWebsiteController.text = profile['companyWebsite'] ?? '';
+                 _industryController.text = profile['industry'] ?? '';
+                 _teamSizeController.text = profile['teamSize'] ?? '';
+                 _companyDescriptionController.text = profile['companyDescription'] ?? '';
+                 _hiringNeedsController.text = (profile['hiringNeeds'] as List? ?? []).join(', ');
+                 final locations = profile['savedLocations'] as List? ?? [];
+                 if (locations.isNotEmpty && locations.first is Map) {
+                   _cityController.text = (locations.first['label'] ?? '').toString();
+                   _addressController.text = (locations.first['address'] ?? _addressController.text).toString();
+                 }
+               }
               if (widget.role == 'professional') {
               _professionController.text = profile['professionalCategory'] ?? '';
                 _hourlyRateController.text = profile['hourlyRate']?.toString() ?? '';
@@ -96,6 +115,47 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'address': _addressController.text.trim(),
       };
 
+      if (widget.role == 'client') {
+        final hiringNeeds = _hiringNeedsController.text.split(',').map((item) => item.trim()).where((item) => item.isNotEmpty).toList();
+        final clientData = <String, dynamic>{
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'companyName': _companyNameController.text.trim(),
+          'companyWebsite': _companyWebsiteController.text.trim(),
+          'industry': _industryController.text.trim(),
+          'teamSize': _teamSizeController.text.trim(),
+          'companyDescription': _companyDescriptionController.text.trim(),
+          'address': _addressController.text.trim(),
+          'profilePhotoUrl': _profileData?['avatarUrl'] ?? '',
+          'savedLocations': [
+            {'label': _cityController.text.trim().isEmpty ? 'Primary location' : _cityController.text.trim(), 'address': _addressController.text.trim()},
+          ],
+          'hiringNeeds': hiringNeeds,
+        };
+        await ApiClient.instance.patch('/api/v1/client/profile', data: clientData);
+        // Keep the current signed-in user shape (including its role) while
+        // refreshing the details displayed locally.
+        final accessToken = await AuthService().getAccessToken();
+        if (accessToken != null) {
+          await AuthService().saveSession(
+            {
+              ...user,
+              'firstName': nameParts.first,
+              'lastName': nameParts.length > 1 ? nameParts.skip(1).join(' ') : '-',
+              'phone': _phoneController.text.trim(),
+            },
+            accessToken,
+            isProfileComplete: true,
+          );
+        }
+        if (mounted) {
+          _showFriendlyMsg('Client profile saved successfully!');
+          context.go('/');
+        }
+        return;
+      }
+
       if (widget.role == 'professional') {
         data.addAll({
           'professionalCategory': _professionController.text.trim(),
@@ -130,6 +190,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    await AuthService().logout();
+    if (mounted) context.go('/');
+  }
+
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -142,6 +207,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _professionController.dispose();
     _experienceController.dispose();
     _hourlyRateController.dispose();
+    _companyNameController.dispose();
+    _companyWebsiteController.dispose();
+    _industryController.dispose();
+    _teamSizeController.dispose();
+    _companyDescriptionController.dispose();
+    _hiringNeedsController.dispose();
     super.dispose();
   }
 
@@ -160,9 +231,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${widget.role == 'client' ? 'Client' : 'Professional'} Profile Setup', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  widget.role == 'client' ? 'Client company profile' : 'Professional Profile Setup',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 12),
-                const Text('Please complete your profile to access all features.'),
+                Text(
+                  widget.role == 'client'
+                      ? 'Tell professionals who you are, where you work, and the skills you need.'
+                      : 'Please complete your profile to access all features.',
+                ),
                 const SizedBox(height: 32),
                 Center(
                   child: GestureDetector(
@@ -177,11 +255,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.grey[200],
-                      backgroundImage: _imageFile != null 
-                        ? FileImage(_imageFile!) 
-                        : (_profileData?['profile_photo'] != null && _profileData!['profile_photo'].isNotEmpty
-                          ? FileImage(File(_profileData!['profile_photo'])) 
-                          : const NetworkImage('https://i.pravatar.cc/300')) as ImageProvider,
+                      backgroundImage: _imageFile != null
+                          ? FileImage(_imageFile!)
+                          : (_profileData?['avatarUrl']?.toString().isNotEmpty == true
+                              ? NetworkImage(_profileData!['avatarUrl'].toString())
+                              : const NetworkImage('https://i.pravatar.cc/300')) as ImageProvider,
                       child: const Icon(Icons.camera_alt, color: Colors.white70),
                     ),
                   ),
@@ -193,14 +271,43 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 const SizedBox(height: 16),
                 _buildField('Phone', _phoneController, type: TextInputType.phone),
                 const SizedBox(height: 16),
-                _buildField('Date of Birth', _dobController, hint: 'YYYY-MM-DD', type: TextInputType.datetime),
-                const SizedBox(height: 16),
+                if (widget.role == 'client') ...[
+                  const Text('Company details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+                  const SizedBox(height: 16),
+                  _buildField('Company Name', _companyNameController),
+                  const SizedBox(height: 16),
+                  _buildField('Company Website', _companyWebsiteController, hint: 'https://example.com', required: false),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(child: _buildField('Industry', _industryController)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildField('Team Size', _teamSizeController, hint: 'e.g. 1-10')),
+                  ]),
+                  const SizedBox(height: 16),
+                  _buildField(
+                    'Company Description',
+                    _companyDescriptionController,
+                    hint: 'Tell professionals about your company and goals',
+                    maxLines: 4,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildField('Hiring Needs / Skills', _hiringNeedsController, hint: 'e.g. UI design, Flutter, SEO'),
+                  const SizedBox(height: 16),
+                ],
+                if (widget.role != 'client') ...[
+                  _buildField('Date of Birth', _dobController, hint: 'YYYY-MM-DD', type: TextInputType.datetime),
+                  const SizedBox(height: 16),
+                ],
+                if (widget.role == 'client') ...[
+                  const Text('Primary saved location', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+                  const SizedBox(height: 16),
+                ],
                 _buildField('Address', _addressController),
                 const SizedBox(height: 16),
                 Row(children: [
-                  Expanded(child: _buildField('City', _cityController)), 
+                  Expanded(child: _buildField(widget.role == 'client' ? 'Location Label' : 'City', _cityController)),
                   const SizedBox(width: 16), 
-                  Expanded(child: _buildField('Pincode', _pincodeController, type: TextInputType.number))
+                  Expanded(child: _buildField('Pincode', _pincodeController, type: TextInputType.number, required: widget.role != 'client'))
                 ]),
                 if (widget.role == 'professional') ...[
                   const SizedBox(height: 16),
@@ -214,6 +321,16 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 ],
                 const SizedBox(height: 40),
                 _buildButton(),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout_outlined),
+                    label: const Text('Log out'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                  ),
+                ),
               ],
             ),
           ),
@@ -222,7 +339,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, {bool enabled = true, String? hint, TextInputType type = TextInputType.text}) {
+  Widget _buildField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+    bool required = true,
+    String? hint,
+    TextInputType type = TextInputType.text,
+    int maxLines = 1,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -232,10 +357,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           controller: controller,
           enabled: enabled,
           keyboardType: type,
+          maxLines: maxLines,
           decoration: InputDecoration(hintText: hint ?? label),
           validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Please enter your ${label.toLowerCase()}';
-            if (label == 'Date of Birth' && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) return 'Use YYYY-MM-DD format';
+            if (required && (v == null || v.trim().isEmpty)) return 'Please enter your ${label.toLowerCase()}';
+            if (label == 'Date of Birth' && !RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v ?? '')) return 'Use YYYY-MM-DD format';
+            if (label == 'Company Description' && v != null && v.trim().length < 20) return 'Use at least 20 characters';
             return null;
           },
         ),
@@ -244,7 +371,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   }
 
   Widget _buildButton() {
-    return _AnimatedButton(onPressed: _isSaving ? null : _saveProfile, text: 'Complete Setup', isLoading: _isSaving);
+    return _AnimatedButton(
+      onPressed: _isSaving ? null : _saveProfile,
+      text: widget.role == 'client' ? 'Save company profile' : 'Complete Setup',
+      isLoading: _isSaving,
+    );
   }
 }
 

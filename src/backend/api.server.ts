@@ -19,11 +19,15 @@ import {
   createUserRecord,
   findUserByEmail,
   findUserById,
+  getClientProfileByUserId,
+  getProfessionalProfileByUserId,
+  updateClientProfileByUserId,
   updateUserPasswordByEmail,
   type PublicUser,
   type UserRole,
 } from "@/lib/user-db.server";
 import { clientJobSchema, type ClientJobInput } from "@/lib/validation/client-job";
+import { clientProfileSchema, type ClientProfileInput } from "@/lib/validation/client-profile";
 import {
   createClientJob,
   deleteClientJob,
@@ -47,6 +51,7 @@ import {
   getAdminDashboardSnapshot,
   getAdminJobRecords,
   getAdminPaymentTransactions,
+  getPostgresAdminJobRecords,
 } from "@/lib/admin-dashboard-db.server";
 import {
   getAdminUsers,
@@ -319,6 +324,21 @@ async function route(request: Request, url: URL): Promise<Response> {
 
   if (method === "GET" && pathname === `${API_PREFIX}/profile`)
     return json(publicAccount(currentUser(request)));
+  if (method === "GET" && pathname === `${API_PREFIX}/client/profile`) {
+    const user = currentUser(request, ["CLIENT"]);
+    return json(await getClientProfileByUserId(user.id));
+  }
+  if (method === "PATCH" && pathname === `${API_PREFIX}/client/profile`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const input = parse(clientProfileSchema, await body(request)) as ClientProfileInput;
+    return json(
+      await updateClientProfileByUserId({
+        userId: user.id,
+        ...input,
+        avatarUrl: input.profilePhotoUrl || null,
+      }),
+    );
+  }
   if (method === "PATCH" && pathname === `${API_PREFIX}/profile`) {
     const user = currentUser(request);
     const input = parse(profile, await body(request));
@@ -337,6 +357,12 @@ async function route(request: Request, url: URL): Promise<Response> {
 
   if (method === "GET" && pathname === `${API_PREFIX}/jobs`) {
     return json(await getOpenClientJobs());
+  }
+  const publicJobMatch = match(pathname, new RegExp(`^${API_PREFIX}/jobs/(\\d+)$`));
+  if (publicJobMatch && method === "GET") {
+    const job = (await getOpenClientJobs()).find((item) => item.id === Number(publicJobMatch[1]));
+    if (!job) throw new ApiError(404, "Job not found.");
+    return json(job);
   }
   if (method === "GET" && pathname === `${API_PREFIX}/categories`) {
     return json(db.prepare(`SELECT * FROM "ServiceCategory" ORDER BY sortOrder,id`).all());
@@ -362,6 +388,17 @@ async function route(request: Request, url: URL): Promise<Response> {
         availabilityStatus: professional.availabilityStatus,
       })),
     );
+  }
+  const professionalProfileMatch = match(
+    pathname,
+    new RegExp(`^${API_PREFIX}/professionals/(\\d+)$`),
+  );
+  if (professionalProfileMatch && method === "GET") {
+    const professional = await getProfessionalProfileByUserId(
+      Number(professionalProfileMatch[1]),
+    );
+    if (!professional) throw new ApiError(404, "Professional not found.");
+    return json(professional);
   }
   if (method === "GET" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);
@@ -672,7 +709,11 @@ async function route(request: Request, url: URL): Promise<Response> {
     return json(updateProfessionalVerifiedStatusByAdmin(Number(routeMatch[1]), input.isVerified));
   }
   if (method === "GET" && pathname === `${API_PREFIX}/admin/jobs`)
-    return json(getAdminJobRecords());
+    return json(
+      (process.env.DATABASE_URL || "").startsWith("postgres")
+        ? await getPostgresAdminJobRecords()
+        : getAdminJobRecords(),
+    );
   routeMatch = match(pathname, new RegExp(`^${API_PREFIX}/admin/jobs/(\\d+)/status$`));
   if (routeMatch && method === "PATCH") {
     const input = parse(

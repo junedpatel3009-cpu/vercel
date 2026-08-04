@@ -22,8 +22,11 @@ import '../../screens/misc/earnings_screen.dart';
 import '../../screens/pro/pro_screen.dart';
 import '../../screens/project/project_screen.dart';
 import '../../screens/job/job_screen.dart';
+import '../../screens/job/jobs_screen.dart';
+import '../../screens/job/saved_jobs_screen.dart';
 import '../../screens/misc/database_view_screen.dart';
 import '../../screens/auth/setup/profile_setup_screen.dart';
+import '../../screens/auth/welcome_screen.dart';
 import '../auth/auth_service.dart';
 
 class AppRoutes {
@@ -63,6 +66,13 @@ class AppRoutes {
     initialLocation: '/',
     redirect: (context, state) async {
       final isLoggedIn = await AuthService().isLoggedIn();
+      final hasSeenWelcome = await AuthService().hasSeenWelcome();
+      final location = state.matchedLocation;
+      if (isLoggedIn && !hasSeenWelcome) {
+        await AuthService().markWelcomeSeen();
+      }
+      if (location == '/welcome' && hasSeenWelcome) return '/';
+      if (location == '/' && !hasSeenWelcome && !isLoggedIn) return '/welcome';
       final needsAuth = state.matchedLocation == '/dashboard' || 
                         state.matchedLocation == '/profile' ||
                         state.matchedLocation == '/post-job';
@@ -72,12 +82,14 @@ class AppRoutes {
     },
     routes: [
       _route('/', (context, state) => const LandingScreen()),
+      _route('/welcome', (context, state) => const WelcomeScreen()),
       _route('/setup/:role', (context, state) => ProfileSetupScreen(role: state.pathParameters['role']!)),
       _route('/login', (context, state) => const LoginScreen()),
       _route('/signup', (context, state) => const SignupScreen()),
       _route('/dashboard', (context, state) => const DashboardScreen()),
       _route('/services', (context, state) => const ServicesScreen()),
-      _route('/jobs', (context, state) => const DashboardScreen()),
+      _route('/jobs', (context, state) => const JobsScreen()),
+      _route('/saved-jobs', (context, state) => const SavedJobsScreen()),
       _route('/messages', (context, state) => const MessagesScreen()),
       _route('/notifications', (context, state) => const NotificationsScreen()),
       _route('/profile', (context, state) {

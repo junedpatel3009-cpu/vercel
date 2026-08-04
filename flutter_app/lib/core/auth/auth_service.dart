@@ -11,6 +11,17 @@ class AuthService {
   static const String _accessTokenKey = 'access_token';
   static const String _biometricUserKey = 'biometric_user_data';
   static const String _biometricTypeKey = 'biometric_type';
+  static const String _welcomeSeenKey = 'welcome_screen_seen';
+
+  Future<bool> hasSeenWelcome() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_welcomeSeenKey) ?? false;
+  }
+
+  Future<void> markWelcomeSeen() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_welcomeSeenKey, true);
+  }
 
   Future<void> saveUser(Map<String, dynamic> user) async {
     final prefs = await SharedPreferences.getInstance();
