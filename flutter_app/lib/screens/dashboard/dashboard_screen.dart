@@ -100,9 +100,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final active = _projects.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() == 'ACTIVE').cast<Map<String, dynamic>>().firstOrNull;
     final title = active?['title']?.toString() ?? (metrics.hiring > 0 ? '$metrics.hiring project${metrics.hiring == 1 ? '' : 's'} ready to hire' : 'Your project workspace is ready');
     final message = active == null ? 'Find the right professional, compare profiles, and send a hire request.' : '${(active['project'] as Map)['professionalName'] ?? 'Your professional'} is working on this project.';
-    return Container(padding: const EdgeInsets.all(19), decoration: BoxDecoration(color: const Color(0xFFEAF1FF), borderRadius: BorderRadius.circular(20)), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(padding: const EdgeInsets.all(10), decoration: const BoxDecoration(color: Color(0xFF2450B8), shape: BoxShape.circle), child: const Icon(Icons.notifications_active_outlined, color: Colors.white, size: 20)),
-      const SizedBox(width: 13), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('LATEST ACTIVITY', style: TextStyle(fontSize: 10, letterSpacing: 1, fontWeight: FontWeight.w800, color: Color(0xFF2450B8))), const SizedBox(height: 5), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.brandNavy)), const SizedBox(height: 3), Text(message, style: const TextStyle(fontSize: 12, color: AppTheme.textGray, height: 1.35))])])]);
+    return Container(
+      padding: const EdgeInsets.all(19),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF1FF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: const BoxDecoration(
+              color: Color(0xFF2450B8),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.notifications_active_outlined,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'LATEST ACTIVITY',
+                  style: TextStyle(
+                    fontSize: 10,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF2450B8),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brandNavy,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textGray,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _projectCard(Map<String, dynamic> job) {
