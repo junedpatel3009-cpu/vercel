@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
 import 'package:flutter/services.dart';
@@ -34,11 +35,18 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Future<void> _loadData() async {
     final user = await AuthService().getUser();
+    final cached = await _readDashboardCache(user);
     // Resolve the local session first. Remote dashboard requests can be slow
     // or fail, but neither case means that the user has been logged out.
     if (mounted) {
       setState(() {
         _currentUser = user;
+        _availableJobs = cached.availableJobs;
+        _publicJobs = cached.publicJobs;
+        _recommendedPros = cached.recommendedPros;
+        _focusItems = cached.focusItems;
+        _stats = cached.stats;
+        _latestUpdate = cached.latestUpdate;
         _isSessionLoading = false;
       });
     }
@@ -53,19 +61,25 @@ class _LandingScreenState extends State<LandingScreen> {
     Map<String, dynamic>? update;
 
     try {
-      // Jobs are marketplace content, so every home view can show them.
-      publicJobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
-
       if (user != null) {
         if (user['role'] == 'professional') {
-          jobs = await ApiClient.instance.getList('/api/v1/jobs');
+          final responses = await Future.wait([
+            ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
+            ApiClient.instance.getList('/api/v1/jobs'),
+          ]);
+          publicJobs = responses[0];
+          jobs = responses[1];
           stats = await db.getProfessionalStats(user['id']);
           focus = await db.getJobs(status: 'assigned');
         } else {
-          pros = _mapProfessionals(
-            await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
-          );
-          focus = await ApiClient.instance.getList('/api/v1/client/jobs');
+          final responses = await Future.wait([
+            ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
+            ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+            ApiClient.instance.getList('/api/v1/client/jobs'),
+          ]);
+          publicJobs = responses[0];
+          pros = _mapProfessionals(responses[1]);
+          focus = responses[2];
           final activeJobs = focus.where((job) {
             final status = (job['status'] ?? '').toString().toUpperCase();
             return status == 'OPEN' || status == 'ACTIVE' || status == 'ASSIGNED' || status == 'IN_PROGRESS';
@@ -80,9 +94,12 @@ class _LandingScreenState extends State<LandingScreen> {
           update = {'message': 'Your job "${job['title'] ?? 'Project'}" is ${((job['status'] ?? 'OPEN').toString()).toLowerCase()}.'};
         }
       } else {
-        pros = _mapProfessionals(
-          await ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
-        );
+        final responses = await Future.wait([
+          ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
+          ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+        ]);
+        publicJobs = responses[0];
+        pros = _mapProfessionals(responses[1]);
       }
     } on ApiException {
       // Keep the signed-in UI visible if the server is temporarily offline.
@@ -97,6 +114,56 @@ class _LandingScreenState extends State<LandingScreen> {
         _focusItems = focus;
         _latestUpdate = update;
       });
+      _saveDashboardCache(
+        user,
+        _DashboardCache(
+          availableJobs: jobs,
+          publicJobs: publicJobs,
+          recommendedPros: pros,
+          focusItems: focus,
+          stats: stats,
+          latestUpdate: update,
+        ),
+      );
+    }
+  }
+
+  String _dashboardCacheKey(Map<String, dynamic>? user) =>
+      'home_dashboard_cache_${user?['id'] ?? 'guest'}';
+
+  Future<_DashboardCache> _readDashboardCache(Map<String, dynamic>? user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_dashboardCacheKey(user));
+      if (raw == null) return const _DashboardCache();
+      final data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+      List<Map<String, dynamic>> listFor(String key) => (data[key] as List? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      return _DashboardCache(
+        availableJobs: listFor('availableJobs'),
+        publicJobs: listFor('publicJobs'),
+        recommendedPros: listFor('recommendedPros'),
+        focusItems: listFor('focusItems'),
+        stats: Map<String, dynamic>.from(data['stats'] as Map? ?? {}),
+        latestUpdate: data['latestUpdate'] is Map
+            ? Map<String, dynamic>.from(data['latestUpdate'] as Map)
+            : null,
+      );
+    } catch (_) {
+      return const _DashboardCache();
+    }
+  }
+
+  Future<void> _saveDashboardCache(
+    Map<String, dynamic>? user,
+    _DashboardCache cache,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_dashboardCacheKey(user), jsonEncode(cache.toJson()));
+    } catch (_) {
+      // The live data is already shown; cache storage is only an optimization.
     }
   }
 
@@ -785,6 +852,33 @@ class _LandingScreenState extends State<LandingScreen> {
     }
     return null;
   }
+}
+
+class _DashboardCache {
+  const _DashboardCache({
+    this.availableJobs = const [],
+    this.publicJobs = const [],
+    this.recommendedPros = const [],
+    this.focusItems = const [],
+    this.stats = const {},
+    this.latestUpdate,
+  });
+
+  final List<Map<String, dynamic>> availableJobs;
+  final List<Map<String, dynamic>> publicJobs;
+  final List<Map<String, dynamic>> recommendedPros;
+  final List<Map<String, dynamic>> focusItems;
+  final Map<String, dynamic> stats;
+  final Map<String, dynamic>? latestUpdate;
+
+  Map<String, dynamic> toJson() => {
+        'availableJobs': availableJobs,
+        'publicJobs': publicJobs,
+        'recommendedPros': recommendedPros,
+        'focusItems': focusItems,
+        'stats': stats,
+        'latestUpdate': latestUpdate,
+      };
 }
 
 /// Adds a light staggered entrance without changing the page layout or cards.

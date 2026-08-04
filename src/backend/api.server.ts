@@ -404,6 +404,46 @@ async function route(request: Request, url: URL): Promise<Response> {
     const user = currentUser(request, ["CLIENT"]);
     return json(await getClientJobsByUserId(user.id));
   }
+  if (method === "GET" && pathname === `${API_PREFIX}/client/project-board`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const jobs = await getClientJobsByUserId(user.id);
+    const trackingTable = db
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='ProjectTracking'`)
+      .get() as { name?: string } | undefined;
+    const tracking = trackingTable
+      ? db
+          .prepare(
+            `SELECT ProjectTracking.jobId, ProjectTracking.id AS trackingId, ProjectTracking.status AS projectStatus,
+                    ProjectTracking.acceptedAt, ProjectTracking.updatedAt,
+                    User.id AS professionalId, User.firstName, User.lastName, User.avatarUrl
+             FROM "ProjectTracking"
+             LEFT JOIN "User" AS User ON User.id = ProjectTracking.professionalId
+             WHERE ProjectTracking.clientId=?
+             ORDER BY datetime(ProjectTracking.updatedAt) DESC`,
+          )
+          .all(user.id) as Array<Record<string, unknown>>
+      : [];
+    const trackingByJob = new Map(tracking.map((item) => [Number(item.jobId), item]));
+    return json(
+      jobs.map((job) => {
+        const project = trackingByJob.get(job.id);
+        return {
+          ...job,
+          project: project
+            ? {
+                trackingId: project.trackingId,
+                status: project.projectStatus,
+                acceptedAt: project.acceptedAt,
+                updatedAt: project.updatedAt,
+                professionalId: project.professionalId,
+                professionalName: `${project.firstName ?? ""} ${project.lastName ?? ""}`.trim() || "Professional",
+                professionalAvatar: project.avatarUrl ?? null,
+              }
+            : null,
+        };
+      }),
+    );
+  }
   if (method === "POST" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);
     return json(
