@@ -537,7 +537,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           child: const Text('Cancel Post', style: TextStyle(color: Colors.black87)),
         ),
         const SizedBox(width: 8),
-        const CircleAvatar(radius: 16, backgroundImage: NetworkImage('https://i.pravatar.cc/100?u=jane')),
+        const CircleAvatar(radius: 16, child: Icon(Icons.person_outline, size: 18)),
         const SizedBox(width: 24),
       ],
     );

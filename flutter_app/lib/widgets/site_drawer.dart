@@ -37,9 +37,7 @@ class _SiteDrawerState extends State<SiteDrawer> {
           UserAccountsDrawerHeader(
             accountName: Text(_currentUser?['full_name'] ?? 'Guest'),
             accountEmail: Text(_currentUser?['email'] ?? 'Welcome to Servio'),
-            currentAccountPicture: CircleAvatar(
-              backgroundImage: NetworkImage(_currentUser?['profile_image'] ?? 'https://i.pravatar.cc/100?u=user'),
-            ),
+            currentAccountPicture: const CircleAvatar(child: Icon(Icons.person_outline)),
             decoration: BoxDecoration(color: theme.colorScheme.primary),
           ),
           ListTile(

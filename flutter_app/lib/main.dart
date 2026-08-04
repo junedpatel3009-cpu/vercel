@@ -8,8 +8,9 @@ import 'package:servio_flutter/core/auth/auth_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Restore the bearer token before any protected screen makes an API call.
-  await AuthService().getAccessToken();
+  // Restore the saved sign-in before the router is built. The user should not
+  // have to log in again merely because they closed the app.
+  await AuthService().restoreSession();
 
   // Initialize sqflite for desktop (Windows/Linux)
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {

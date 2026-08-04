@@ -348,7 +348,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildProCard(BuildContext context, Map<String, dynamic> pro) {
-    return Container(
+    return InkWell(
+      onTap: () => context.push('/pro/${pro['user_id']}'),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -364,7 +367,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             children: [
               Stack(
                 children: [
-                  CircleAvatar(radius: 28, backgroundImage: NetworkImage(pro['profile_photo'] ?? 'https://i.pravatar.cc/100?u=${pro['user_id']}')),
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundImage: pro['profile_photo']?.toString().startsWith('http') == true ? NetworkImage(pro['profile_photo'].toString()) : null,
+                    child: pro['profile_photo']?.toString().startsWith('http') == true ? null : const Icon(Icons.person_outline),
+                  ),
                   if (pro['verification_status'] == 'verified')
                     Positioned(
                       bottom: 0,
@@ -434,6 +441,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           )
         ],
       ),
+    ),
     );
   }
 

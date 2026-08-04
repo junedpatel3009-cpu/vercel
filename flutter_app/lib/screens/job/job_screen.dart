@@ -300,7 +300,7 @@ class _JobScreenState extends State<JobScreen> {
         children: [
           Row(
             children: [
-              CircleAvatar(backgroundImage: NetworkImage(proposal['profile_photo'] ?? 'https://i.pravatar.cc/100?u=${proposal['professional_id']}')),
+              const CircleAvatar(child: Icon(Icons.person_outline)),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(proposal['full_name'] ?? 'Professional', style: const TextStyle(fontWeight: FontWeight.bold)), Text(proposal['profession'] ?? '', style: const TextStyle(fontSize: 12, color: AppTheme.textGray))])),
               Text('\$${proposal['price']}', style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.brandBlue)),

@@ -987,11 +987,11 @@ function ProfessionalProfileSetup() {
               }}
             >
               <div className="grid h-[86px] w-[86px] place-items-center rounded-full bg-card">
-                <img
-                  src={form.profilePhotoUrl || "https://i.pravatar.cc/140?u=professional-profile"}
-                  alt={displayName}
-                  className="h-20 w-20 rounded-full object-cover"
-                />
+                {form.profilePhotoUrl ? (
+                  <img src={form.profilePhotoUrl} alt={displayName} className="h-20 w-20 rounded-full object-cover" />
+                ) : (
+                  <UserRound className="h-8 w-8 text-muted-foreground" />
+                )}
               </div>
               <span className="absolute -bottom-2 rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground shadow-soft">
                 {completion}%

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../core/theme/app_theme.dart';
 import 'motion.dart';
@@ -32,12 +31,9 @@ class ProCardWidget extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 1.8,
-            child: CachedNetworkImage(
-              imageUrl: pro['profile_photo'] ?? 'https://i.pravatar.cc/300?u=${pro['user_id']}',
-              fit: BoxFit.cover,
-              fadeInDuration: AppMotion.standard,
-              placeholder: (context, _) => Container(color: Colors.grey[100]),
-              errorWidget: (context, _, __) => Container(color: Colors.grey[100]),
+            child: Container(
+              color: const Color(0xFFEEF2FF),
+              child: const Icon(Icons.person_outline, size: 58, color: AppTheme.brandBlue),
             ),
           ),
           Padding(

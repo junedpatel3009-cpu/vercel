@@ -66,6 +66,34 @@ class AuthService {
     return token;
   }
 
+  /// Restores the locally saved session before the router is created.
+  /// This keeps a signed-in user on the app home after closing and reopening
+  /// the app; signing out is the only action that clears this session.
+  Future<bool> restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_accessTokenKey);
+    final userJson = prefs.getString(_userKey);
+
+    if (token == null || token.trim().isEmpty || userJson == null || userJson.trim().isEmpty) {
+      ApiClient.instance.setAccessToken(null);
+      return false;
+    }
+
+    try {
+      final user = jsonDecode(userJson);
+      if (user is! Map) {
+        ApiClient.instance.setAccessToken(null);
+        return false;
+      }
+      ApiClient.instance.setAccessToken(token);
+      await prefs.setBool(_welcomeSeenKey, true);
+      return true;
+    } catch (_) {
+      ApiClient.instance.setAccessToken(null);
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userKey);
@@ -75,8 +103,8 @@ class AuthService {
   }
 
   Future<bool> isLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey(_userKey);
+    final user = await getUser();
+    return user != null && user.isNotEmpty;
   }
 
   Future<void> setBiometricPreference(bool enabled, String? type) async {

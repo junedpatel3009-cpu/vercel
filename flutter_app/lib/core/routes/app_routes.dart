@@ -77,7 +77,10 @@ class AppRoutes {
                         state.matchedLocation == '/profile' ||
                         state.matchedLocation == '/post-job';
 
-      if (needsAuth && !isLoggedIn) return '/login';
+      // Do not force the login page on app start or after a restored-session
+      // race. Guests can browse the home screen and choose to sign in when
+      // they use an action that needs an account.
+      if (needsAuth && !isLoggedIn) return '/';
       return null;
     },
     routes: [
@@ -90,7 +93,11 @@ class AppRoutes {
       _route('/services', (context, state) => const ServicesScreen()),
       _route('/jobs', (context, state) => const JobsScreen()),
       _route('/saved-jobs', (context, state) => const SavedJobsScreen()),
-      _route('/messages', (context, state) => const MessagesScreen()),
+      _route('/messages', (context, state) => MessagesScreen(
+            initialProfessionalId: state.uri.queryParameters['proId'],
+            initialProfessionalName: state.uri.queryParameters['name'],
+            initialProfessionalAvatar: state.uri.queryParameters['avatar'],
+          )),
       _route('/notifications', (context, state) => const NotificationsScreen()),
       _route('/profile', (context, state) {
           return FutureBuilder<Map<String, dynamic>?>(

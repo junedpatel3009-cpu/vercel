@@ -677,15 +677,11 @@ function ProfileSetup() {
                 {currentStep === 0 ? (
                   <>
                     <div className="flex items-start gap-4 rounded-2xl border border-border bg-muted/40 p-4">
-                      <img
-                        src={
-                          profilePhotoPreview ||
-                          form.watch("profilePhotoUrl") ||
-                          "https://i.pravatar.cc/120?u=client-profile"
-                        }
-                        alt="Profile preview"
-                        className="h-20 w-20 rounded-2xl object-cover"
-                      />
+                      {profilePhotoPreview || form.watch("profilePhotoUrl") ? (
+                        <img src={profilePhotoPreview || form.watch("profilePhotoUrl")} alt="Profile preview" className="h-20 w-20 rounded-2xl object-cover" />
+                      ) : (
+                        <div className="grid h-20 w-20 place-items-center rounded-2xl bg-muted text-muted-foreground"><Building2 className="h-8 w-8" /></div>
+                      )}
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                           <ImagePlus className="h-4 w-4 text-primary" />

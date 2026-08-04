@@ -208,7 +208,7 @@ export function AppShell({
   title,
   userName = "Alex Rivers",
   userRole = "Client",
-  userAvatarUrl = "https://i.pravatar.cc/100?u=me",
+  userAvatarUrl = "",
 }: {
   children: React.ReactNode;
   title?: string;
@@ -722,11 +722,11 @@ export function AppShell({
             ) : null}
           </button>
           <div className="flex items-center gap-2">
-            <img
-              src={userAvatarUrl || "https://i.pravatar.cc/100?u=me"}
-              alt="me"
-              className="h-9 w-9 rounded-full border-2 border-card object-cover shadow-sm"
-            />
+            {userAvatarUrl ? (
+              <img src={userAvatarUrl} alt="me" className="h-9 w-9 rounded-full border-2 border-card object-cover shadow-sm" />
+            ) : (
+              <div className="grid h-9 w-9 place-items-center rounded-full border-2 border-card bg-muted text-muted-foreground shadow-sm"><User className="h-4 w-4" /></div>
+            )}
             <div className="hidden text-sm leading-tight sm:block">
               <p className="font-medium">{userName}</p>
               <p className="text-xs text-muted-foreground">{userRole}</p>
@@ -946,11 +946,11 @@ function RealtimePopup({
       {messagePopup ? (
         <div className="rounded-xl border border-border bg-card p-4 shadow-elevated">
           <div className="flex items-start gap-3">
-            <img
-              src={messagePopup.avatarUrl || "https://i.pravatar.cc/100?u=message-popup"}
-              alt=""
-              className="h-10 w-10 rounded-full object-cover"
-            />
+            {messagePopup.avatarUrl ? (
+              <img src={messagePopup.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+            ) : (
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-muted text-muted-foreground"><User className="h-4 w-4" /></div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold">{messagePopup.title}</p>
               <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">

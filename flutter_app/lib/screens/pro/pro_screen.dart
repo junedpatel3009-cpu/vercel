@@ -64,10 +64,9 @@ class _ProScreenState extends State<ProScreen> {
       context.push('/login');
       return;
     }
-    context.push('/messages');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Start a conversation with ${_pro!['fullName']} from Messages.')),
-    );
+    final name = Uri.encodeComponent((_pro!['fullName'] ?? 'Professional').toString());
+    final avatar = Uri.encodeComponent((_pro!['avatarUrl'] ?? '').toString());
+    context.push('/messages?proId=$_professionalId&name=$name&avatar=$avatar');
   }
 
   Future<void> _hire() async {
@@ -79,37 +78,64 @@ class _ProScreenState extends State<ProScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Only client accounts can hire professionals.')));
       return;
     }
-    final title = TextEditingController(text: 'Project with ${_pro!['fullName']}');
-    final description = TextEditingController();
-    final price = TextEditingController(text: (_pro!['hourlyRate'] ?? 0).toString());
-    final formKey = GlobalKey<FormState>();
-    final submitted = await showModalBottomSheet<bool>(
+    List<Map<String, dynamic>> jobs;
+    try {
+      jobs = await ApiClient.instance.getList('/api/v1/client/jobs');
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    }
+    if (jobs.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post a job first, then you can hire this professional.')));
+      return;
+    }
+    if (!mounted) return;
+
+    Map<String, dynamic>? selectedJob;
+    final submitted = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.viewInsetsOf(sheetContext).bottom + 24),
-        child: Form(
-          key: formKey,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.viewInsetsOf(sheetContext).bottom + 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Hire ${_pro!['fullName']}', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
               const SizedBox(height: 8),
-              const Text('Send a direct hire request. The professional can review it before starting.'),
+              const Text('Choose one of your posted jobs. Its budget and details will be used for this hire request.'),
               const SizedBox(height: 18),
-              TextFormField(controller: title, decoration: const InputDecoration(labelText: 'Project title'), validator: _required),
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: selectedJob,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Select your posted job'),
+                items: jobs.map((job) => DropdownMenuItem(
+                  value: job,
+                  child: Text((job['title'] ?? 'Untitled job').toString(), overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (job) => setSheetState(() => selectedJob = job),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Work description'), validator: _required),
-              const SizedBox(height: 12),
-              TextFormField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Fixed budget'), validator: _required),
+              if (selectedJob != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(14)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Job budget', style: TextStyle(fontSize: 12, color: AppTheme.textGray)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '₹${selectedJob!['budgetMin'] ?? selectedJob!['min_budget'] ?? 0} - ₹${selectedJob!['budgetMax'] ?? selectedJob!['max_budget'] ?? 0}',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.brandNavy),
+                    ),
+                  ]),
+                ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) Navigator.pop(sheetContext, true);
-                  },
+                  onPressed: selectedJob == null ? null : () => Navigator.pop(sheetContext, selectedJob),
                   child: const Text('Send hire request'),
                 ),
               ),
@@ -118,20 +144,22 @@ class _ProScreenState extends State<ProScreen> {
         ),
       ),
     );
-    if (submitted != true) return;
+    if (submitted == null) return;
     try {
+      final fixedPrice = submitted['budgetMax'] ?? submitted['max_budget'] ?? submitted['budgetMin'] ?? submitted['min_budget'] ?? 0;
       await ApiClient.instance.post('/api/v1/client/hire', data: {
         'professionalId': _professionalId,
-        'hiringTeam': '',
-        'contractTitle': title.text.trim(),
-        'workDescription': description.text.trim(),
-        'jobDate': '',
-        'deadline': '',
-        'workMode': 'remote',
-        'location': '',
+        'clientProjectId': submitted['id'],
+        'hiringTeam': 'Client',
+        'contractTitle': submitted['title'] ?? 'Direct hire project',
+        'workDescription': submitted['description'] ?? 'Work requested by the client.',
+        'jobDate': submitted['jobDate'] ?? submitted['start_date'] ?? '',
+        'deadline': submitted['deadline'] ?? '',
+        'workMode': (submitted['workMode'] ?? submitted['work_mode'] ?? 'remote').toString().toLowerCase() == 'onsite' ? 'onsite' : 'remote',
+        'location': submitted['locationLabel'] ?? submitted['city'] ?? '',
         'paymentOption': 'fixed',
         'hourlyRate': null,
-        'fixedPrice': num.tryParse(price.text.trim()) ?? 0,
+        'fixedPrice': fixedPrice,
         'paymentSchedule': 'whole',
         'acceptedTerms': true,
         'attachments': [],
@@ -143,13 +171,10 @@ class _ProScreenState extends State<ProScreen> {
     }
   }
 
-  String? _required(String? value) => value == null || value.trim().isEmpty ? 'This field is required' : null;
-
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     if (_pro == null) return Scaffold(appBar: AppBar(), body: const Center(child: Text('Professional not found')));
-    final photo = _pro!['avatarUrl']?.toString() ?? '';
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -160,7 +185,7 @@ class _ProScreenState extends State<ProScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(child: CircleAvatar(radius: 54, backgroundImage: photo.startsWith('http') ? NetworkImage(photo) : null, child: photo.startsWith('http') ? null : const Icon(Icons.person, size: 52))),
+          Center(child: CircleAvatar(radius: 54, backgroundImage: _pro!['avatarUrl']?.toString().startsWith('http') == true ? NetworkImage(_pro!['avatarUrl'].toString()) : null, child: _pro!['avatarUrl']?.toString().startsWith('http') == true ? null : const Icon(Icons.person_outline, size: 52))),
           const SizedBox(height: 18),
           Center(child: Text(_pro!['fullName'] ?? 'Professional', style: GoogleFonts.plusJakartaSans(fontSize: 25, fontWeight: FontWeight.w800, color: AppTheme.brandNavy))),
           const SizedBox(height: 6),

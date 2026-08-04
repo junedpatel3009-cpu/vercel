@@ -149,10 +149,7 @@ class _SiteHeaderWidgetState extends State<SiteHeaderWidget> {
                     child: Text('Logout', style: TextStyle(color: Colors.red)),
                   ),
                 ],
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundImage: NetworkImage(_currentUser!['profile_image'] ?? 'https://i.pravatar.cc/100?u=user'),
-                ),
+                child: const CircleAvatar(radius: 18, child: Icon(Icons.person_outline)),
               ),
             ],
             const SizedBox(width: 12),

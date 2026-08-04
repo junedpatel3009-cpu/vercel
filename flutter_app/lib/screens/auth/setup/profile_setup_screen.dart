@@ -1,7 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../../../widgets/site_header.dart';
 import '../../../core/auth/auth_service.dart';
 import '../../../core/api/api_client.dart';
@@ -19,10 +21,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   Map<String, dynamic>? _profileData;
-  
   File? _imageFile;
+  String? _uploadedAvatarDataUrl;
   final ImagePicker _picker = ImagePicker();
-
+  
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -114,6 +116,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'phone': _phoneController.text.trim(),
         'address': _addressController.text.trim(),
       };
+      if (_uploadedAvatarDataUrl != null) data['avatarUrl'] = _uploadedAvatarDataUrl;
 
       if (widget.role == 'client') {
         final hiringNeeds = _hiringNeedsController.text.split(',').map((item) => item.trim()).where((item) => item.isNotEmpty).toList();
@@ -127,7 +130,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           'teamSize': _teamSizeController.text.trim(),
           'companyDescription': _companyDescriptionController.text.trim(),
           'address': _addressController.text.trim(),
-          'profilePhotoUrl': _profileData?['avatarUrl'] ?? '',
+          'profilePhotoUrl': _uploadedAvatarDataUrl ?? _profileData?['avatarUrl'] ?? '',
           'savedLocations': [
             {'label': _cityController.text.trim().isEmpty ? 'Primary location' : _cityController.text.trim(), 'address': _addressController.text.trim()},
           ],
@@ -190,6 +193,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
   }
 
+  ImageProvider? _savedAvatar() {
+    final value = (_profileData?['avatarUrl'] ?? '').toString();
+    if (value.startsWith('http://') || value.startsWith('https://')) return NetworkImage(value);
+    if (value.startsWith('data:image')) {
+      try {
+        return MemoryImage(base64Decode(value.substring(value.indexOf(',') + 1)));
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
+  }
+
   Future<void> _logout() async {
     await AuthService().logout();
     if (mounted) context.go('/');
@@ -245,22 +261,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                 Center(
                   child: GestureDetector(
                     onTap: () async {
-                      try {
-                        final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                        if (image != null) setState(() => _imageFile = File(image.path));
-                      } catch (e) {
-                        _showFriendlyMsg('Unable to access gallery. Please check permissions.');
-                      }
+                      final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                      if (image == null) return;
+                      final bytes = await image.readAsBytes();
+                      if (!mounted) return;
+                      setState(() {
+                        _imageFile = File(image.path);
+                        _uploadedAvatarDataUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                      });
                     },
                     child: CircleAvatar(
                       radius: 50,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _imageFile != null
-                          ? FileImage(_imageFile!)
-                          : (_profileData?['avatarUrl']?.toString().isNotEmpty == true
-                              ? NetworkImage(_profileData!['avatarUrl'].toString())
-                              : const NetworkImage('https://i.pravatar.cc/300')) as ImageProvider,
-                      child: const Icon(Icons.camera_alt, color: Colors.white70),
+                      backgroundColor: const Color(0xFFE8F0FF),
+                      backgroundImage: _imageFile != null ? FileImage(_imageFile!) : _savedAvatar(),
+                      child: _imageFile == null && _savedAvatar() == null
+                          ? const Icon(Icons.person_outline, size: 48, color: Color(0xFF1E40AF))
+                          : null,
                     ),
                   ),
                 ),

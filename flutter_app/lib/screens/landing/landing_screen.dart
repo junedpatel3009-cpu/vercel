@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -330,12 +332,6 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  ImageProvider? _profileAvatar() {
-    final value = (_currentUser?['avatarUrl'] ?? _currentUser?['profile_image'] ?? '').toString().trim();
-    if (value.startsWith('http://') || value.startsWith('https://')) return NetworkImage(value);
-    return null;
-  }
-
   Widget _buildGreeting() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,25 +547,14 @@ class _LandingScreenState extends State<LandingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: pro['profile_photo'] == null
-                        ? Container(
-                            height: 150,
-                            width: double.infinity,
-                            color: const Color(0xFFEEF2FF),
-                            child: const Icon(Icons.person_outline, size: 52, color: Color(0xFF1E40AF)),
-                          )
-                        : Image.network(
-                            pro['profile_photo'],
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: const Color(0xFFEEF2FF),
-                              child: const Icon(Icons.person_outline, size: 52, color: Color(0xFF1E40AF)),
-                            ),
-                          ),
+                  Container(
+                    height: 150,
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: const Icon(Icons.person_outline, size: 52, color: Color(0xFF1E40AF)),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -777,6 +762,19 @@ class _LandingScreenState extends State<LandingScreen> {
       );
     }
     return _buildJobsList(context, _publicJobs);
+  }
+
+  ImageProvider? _profileAvatar() {
+    final value = (_currentUser?['avatarUrl'] ?? _currentUser?['profile_image'] ?? '').toString().trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) return NetworkImage(value);
+    if (value.startsWith('data:image')) {
+      try {
+        return MemoryImage(base64Decode(value.substring(value.indexOf(',') + 1)));
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 }
 
