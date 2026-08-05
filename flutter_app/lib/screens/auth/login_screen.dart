@@ -65,16 +65,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final success = await _biometricService.authenticate();
       if (success) {
-        // First try to see if there's an active session
-        var user = await AuthService().getUser();
-        
-        // If no active session, try to get the user remembered for biometrics
-        if (user == null) {
-          user = await AuthService().getBiometricUser();
-          if (user != null) {
-            await AuthService().saveUser(user);
-          }
-        }
+        // The device prompt succeeded. Restore the user and bearer token that
+        // were saved specifically for biometric login.
+        var user = await AuthService().restoreBiometricSession();
+        user ??= await AuthService().getUser();
 
         if (user != null && mounted) {
           _navigateUser(user);

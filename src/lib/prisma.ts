@@ -15,7 +15,11 @@ async function createPrismaClient() {
     log: ["warn", "error"],
   };
 
-  const databaseUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  // Supabase's transaction-mode pooler (normally DATABASE_URL on port 6543)
+  // is useful for short-lived tools, but has proven unreliable for this
+  // long-lived Prisma adapter. Prefer the direct/session connection when it
+  // is provided, while retaining DATABASE_URL as the fallback.
+  const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error("DATABASE_URL or DIRECT_URL is required for Prisma initialization.");
   }

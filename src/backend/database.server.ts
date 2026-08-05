@@ -90,4 +90,6 @@ function migrateApiSchema(db: AppDatabase) {
     CREATE INDEX IF NOT EXISTS "Payment_users_idx" ON "Payment"("clientId", "professionalId");
   `);
   addColumn(db, "User", "emailVerifiedAt", '"emailVerifiedAt" TEXT');
+  addColumn(db, "User", "biometricEnabled", '"biometricEnabled" INTEGER NOT NULL DEFAULT 0');
+  addColumn(db, "User", "biometricType", '"biometricType" TEXT');
 }

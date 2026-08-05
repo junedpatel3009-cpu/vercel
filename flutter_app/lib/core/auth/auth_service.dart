@@ -10,6 +10,7 @@ class AuthService {
   static const String _userKey = 'user_session';
   static const String _accessTokenKey = 'access_token';
   static const String _biometricUserKey = 'biometric_user_data';
+  static const String _biometricTokenKey = 'biometric_access_token';
   static const String _biometricTypeKey = 'biometric_type';
   static const String _welcomeSeenKey = 'welcome_screen_seen';
 
@@ -96,6 +97,14 @@ class AuthService {
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
+    // A biometric-enabled user may re-open the session only after the device
+    // confirms fingerprint/face authentication on the login screen.
+    if (prefs.getBool('biometric_enabled') == true) {
+      final token = prefs.getString(_accessTokenKey);
+      if (token != null && token.isNotEmpty) {
+        await prefs.setString(_biometricTokenKey, token);
+      }
+    }
     await prefs.remove(_userKey);
     await prefs.remove(_accessTokenKey);
     ApiClient.instance.setAccessToken(null);
@@ -110,7 +119,38 @@ class AuthService {
   Future<void> setBiometricPreference(bool enabled, String? type) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('biometric_enabled', enabled);
-    if (type != null) await prefs.setString(_biometricTypeKey, type);
+    if (type != null) {
+      await prefs.setString(_biometricTypeKey, type);
+    } else {
+      await prefs.remove(_biometricTypeKey);
+    }
+    if (enabled) {
+      final user = prefs.getString(_userKey);
+      final token = prefs.getString(_accessTokenKey);
+      if (user != null) await prefs.setString(_biometricUserKey, user);
+      if (token != null && token.isNotEmpty) await prefs.setString(_biometricTokenKey, token);
+    } else {
+      await prefs.remove(_biometricUserKey);
+      await prefs.remove(_biometricTokenKey);
+    }
+  }
+
+  /// Restores a locally remembered session only after the device biometric
+  /// prompt has succeeded. This is deliberately never called at app startup.
+  Future<Map<String, dynamic>?> restoreBiometricSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(_biometricUserKey);
+    final token = prefs.getString(_biometricTokenKey);
+    if (userJson == null || token == null || token.isEmpty) return null;
+    try {
+      final user = Map<String, dynamic>.from(jsonDecode(userJson) as Map);
+      await prefs.setString(_userKey, userJson);
+      await prefs.setString(_accessTokenKey, token);
+      ApiClient.instance.setAccessToken(token);
+      return user;
+    } catch (_) {
+      return null;
+    }
   }
 
   // Alias for compatibility

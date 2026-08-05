@@ -56,7 +56,7 @@ class _ClientWorkspaceMenuState extends State<ClientWorkspaceMenu> {
   }
 
   bool _excludedRoute(String location) => const {
-        '/', '/welcome', '/login', '/signup', '/forgot-password', '/setup/client', '/setup/professional',
+        '/', '/welcome', '/login', '/signup', '/forgot-password', '/setup/professional',
       }.contains(location);
 
   void _openMenu() {
@@ -97,7 +97,7 @@ class _ClientWorkspaceMenuState extends State<ClientWorkspaceMenu> {
         const SizedBox(height: 18),
         _item(dialogContext, Icons.grid_view_rounded, 'Dashboard', '/'),
         _item(dialogContext, Icons.person_outline_rounded, 'My info', '/setup/client'),
-        _item(dialogContext, Icons.group_outlined, 'Find pros', '/discover'),
+        _item(dialogContext, Icons.group_outlined, 'Find pros', '/client/find-pros'),
         _item(dialogContext, Icons.add_circle_outline_rounded, 'Post a job', '/post-job'),
         _item(dialogContext, Icons.business_center_outlined, 'Projects', '/jobs'),
         _item(dialogContext, Icons.chat_bubble_outline_rounded, 'Messages', '/messages'),

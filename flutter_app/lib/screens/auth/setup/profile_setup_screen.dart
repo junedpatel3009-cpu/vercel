@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../widgets/site_header.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/auth/biometric_service.dart';
 import '../../../core/api/api_client.dart';
 
 class ProfileSetupScreen extends StatefulWidget {
@@ -24,6 +25,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   File? _imageFile;
   String? _uploadedAvatarDataUrl;
   final ImagePicker _picker = ImagePicker();
+  final BiometricService _biometricService = BiometricService();
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
   
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -47,21 +51,82 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   void initState() {
     super.initState();
     _loadInitialData();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final enabled = await AuthService().isBiometricEnabled();
+    final available = await _biometricService.isBiometricAvailable();
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = enabled;
+        _biometricAvailable = available;
+      });
+    }
+  }
+
+  Future<void> _changeBiometric(bool enabled) async {
+    if (enabled && !_biometricAvailable) {
+      _showFriendlyMsg('Fingerprint or face unlock is not available on this phone.');
+      return;
+    }
+
+    String? type;
+    if (enabled) {
+      final verified = await _biometricService.authenticate();
+      if (!verified) {
+        _showFriendlyMsg('Biometric verification was not completed.');
+        return;
+      }
+      final options = await _biometricService.getAvailableBiometrics();
+      type = options.isEmpty ? 'device' : options.first.name;
+    }
+
+    try {
+      await ApiClient.instance.patch(
+        '/api/v1/profile/biometric',
+        data: {'enabled': enabled, 'type': type},
+      );
+      await AuthService().setBiometricPreference(enabled, type);
+      final user = await AuthService().getUser();
+      if (user != null) {
+        user['biometric_enabled'] = enabled;
+        user['biometric_type'] = type;
+        await AuthService().saveUser(user);
+      }
+      if (mounted) {
+        setState(() => _biometricEnabled = enabled);
+        _showFriendlyMsg(enabled ? 'Biometric login enabled.' : 'Biometric login disabled.');
+      }
+    } on ApiException {
+      _showFriendlyMsg('Could not save biometric preference. Please try again.');
+    }
   }
 
   Future<void> _loadInitialData() async {
     try {
       final user = await AuthService().getUser();
       if (user != null) {
-        final profile = await ApiClient.instance.get(widget.role == 'client' ? '/api/v1/client/profile' : '/api/v1/profile');
+        Map<String, dynamic> profile = Map<String, dynamic>.from(user);
+        try {
+          final serverProfile = await ApiClient.instance.get(
+            widget.role == 'client' ? '/api/v1/client/profile' : '/api/v1/profile',
+          );
+          profile.addAll(serverProfile);
+        } on ApiException {
+          // The saved login session still contains the user's basic profile
+          // data, so keep the form useful if the server is briefly slow.
+        }
 
         if (mounted) {
           setState(() {
             _profileData = profile;
-            _fullNameController.text =
-                  '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim();
-              _emailController.text = profile['email'] ?? '';
-              _phoneController.text = profile['phone'] ?? '';
+            _fullNameController.text = (profile['fullName'] ??
+                  '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}')
+                .toString()
+                .trim();
+              _emailController.text = (profile['email'] ?? user['email'] ?? '').toString();
+              _phoneController.text = (profile['phone'] ?? user['phone'] ?? '').toString();
                _addressController.text = profile['address'] ?? '';
                _cityController.text = profile['professionalCity'] ?? '';
                if (widget.role == 'client') {
@@ -281,6 +346,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F8FF),
+                    border: Border.all(color: const Color(0xFFD9E3F8)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(color: Color(0xFFE1EAFF), shape: BoxShape.circle),
+                        child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF2450B8)),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Biometric login', style: TextStyle(fontWeight: FontWeight.w800)),
+                            SizedBox(height: 3),
+                            Text('Use fingerprint or face unlock next time.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                          ],
+                        ),
+                      ),
+                      Switch(value: _biometricEnabled, onChanged: _changeBiometric),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
                 _buildField('Full Name', _fullNameController),
                 const SizedBox(height: 16),
                 _buildField('Email', _emailController, enabled: false),

@@ -354,6 +354,20 @@ async function route(request: Request, url: URL): Promise<Response> {
       ).run(...allowed.map(([, value]) => value), now(), user.id);
     return json(publicAccount(findUserById(user.id)!));
   }
+  if (method === "PATCH" && pathname === `${API_PREFIX}/profile/biometric`) {
+    const user = currentUser(request);
+    const input = parse(
+      z.object({
+        enabled: z.boolean(),
+        type: z.string().trim().max(40).nullable().optional(),
+      }),
+      await body(request),
+    );
+    db.prepare(
+      `UPDATE "User" SET "biometricEnabled"=?, "biometricType"=?, "updatedAt"=? WHERE id=?`,
+    ).run(input.enabled ? 1 : 0, input.enabled ? input.type || null : null, now(), user.id);
+    return json({ biometricEnabled: input.enabled, biometricType: input.enabled ? input.type || null : null });
+  }
 
   if (method === "GET" && pathname === `${API_PREFIX}/jobs`) {
     return json(await getOpenClientJobs());

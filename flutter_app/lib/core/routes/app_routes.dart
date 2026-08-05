@@ -5,6 +5,7 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/signup_screen.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 import '../../screens/dashboard/client_reports_screen.dart';
+import '../../screens/dashboard/client_find_pros_screen.dart';
 import '../../screens/services/services_screen.dart';
 import '../../screens/messages/messages_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
@@ -99,6 +100,7 @@ class AppRoutes {
       _route('/signup', (context, state) => const SignupScreen()),
       _route('/dashboard', (context, state) => const DashboardScreen()),
       _route('/reports', (context, state) => const ClientReportsScreen()),
+      _route('/client/find-pros', (context, state) => const ClientFindProsScreen()),
       _route('/services', (context, state) => const ServicesScreen()),
       _route('/jobs', (context, state) => const JobsScreen()),
       _route('/saved-jobs', (context, state) => const SavedJobsScreen()),

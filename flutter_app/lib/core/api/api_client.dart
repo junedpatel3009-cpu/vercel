@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Client for the Servio website backend. Configure a deployed backend with:
 /// flutter run --dart-define=API_BASE_URL=https://your-domain.example
@@ -30,8 +31,21 @@ class ApiClient {
 
   void setAccessToken(String? token) => _accessToken = token;
 
+  /// A screen can be opened before the app bootstrap has restored its bearer
+  /// token (for example after an Android activity resume). Restore it lazily
+  /// so protected client pages do not show an "Authentication required" error.
+  Future<void> _restoreSavedTokenIfNeeded() async {
+    if (_accessToken != null && _accessToken!.trim().isNotEmpty) return;
+    final preferences = await SharedPreferences.getInstance();
+    final savedToken = preferences.getString('access_token');
+    if (savedToken != null && savedToken.trim().isNotEmpty) {
+      _accessToken = savedToken;
+    }
+  }
+
   /// Stores a job attachment and returns its metadata from the website API.
   Future<Map<String, dynamic>> uploadFile(File file, {required String purpose}) async {
+    await _restoreSavedTokenIfNeeded();
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/api/v1/files'));
     request.headers['accept'] = 'application/json';
     if (_accessToken != null) request.headers['authorization'] = 'Bearer $_accessToken';
@@ -85,6 +99,7 @@ class ApiClient {
     String path, {
     bool authenticated = true,
   }) async {
+    if (authenticated) await _restoreSavedTokenIfNeeded();
     final headers = <String, String>{'accept': 'application/json'};
     if (authenticated && _accessToken != null) {
       headers['authorization'] = 'Bearer $_accessToken';
@@ -109,6 +124,7 @@ class ApiClient {
     Map<String, dynamic>? data,
     bool authenticated = true,
   }) async {
+    if (authenticated) await _restoreSavedTokenIfNeeded();
     final headers = <String, String>{'accept': 'application/json'};
     if (data != null) headers['content-type'] = 'application/json';
     if (authenticated && _accessToken != null) {

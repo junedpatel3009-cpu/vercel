@@ -33,8 +33,8 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
   Future<void> _load() async {
     try {
       final responses = await Future.wait([
-        ApiClient.instance.getList('/api/v1/client/project-board'),
-        ApiClient.instance.get('/api/v1/client/finance'),
+        _loadProjects(),
+        _loadFinance(),
       ]);
       if (mounted) {
         setState(() {
@@ -43,13 +43,29 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
         });
       }
     } on ApiException catch (error) {
-      if (mounted) {
+      if (mounted && error.statusCode != 401) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadProjects() async {
+    try {
+      return await ApiClient.instance.getList('/api/v1/client/project-board');
+    } on ApiException {
+      return ApiClient.instance.getList('/api/v1/client/jobs');
+    }
+  }
+
+  Future<Map<String, dynamic>> _loadFinance() async {
+    try {
+      return await ApiClient.instance.get('/api/v1/client/finance');
+    } on ApiException {
+      return <String, dynamic>{'totals': <String, dynamic>{}};
     }
   }
 

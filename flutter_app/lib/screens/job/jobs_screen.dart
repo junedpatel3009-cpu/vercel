@@ -31,13 +31,21 @@ class _JobsScreenState extends State<JobsScreen> {
     try {
       final user = await AuthService().getUser();
       final isClient = user?['role'].toString().toLowerCase() == 'client';
-      final jobs = await ApiClient.instance.getList(
-        isClient ? '/api/v1/client/project-board' : '/api/v1/jobs',
-        authenticated: isClient,
-      );
+      List<Map<String, dynamic>> jobs;
+      if (isClient) {
+        try {
+          jobs = await ApiClient.instance.getList('/api/v1/client/project-board');
+        } on ApiException {
+          jobs = await ApiClient.instance.getList('/api/v1/client/jobs');
+        }
+      } else {
+        jobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
+      }
       if (mounted) setState(() { _jobs = jobs; _isClient = isClient; });
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted && error.statusCode != 401) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

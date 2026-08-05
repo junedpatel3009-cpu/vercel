@@ -28,10 +28,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadDashboard() async {
     final user = await AuthService().getUser();
+    if (mounted) {
+      setState(() => _user = user);
+    }
     try {
       final results = await Future.wait([
-        ApiClient.instance.getList('/api/v1/client/project-board'),
-        ApiClient.instance.get('/api/v1/client/finance'),
+        _loadProjects(),
+        _loadFinance(),
       ]);
       if (mounted) {
         setState(() {
@@ -41,13 +44,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     } on ApiException catch (error) {
-      if (mounted) {
+      if (mounted && error.statusCode != 401) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
       }
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadProjects() async {
+    try {
+      return await ApiClient.instance.getList('/api/v1/client/project-board');
+    } on ApiException {
+      // The project-board enrichment can be unavailable before a hire exists.
+      // The user's own saved jobs remain a reliable fallback.
+      return ApiClient.instance.getList('/api/v1/client/jobs');
+    }
+  }
+
+  Future<Map<String, dynamic>> _loadFinance() async {
+    try {
+      return await ApiClient.instance.get('/api/v1/client/finance');
+    } on ApiException {
+      return <String, dynamic>{'totals': <String, dynamic>{}};
     }
   }
 

@@ -203,6 +203,13 @@ class _SignupScreenState extends State<SignupScreen> {
       final sessionUser = await AuthService().register(user);
       if (sessionUser == null) throw ApiException('Unable to create your account.');
       if (_biometricEnabled) {
+        await ApiClient.instance.patch(
+          '/api/v1/profile/biometric',
+          data: {'enabled': true, 'type': _biometricType},
+        );
+        sessionUser['biometric_enabled'] = true;
+        sessionUser['biometric_type'] = _biometricType;
+        await AuthService().saveUser(sessionUser);
         await AuthService().setBiometricPreference(true, _biometricType);
       }
 

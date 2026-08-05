@@ -61,7 +61,9 @@ class _EarningsScreenState extends State<EarningsScreen> {
         }
       }
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted && error.statusCode != 401) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
