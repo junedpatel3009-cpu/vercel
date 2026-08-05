@@ -34,7 +34,7 @@ class _ClientFindProsScreenState extends State<ClientFindProsScreen> {
 
   Future<void> _loadProfessionals() async {
     try {
-      final results = await ApiClient.instance.getList('/api/v1/professionals', authenticated: false);
+      final results = await ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false);
       if (mounted) {
         setState(() => _professionals = results);
       }

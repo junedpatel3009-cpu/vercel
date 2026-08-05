@@ -385,7 +385,12 @@ async function route(request: Request, url: URL): Promise<Response> {
     return json(db.prepare(`SELECT * FROM "Service" WHERE isActive=1 ORDER BY id DESC`).all());
   }
   if (method === "GET" && pathname === `${API_PREFIX}/professionals`) {
-    const professionals = await getProfessionalUsers();
+    const requestedLimit = Number(url.searchParams.get("limit"));
+    const professionals = await getProfessionalUsers(
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? { limit: requestedLimit }
+        : undefined,
+    );
     return json(
       professionals.map((professional) => ({
         id: professional.id,

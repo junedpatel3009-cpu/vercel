@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -18,9 +19,10 @@ class ApiClient {
 
   // Development computer's reserved Wi-Fi address. Physical phones on this
   // network use it automatically when no production API URL is configured.
-  static const String _localNetworkBaseUrl = 'http://192.168.31.114:5173';
+  static const String _localNetworkBaseUrl = 'http://10.16.120.18:5173';
 
   String? _accessToken;
+  static const Duration _requestTimeout = Duration(seconds: 12);
 
   String get baseUrl {
     // Flutter web runs on this computer; physical phones use the LAN address.
@@ -104,8 +106,18 @@ class ApiClient {
     if (authenticated && _accessToken != null) {
       headers['authorization'] = 'Bearer $_accessToken';
     }
-    final response = await http.get(Uri.parse('$baseUrl$path'), headers: headers);
-    final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    late final http.Response response;
+    dynamic decoded;
+    try {
+      response = await http
+          .get(Uri.parse('$baseUrl$path'), headers: headers)
+          .timeout(_requestTimeout);
+      decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+    } on TimeoutException {
+      throw ApiException('The server took too long to respond. Please try again.');
+    } on Exception {
+      throw ApiException('Unable to reach the website server at $baseUrl.');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final error = decoded is Map<String, dynamic> ? decoded['error'] : null;
       throw ApiException(
@@ -135,9 +147,13 @@ class ApiClient {
     late final http.Response response;
     try {
       response = switch (method) {
-        'GET' => await http.get(uri, headers: headers),
-        'POST' => await http.post(uri, headers: headers, body: jsonEncode(data)),
-        'PATCH' => await http.patch(uri, headers: headers, body: jsonEncode(data)),
+        'GET' => await http.get(uri, headers: headers).timeout(_requestTimeout),
+        'POST' => await http
+            .post(uri, headers: headers, body: jsonEncode(data))
+            .timeout(_requestTimeout),
+        'PATCH' => await http
+            .patch(uri, headers: headers, body: jsonEncode(data))
+            .timeout(_requestTimeout),
         _ => throw UnsupportedError('Unsupported HTTP method: $method'),
       };
     } on Exception catch (_) {

@@ -1285,13 +1285,18 @@ export async function getClientProfileByUserId(userId: number) {
   });
 }
 
-export async function getProfessionalUsers() {
+export async function getProfessionalUsers(options?: { limit?: number }) {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
+  const limit =
+    typeof options?.limit === "number"
+      ? Math.max(1, Math.min(Math.floor(options.limit), 100))
+      : undefined;
 
   if (isPostgres) {
     const rows = await prisma.user.findMany({
       where: { role: "PROFESSIONAL", isActive: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      ...(limit ? { take: limit } : {}),
       select: {
         id: true,
         firstName: true,
@@ -1354,9 +1359,10 @@ export async function getProfessionalUsers() {
             FROM "User"
             WHERE role = 'PROFESSIONAL' AND isActive = 1
             ORDER BY datetime(createdAt) DESC, id DESC
+            ${limit ? "LIMIT ?" : ""}
           `,
         )
-        .all() as Array<{
+        .all(...(limit ? [limit] : [])) as Array<{
         id: number;
         firstName: string;
         lastName: string;

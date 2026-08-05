@@ -90,7 +90,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Future<void> _loadProfessionals() async {
     try {
-      final rows = await ApiClient.instance.getList('/api/v1/professionals', authenticated: false);
+      final rows = await ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false);
       if (!mounted) return;
       setState(() {
         _professionals = rows.map((pro) => <String, dynamic>{

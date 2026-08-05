@@ -74,7 +74,7 @@ class _LandingScreenState extends State<LandingScreen> {
         } else {
           final responses = await Future.wait([
             ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
-            ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+            ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false),
             ApiClient.instance.getList('/api/v1/client/jobs'),
           ]);
           publicJobs = responses[0];
@@ -96,7 +96,7 @@ class _LandingScreenState extends State<LandingScreen> {
       } else {
         final responses = await Future.wait([
           ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
-          ApiClient.instance.getList('/api/v1/professionals', authenticated: false),
+          ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false),
         ]);
         publicJobs = responses[0];
         pros = _mapProfessionals(responses[1]);

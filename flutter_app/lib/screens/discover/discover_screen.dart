@@ -40,7 +40,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         final db = DatabaseHelper();
         _results = await db.getJobs(status: 'active', query: query);
       } else {
-        final rows = await ApiClient.instance.getList('/api/v1/professionals', authenticated: false);
+        final rows = await ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false);
       final normalizedQuery = (query ?? _searchController.text).trim().toLowerCase();
         _results = rows.map((pro) => <String, dynamic>{
         'user_id': pro['id'],

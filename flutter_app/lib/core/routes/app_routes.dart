@@ -110,22 +110,7 @@ class AppRoutes {
             initialProfessionalAvatar: state.uri.queryParameters['avatar'],
           )),
       _route('/notifications', (context, state) => const NotificationsScreen()),
-      _route('/profile', (context, state) {
-          return FutureBuilder<Map<String, dynamic>?>(
-            future: AuthService().getUser(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
-              }
-              final user = snapshot.data;
-              final role = user?['role'] ?? 'client';
-              if (role.toString().toLowerCase() == 'client') {
-                return const DashboardScreen();
-              }
-              return ProfileSetupScreen(role: role);
-            },
-          );
-        }),
+      _route('/profile', (context, state) => const _ProfileDestination()),
       _route('/discover', (context, state) => const DiscoverScreen()),
       _route('/post-job', (context, state) => const PostJobScreen()),
       _route('/pricing', (context, state) => const PricingScreen()),
@@ -145,4 +130,35 @@ class AppRoutes {
       _route('/db-view', (context, state) => const DatabaseViewScreen()),
     ],
   );
+}
+
+/// Resolves the saved user only once. Creating a Future directly inside a
+/// route builder restarts it whenever GoRouter rebuilds the route, which made
+/// the profile screen repeatedly show its loading state.
+class _ProfileDestination extends StatefulWidget {
+  const _ProfileDestination();
+
+  @override
+  State<_ProfileDestination> createState() => _ProfileDestinationState();
+}
+
+class _ProfileDestinationState extends State<_ProfileDestination> {
+  late final Future<Map<String, dynamic>?> _user = AuthService().getUser();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _user,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        final role = (snapshot.data?['role'] ?? 'client').toString();
+        return role.toLowerCase() == 'client'
+            ? const DashboardScreen()
+            : ProfileSetupScreen(role: role);
+      },
+    );
+  }
 }

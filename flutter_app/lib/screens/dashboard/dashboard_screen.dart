@@ -29,7 +29,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadDashboard() async {
     final user = await AuthService().getUser();
     if (mounted) {
-      setState(() => _user = user);
+      // The saved session is local and available immediately. Show the
+      // dashboard shell now; the remote project and finance requests can
+      // finish in the background instead of blocking the whole profile page.
+      setState(() {
+        _user = user;
+        _loading = false;
+      });
     }
     try {
       final results = await Future.wait([
@@ -46,10 +52,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } on ApiException catch (error) {
       if (mounted && error.statusCode != 401) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
       }
     }
   }
