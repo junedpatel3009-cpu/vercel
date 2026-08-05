@@ -33,21 +33,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ApiClient.instance.getList('/api/v1/client/project-board'),
         ApiClient.instance.get('/api/v1/client/finance'),
       ]);
-      if (mounted) setState(() {
-        _user = user;
-        _projects = results[0] as List<Map<String, dynamic>>;
-        _finance = Map<String, dynamic>.from(results[1] as Map);
-      });
+      if (mounted) {
+        setState(() {
+          _user = user;
+          _projects = results[0] as List<Map<String, dynamic>>;
+          _finance = Map<String, dynamic>.from(results[1] as Map);
+        });
+      }
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Scaffold(backgroundColor: AppTheme.bgLight, body: Center(child: CircularProgressIndicator()));
+    if (_loading) {
+      return const Scaffold(backgroundColor: AppTheme.bgLight, body: Center(child: CircularProgressIndicator()));
+    }
     final metrics = _metrics;
     final name = (_user?['firstName'] ?? _user?['full_name'] ?? _user?['name'] ?? 'there').toString().split(' ').first;
     return Scaffold(

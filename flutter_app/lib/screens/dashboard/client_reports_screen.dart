@@ -36,14 +36,20 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
         ApiClient.instance.getList('/api/v1/client/project-board'),
         ApiClient.instance.get('/api/v1/client/finance'),
       ]);
-      if (mounted) setState(() {
-        _jobs = responses[0] as List<Map<String, dynamic>>;
-        _finance = Map<String, dynamic>.from(responses[1] as Map);
-      });
+      if (mounted) {
+        setState(() {
+          _jobs = responses[0] as List<Map<String, dynamic>>;
+          _finance = Map<String, dynamic>.from(responses[1] as Map);
+        });
+      }
     } on ApiException catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -162,33 +168,80 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
         pw.Text('Servio client project report', style: pw.TextStyle(fontSize: 23, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
         pw.SizedBox(height: 5), pw.Text('Generated $date'), pw.Divider(), pw.SizedBox(height: 10),
       ];
-      if (options.summary) sections.addAll(_pdfSummary(metrics));
-      if (options.budget) sections.addAll(_pdfBudget(metrics));
-      if (options.running) sections.addAll(_pdfProjectSection('Running projects', _projectsFor('running'), options.details));
-      if (options.hiring) sections.addAll(_pdfProjectSection('Hiring projects', _projectsFor('hiring'), options.details));
-      if (options.completed) sections.addAll(_pdfProjectSection('Completed projects', _projectsFor('completed'), options.details));
+      if (options.summary) {
+        sections.addAll(_pdfSummary(metrics));
+      }
+      if (options.budget) {
+        sections.addAll(_pdfBudget(metrics));
+      }
+      if (options.running) {
+        sections.addAll(_pdfProjectSection('Running projects', _projectsFor('running'), options.details));
+      }
+      if (options.hiring) {
+        sections.addAll(_pdfProjectSection('Hiring projects', _projectsFor('hiring'), options.details));
+      }
+      if (options.completed) {
+        sections.addAll(_pdfProjectSection('Completed projects', _projectsFor('completed'), options.details));
+      }
       document.addPage(pw.MultiPage(pageFormat: PdfPageFormat.a4, margin: const pw.EdgeInsets.all(28), build: (_) => sections));
       final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/servio-project-report-${DateFormat('yyyyMMdd-HHmm').format(DateTime.now())}.pdf');
       await file.writeAsBytes(await document.save());
       await Share.shareXFiles([XFile(file.path)], text: 'Servio client project report');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF report is ready to save or share.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF report is ready to save or share.')));
+      }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not create the PDF. Please try again.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not create the PDF. Please try again.')));
+      }
     } finally {
-      if (mounted) setState(() => _exporting = false);
+      if (mounted) {
+        setState(() => _exporting = false);
+      }
     }
   }
 
-  List<pw.Widget> _pdfSummary(_ReportMetrics m) => [pw.Text('Dashboard summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 6), pw.Table.fromTextArray(headers: const ['Total', 'Running', 'Hiring', 'Completed'], data: [['${m.total}', '${m.running}', '${m.hiring}', '${m.completed}']]), pw.SizedBox(height: 16)];
-  List<pw.Widget> _pdfBudget(_ReportMetrics m) => [pw.Text('Budget & payments', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 6), pw.Table.fromTextArray(headers: const ['Committed budget', 'Paid to professionals'], data: [[_money(m.committed), _money(m.paid)]]), pw.SizedBox(height: 16)];
+  List<pw.Widget> _pdfSummary(_ReportMetrics m) => [
+        pw.Text('Dashboard summary', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.TableHelper.fromTextArray(headers: const ['Total', 'Running', 'Hiring', 'Completed'], data: [['${m.total}', '${m.running}', '${m.hiring}', '${m.completed}']]),
+        pw.SizedBox(height: 16),
+      ];
+  List<pw.Widget> _pdfBudget(_ReportMetrics m) => [
+        pw.Text('Budget & payments', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.TableHelper.fromTextArray(headers: const ['Committed budget', 'Paid to professionals'], data: [[_money(m.committed), _money(m.paid)]]),
+        pw.SizedBox(height: 16),
+      ];
   List<pw.Widget> _pdfProjectSection(String title, List<Map<String, dynamic>> jobs, bool details) {
-    if (jobs.isEmpty) return [pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)), pw.Text('No projects in this section.'), pw.SizedBox(height: 12)];
+    if (jobs.isEmpty) {
+      return [
+        pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.Text('No projects in this section.'),
+        pw.SizedBox(height: 12),
+      ];
+    }
     final headers = details ? const ['Project', 'Professional', 'Budget', 'Deadline', 'Status'] : const ['Project', 'Professional', 'Status'];
     final data = jobs.map((job) { final project = job['project'] as Map?; final pro = project?['professionalName']?.toString() ?? 'Not hired'; final status = project?['status']?.toString() ?? job['status'].toString(); return details ? [(job['title'] ?? 'Project').toString(), pro, _money(_number(job['budgetMax'] ?? job['budgetMin'])), _date(job['deadline']), status] : [(job['title'] ?? 'Project').toString(), pro, status]; }).toList();
-    return [pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)), pw.SizedBox(height: 6), pw.Table.fromTextArray(headers: headers, data: data, headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8)), pw.SizedBox(height: 16)];
+    return [
+      pw.Text(title, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 6),
+      pw.TableHelper.fromTextArray(headers: headers, data: data, headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8)),
+      pw.SizedBox(height: 16),
+    ];
   }
-  List<Map<String, dynamic>> _projectsFor(String group) => _jobs.where((job) { final project = job['project'] as Map?; final active = project != null && (project['status'] ?? '').toString().toUpperCase() == 'ACTIVE'; if (group == 'running') return active; if (group == 'hiring') return project == null && (job['status'] ?? '').toString().toUpperCase() == 'OPEN'; return project != null && !active; }).toList();
+  List<Map<String, dynamic>> _projectsFor(String group) => _jobs.where((job) {
+        final project = job['project'] as Map?;
+        final active = project != null && (project['status'] ?? '').toString().toUpperCase() == 'ACTIVE';
+        if (group == 'running') {
+          return active;
+        }
+        if (group == 'hiring') {
+          return project == null && (job['status'] ?? '').toString().toUpperCase() == 'OPEN';
+        }
+        return project != null && !active;
+      }).toList();
   String _money(double value) => '\$${value.toStringAsFixed(2)}';
   double _number(dynamic value) => double.tryParse((value ?? 0).toString()) ?? 0;
   String _date(dynamic value) { final parsed = DateTime.tryParse((value ?? '').toString()); return parsed == null ? 'Not set' : DateFormat('dd MMM yyyy').format(parsed); }
