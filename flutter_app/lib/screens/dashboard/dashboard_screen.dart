@@ -86,7 +86,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white, elevation: 0,
         title: const Text('Client dashboard', style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.brandNavy)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.go('/')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/')),
       ),
       body: RefreshIndicator(
         onRefresh: _loadDashboard,
@@ -129,7 +129,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _latestActivity(_Metrics metrics) {
     final active = _projects.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() == 'ACTIVE').cast<Map<String, dynamic>>().firstOrNull;
-    final title = active?['title']?.toString() ?? (metrics.hiring > 0 ? '$metrics.hiring project${metrics.hiring == 1 ? '' : 's'} ready to hire' : 'Your project workspace is ready');
+    final title = active?['title']?.toString() ?? (metrics.hiring > 0 ? '${metrics.hiring} project${metrics.hiring == 1 ? '' : 's'} ready to hire' : 'Your project workspace is ready');
     final message = active == null ? 'Find the right professional, compare profiles, and send a hire request.' : '${(active['project'] as Map)['professionalName'] ?? 'Your professional'} is working on this project.';
     return Container(
       padding: const EdgeInsets.all(19),
@@ -203,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SizedBox(height: 11),
       Text(project == null ? 'No professional hired yet' : 'Working with ${project['professionalName'] ?? 'Professional'}', style: const TextStyle(color: AppTheme.textGray)),
       const SizedBox(height: 13), LinearProgressIndicator(value: progress, minHeight: 6, borderRadius: BorderRadius.circular(10), color: color, backgroundColor: const Color(0xFFE9EEF5)),
-      const SizedBox(height: 9), Row(children: [Icon(Icons.calendar_today_outlined, size: 14, color: color), const SizedBox(width: 5), Text(deadline == null ? 'Deadline not set' : 'Due ${DateFormat.MMMd().format(deadline)}', style: const TextStyle(fontSize: 12, color: AppTheme.textGray)), const Spacer(), TextButton(onPressed: () => context.push('/job/${job['id']}'), child: const Text('Open'))]),
+      const SizedBox(height: 9), Row(children: [Icon(Icons.calendar_today_outlined, size: 14, color: color), const SizedBox(width: 5), Text(deadline == null ? 'Deadline not set' : 'Due ${DateFormat.MMMd().format(deadline)}', style: const TextStyle(fontSize: 12, color: AppTheme.textGray)), const Spacer(), TextButton(onPressed: () => context.push('${project != null ? '/project' : '/job'}/${job['id']}'), child: Text(project != null ? 'Open project' : 'Open job'))]),
     ]));
   }
 
@@ -213,7 +213,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final running = _projects.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() == 'ACTIVE').length;
     final hiring = _projects.where((job) => job['project'] == null && (job['status'] ?? '').toString().toUpperCase() == 'OPEN').length;
     final totals = Map<String, dynamic>.from(_finance['totals'] as Map? ?? {});
-    return _Metrics(running, hiring, _number(totals['paid']), _number(totals['committed']));
+    return _Metrics(running, hiring, _number(totals['paid']), _number(totals['projectBudget'] ?? totals['committed']));
   }
   double _number(dynamic value) => double.tryParse((value ?? 0).toString()) ?? 0;
   String _money(double value) => '\$${value.toStringAsFixed(0)}';

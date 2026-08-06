@@ -18,9 +18,9 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'servio_v1.db');
     
-    // During development, if you want to force a reset, you can change the filename above 
-    // or uncomment the line below:
-    await deleteDatabase(path);
+    // Keep the on-device database between app launches. Deleting it here
+    // recreated the schema and seed data every time a screen accessed SQLite,
+    // so locally stored jobs, notifications, and favourites never persisted.
 
     return await openDatabase(
       path,

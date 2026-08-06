@@ -95,7 +95,7 @@ class _ClientWorkspaceMenuState extends State<ClientWorkspaceMenu> {
         ),
         const Divider(height: 1, color: Color(0xFFE6EBF3)),
         const SizedBox(height: 18),
-        _item(dialogContext, Icons.grid_view_rounded, 'Dashboard', '/'),
+        _item(dialogContext, Icons.grid_view_rounded, 'Dashboard', '/dashboard'),
         _item(dialogContext, Icons.person_outline_rounded, 'My info', '/setup/client'),
         _item(dialogContext, Icons.group_outlined, 'Find pros', '/client/find-pros'),
         _item(dialogContext, Icons.add_circle_outline_rounded, 'Post a job', '/post-job'),

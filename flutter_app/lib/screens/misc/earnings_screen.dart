@@ -100,7 +100,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
   Widget _buildClientSummary() {
     final paid = _amount(_totals['paid']);
     final pending = _amount(_totals['pending']);
-    final committed = _amount(_totals['committed']);
+    final committed = _amount(_totals['projectBudget'] ?? _totals['committed']);
     return Container(
       padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(

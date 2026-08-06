@@ -32,15 +32,10 @@ class _JobsScreenState extends State<JobsScreen> {
       final user = await AuthService().getUser();
       final isClient = user?['role'].toString().toLowerCase() == 'client';
       List<Map<String, dynamic>> jobs;
-      if (isClient) {
-        try {
-          jobs = await ApiClient.instance.getList('/api/v1/client/project-board');
-        } on ApiException {
-          jobs = await ApiClient.instance.getList('/api/v1/client/jobs');
-        }
-      } else {
-        jobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
-      }
+      // The bottom Jobs tab is the marketplace: every client can browse all
+      // open jobs posted by clients. Client project tracking remains on the
+      // dashboard rather than being mixed into this list.
+      jobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
       if (mounted) setState(() { _jobs = jobs; _isClient = isClient; });
     } on ApiException catch (error) {
       if (mounted && error.statusCode != 401) {
@@ -73,7 +68,7 @@ class _JobsScreenState extends State<JobsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(_isClient ? 'Projects' : 'Jobs', style: const TextStyle(color: AppTheme.brandNavy, fontWeight: FontWeight.w800)),
+        title: const Text('Jobs', style: TextStyle(color: AppTheme.brandNavy, fontWeight: FontWeight.w800)),
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/')),
         actions: _isClient ? [
           Padding(
@@ -89,7 +84,7 @@ class _JobsScreenState extends State<JobsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _isClient ? _buildClientBoard() : _buildProfessionalJobs(),
+          : _buildProfessionalJobs(),
     );
   }
 
@@ -184,7 +179,12 @@ class _JobsScreenState extends State<JobsScreen> {
         ]),
         const SizedBox(height: 17),
         Row(children: [
-          Expanded(child: OutlinedButton(onPressed: () => context.push('/job/${job['id']}'), child: const Text('View project'))),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () => context.push('${project != null ? '/project' : '/job'}/${job['id']}'),
+              child: Text(project != null ? 'View project' : 'View job'),
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(child: ElevatedButton.icon(onPressed: project != null ? () => context.push('/messages?proId=${project['professionalId']}&name=${Uri.encodeComponent(proName ?? 'Professional')}') : () => context.push('/discover'), icon: Icon(project != null ? Icons.chat_bubble_outline : Icons.person_search_outlined, size: 17), label: Text(project != null ? 'Message' : 'Find pro'), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.brandBlue, foregroundColor: Colors.white))),
         ]),

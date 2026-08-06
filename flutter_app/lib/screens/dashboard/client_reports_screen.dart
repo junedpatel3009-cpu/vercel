@@ -125,7 +125,7 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
     final completed = _jobs.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() != 'ACTIVE').length;
     final hiring = _jobs.where((job) => job['project'] == null && (job['status'] ?? '').toString().toUpperCase() == 'OPEN').length;
     final totals = Map<String, dynamic>.from(_finance['totals'] as Map? ?? {});
-    return _ReportMetrics(_jobs.length, running, hiring, completed, _number(totals['committed']), _number(totals['paid']));
+    return _ReportMetrics(_jobs.length, running, hiring, completed, _number(totals['projectBudget'] ?? totals['committed']), _number(totals['paid']));
   }
 
   Widget _metric(String label, String value, IconData icon, Color color) => Container(

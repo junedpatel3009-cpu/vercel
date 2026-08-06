@@ -16,6 +16,7 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -24,18 +25,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _loadNotifications() async {
-    final user = await AuthService().getUser();
-    if (user != null) {
-      final db = DatabaseHelper();
-      final notes = await db.getNotifications(user['id']);
+    try {
+      final user = await AuthService().getUser();
+      if (user != null) {
+        final db = DatabaseHelper();
+        final notes = await db.getNotifications(user['id']);
+        if (mounted) {
+          setState(() {
+            _notifications = notes;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (_) {
       if (mounted) {
         setState(() {
-          _notifications = notes;
+          _error = 'Notifications could not be loaded.';
           _isLoading = false;
         });
       }
-    } else {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -54,6 +64,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: _isLoading 
         ? const AnimatedLoadingIndicator(color: AppTheme.brandBlue)
+        : _error != null
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
         : _notifications.isEmpty
           ? _buildEmptyState()
           : ListView.builder(

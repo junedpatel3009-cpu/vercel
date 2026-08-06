@@ -126,7 +126,7 @@ class _ProScreenState extends State<ProScreen> {
                     const Text('Job budget', style: TextStyle(fontSize: 12, color: AppTheme.textGray)),
                     const SizedBox(height: 4),
                     Text(
-                      '₹${selectedJob!['budgetMin'] ?? selectedJob!['min_budget'] ?? 0} - ₹${selectedJob!['budgetMax'] ?? selectedJob!['max_budget'] ?? 0}',
+                      '${selectedJob!['budgetMin'] ?? selectedJob!['min_budget'] ?? 0} - ${selectedJob!['budgetMax'] ?? selectedJob!['max_budget'] ?? 0}',
                       style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.brandNavy),
                     ),
                   ]),

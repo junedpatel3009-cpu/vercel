@@ -1293,7 +1293,8 @@ export async function getProfessionalUsers(options?: { limit?: number }) {
       : undefined;
 
   if (isPostgres) {
-    const rows = await prisma.user.findMany({
+    try {
+      const rows = await prisma.user.findMany({
       where: { role: "PROFESSIONAL", isActive: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       ...(limit ? { take: limit } : {}),
@@ -1321,10 +1322,16 @@ export async function getProfessionalUsers(options?: { limit?: number }) {
       },
     });
 
-    return rows.map((user) => ({
+      return rows.map((user) => ({
       ...user,
       isVerified: Number(user.isVerified) as number,
-    }));
+      }));
+    } catch (error) {
+      console.warn(
+        "Postgres professional query failed; returning local SQLite professionals until the connection recovers.",
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   const db = getDatabase();

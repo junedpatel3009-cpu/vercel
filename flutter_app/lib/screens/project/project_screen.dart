@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/database/database_helper.dart';
+import '../../core/api/api_client.dart';
 
 class ProjectScreen extends StatefulWidget {
   final String projectId;
@@ -13,6 +15,7 @@ class ProjectScreen extends StatefulWidget {
 
 class _ProjectScreenState extends State<ProjectScreen> {
   Map<String, dynamic>? _project;
+  int _requestCount = 0;
   bool _isLoading = true;
 
   @override
@@ -22,9 +25,26 @@ class _ProjectScreenState extends State<ProjectScreen> {
   }
 
   Future<void> _loadProject() async {
-    final db = DatabaseHelper();
     final jobIdInt = int.tryParse(widget.projectId) ?? 0;
-    final job = await db.getJob(jobIdInt);
+    Map<String, dynamic>? job;
+
+    try {
+      // Fetch the core client-jobs list here. Project-board enrichment is
+      // optional and can be unavailable before a hire/project exists.
+      final jobs = await ApiClient.instance.getList('/api/v1/client/jobs');
+      for (final item in jobs) {
+        if (item['id'] == jobIdInt) {
+          job = item;
+          break;
+        }
+      }
+      final requests = await ApiClient.instance.getList('/api/v1/client/applications');
+      _requestCount = requests.where((item) => item['jobId'] == jobIdInt).length;
+    } on ApiException {
+      // Offline/local data remains useful when the server cannot be reached.
+    }
+
+    job ??= await DatabaseHelper().getJob(jobIdInt);
     if (mounted) {
       setState(() {
         _project = job;
@@ -44,6 +64,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text('Project Status', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/jobs')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -51,6 +72,8 @@ class _ProjectScreenState extends State<ProjectScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStatusCard(),
+            const SizedBox(height: 20),
+            _buildProjectDetails(),
             const SizedBox(height: 32),
             const Text('Milestones', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: 16),
@@ -88,6 +111,30 @@ class _ProjectScreenState extends State<ProjectScreen> {
       ),
     );
   }
+
+  Widget _buildProjectDetails() {
+    final budgetMin = _project!['budgetMin'] ?? _project!['min_budget'];
+    final budgetMax = _project!['budgetMax'] ?? _project!['max_budget'];
+    final deadline = _project!['deadline'] ?? _project!['start_date'];
+    final location = _project!['locationLabel'] ?? _project!['city'] ?? _project!['address'];
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Project details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 12),
+        _detail(Icons.group_outlined, 'Hire requests', '$_requestCount'),
+        _detail(Icons.account_balance_wallet_outlined, 'Budget', '${budgetMin ?? 0} – ${budgetMax ?? 0}'),
+        _detail(Icons.calendar_today_outlined, 'Deadline', deadline?.toString().isNotEmpty == true ? deadline.toString() : 'Not set'),
+        _detail(Icons.location_on_outlined, 'Location', location?.toString().isNotEmpty == true ? location.toString() : 'Remote'),
+      ]),
+    );
+  }
+
+  Widget _detail(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [Icon(icon, size: 18, color: AppTheme.brandBlue), const SizedBox(width: 10), Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w700)), Expanded(child: Text(value, style: const TextStyle(color: AppTheme.textGray)))]),
+  );
 
   Widget _buildMilestone(String title, String subtitle, bool completed) {
     return Padding(

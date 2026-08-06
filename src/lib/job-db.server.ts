@@ -528,14 +528,15 @@ export async function getOpenClientJobs() {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    const rows = await prisma.clientJob.findMany({
+    try {
+      const rows = await prisma.clientJob.findMany({
       where: { status: "OPEN" as any },
       orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
       include: { user: true, attachments: true },
     });
 
     // Map Prisma results to the public client job shape used by the rest of the app
-    return rows.map((job) => ({
+      return rows.map((job) => ({
       ...mapJob(
         {
           id: job.id,
@@ -572,7 +573,13 @@ export async function getOpenClientJobs() {
       clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
       clientCompanyName: job.user.companyName || null,
       clientAvatarUrl: job.user.avatarUrl || null,
-    }));
+      }));
+    } catch (error) {
+      console.warn(
+        "Postgres job query failed; returning local SQLite jobs until the connection recovers.",
+        error instanceof Error ? error.message : error,
+      );
+    }
   }
 
   const db = getDatabase();

@@ -16,6 +16,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
   List<Map<String, dynamic>> _categories = [];
   final Map<int, List<Map<String, dynamic>>> _subcategories = {};
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -24,17 +25,26 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseHelper();
-    final cats = await db.getCategories();
-    for (var cat in cats) {
-      final subs = await db.getSubcategories(cat['id']);
-      _subcategories[cat['id']] = subs;
-    }
-    if (mounted) {
-      setState(() {
-        _categories = cats;
-        _isLoading = false;
-      });
+    try {
+      final db = DatabaseHelper();
+      final cats = await db.getCategories();
+      for (var cat in cats) {
+        final subs = await db.getSubcategories(cat['id']);
+        _subcategories[cat['id']] = subs;
+      }
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'Service categories could not be loaded.';
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -49,6 +59,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
       ),
       body: _isLoading 
         ? const AnimatedLoadingIndicator(color: AppTheme.brandBlue)
+        : _error != null
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!)))
         : ListView.builder(
             padding: const EdgeInsets.all(24),
             itemCount: _categories.length,

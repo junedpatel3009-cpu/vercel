@@ -17,12 +17,16 @@ class ApiClient {
   static const String _configuredBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 
-  // Development computer's reserved Wi-Fi address. Physical phones on this
-  // network use it automatically when no production API URL is configured.
-  static const String _localNetworkBaseUrl = 'http://10.16.120.18:5173';
+  // Current development computer Wi-Fi address. For a different network or a
+  // deployed backend, pass API_BASE_URL with --dart-define when running/building
+  // the Android app instead of relying on this local development fallback.
+  static const String _localNetworkBaseUrl = 'http://10.48.108.18:5173';
 
   String? _accessToken;
   static const Duration _requestTimeout = Duration(seconds: 12);
+  static const Duration _listCacheLifetime = Duration(minutes: 3);
+  final Map<String, _CachedList> _listCache = {};
+  final Map<String, Future<List<Map<String, dynamic>>>> _pendingListRequests = {};
 
   String get baseUrl {
     // Flutter web runs on this computer; physical phones use the LAN address.
@@ -102,6 +106,28 @@ class ApiClient {
     bool authenticated = true,
   }) async {
     if (authenticated) await _restoreSavedTokenIfNeeded();
+    final cacheKey = authenticated ? 'auth:${_accessToken ?? ''}:$path' : 'public:$path';
+    final cached = _listCache[cacheKey];
+    if (cached != null && !cached.isExpired) return cached.copy();
+
+    final pending = _pendingListRequests[cacheKey];
+    if (pending != null) return _copyList(await pending);
+
+    final request = _fetchList(path, authenticated: authenticated);
+    _pendingListRequests[cacheKey] = request;
+    try {
+      final result = await request;
+      _listCache[cacheKey] = _CachedList(result);
+      return _copyList(result);
+    } finally {
+      _pendingListRequests.remove(cacheKey);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchList(
+    String path, {
+    required bool authenticated,
+  }) async {
     final headers = <String, String>{'accept': 'application/json'};
     if (authenticated && _accessToken != null) {
       headers['authorization'] = 'Bearer $_accessToken';
@@ -129,6 +155,9 @@ class ApiClient {
     if (payload is! List) throw ApiException('The server returned an invalid list.');
     return payload.map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
+
+  List<Map<String, dynamic>> _copyList(List<Map<String, dynamic>> value) =>
+      value.map((item) => Map<String, dynamic>.from(item)).toList();
 
   Future<Map<String, dynamic>> _request(
     String method,
@@ -160,7 +189,9 @@ class ApiClient {
       throw ApiException('Unable to reach the website server at $baseUrl.');
     }
 
-    return _decodeMapResponse(response);
+    final result = _decodeMapResponse(response);
+    if (method != 'GET') _listCache.clear();
+    return result;
   }
 
   Map<String, dynamic> _decodeMapResponse(http.Response response) {
@@ -190,6 +221,19 @@ class ApiClient {
       _ => MediaType('application', 'octet-stream'),
     };
   }
+}
+
+class _CachedList {
+  _CachedList(this.value) : storedAt = DateTime.now();
+
+  final List<Map<String, dynamic>> value;
+  final DateTime storedAt;
+
+  bool get isExpired =>
+      DateTime.now().difference(storedAt) > ApiClient._listCacheLifetime;
+
+  List<Map<String, dynamic>> copy() =>
+      value.map((item) => Map<String, dynamic>.from(item)).toList();
 }
 
 class ApiException implements Exception {

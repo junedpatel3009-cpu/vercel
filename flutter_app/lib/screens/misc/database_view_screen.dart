@@ -13,26 +13,24 @@ class DatabaseViewScreen extends StatefulWidget {
 class _DatabaseViewScreenState extends State<DatabaseViewScreen> {
   String selectedTable = 'users';
   List<Map<String, dynamic>> tableData = [];
+  bool _isLoading = true;
+  String? _error;
   final List<String> tables = [
     'users',
     'clients',
     'professionals',
-    'job_categories',
+    'categories',
+    'subcategories',
     'jobs',
+    'job_images',
+    'job_documents',
     'proposals',
-    'hired_professionals',
-    'project_milestones',
-    'work_proofs',
     'reviews',
-    'disputes',
     'notifications',
-    'favourite_jobs',
+    'portfolios',
+    'saved_jobs',
     'favourite_professionals',
-    'earnings',
-    'payouts',
     'transactions',
-    'invoices',
-    'verification_documents',
     'otp_verifications',
   ];
 
@@ -43,17 +41,27 @@ class _DatabaseViewScreenState extends State<DatabaseViewScreen> {
   }
 
   Future<void> _fetchData() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final db = await DatabaseHelper().database;
       final data = await db.query(selectedTable);
+      if (!mounted) return;
       setState(() {
         tableData = data;
+        _isLoading = false;
       });
     } catch (e) {
       debugPrint('Error fetching data: $e');
       if (mounted) {
         setState(() {
           tableData = [];
+          _error = 'Could not load $selectedTable: $e';
+          _isLoading = false;
         });
       }
     }
@@ -105,7 +113,11 @@ class _DatabaseViewScreenState extends State<DatabaseViewScreen> {
         ],
       ),
       endDrawer: const SiteDrawer(),
-      body: tableData.isEmpty
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!, textAlign: TextAlign.center)))
+          : tableData.isEmpty
           ? const Center(child: Text('No data found in this table'))
           : SingleChildScrollView(
               scrollDirection: Axis.horizontal,

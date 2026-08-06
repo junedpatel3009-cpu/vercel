@@ -386,11 +386,12 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "GET" && pathname === `${API_PREFIX}/professionals`) {
     const requestedLimit = Number(url.searchParams.get("limit"));
-    const professionals = await getProfessionalUsers(
-      Number.isFinite(requestedLimit) && requestedLimit > 0
-        ? { limit: requestedLimit }
-        : undefined,
-    );
+    // A full directory can be several megabytes and exhaust the Supabase
+    // pooler when multiple mobile screens open at once. Older app builds do
+    // not send a limit, so keep their first response safe as well.
+    const professionals = await getProfessionalUsers({
+      limit: Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50,
+    });
     return json(
       professionals.map((professional) => ({
         id: professional.id,
@@ -711,6 +712,14 @@ async function route(request: Request, url: URL): Promise<Response> {
   }
   if (method === "GET" && pathname === `${API_PREFIX}/client/finance`) {
     const user = currentUser(request, ["CLIENT"]);
+    // Jobs are stored in PostgreSQL in production, while payment processing
+    // still records payment activity locally. Include the job budgets so the
+    // client dashboard reflects projects even before a payment is made.
+    const clientJobs = await getClientJobsByUserId(user.id);
+    const projectBudget = clientJobs.reduce(
+      (total, job) => total + Number(job.budgetMax ?? job.budgetMin ?? 0),
+      0,
+    );
     const payments = db
       .prepare(
         `SELECT Payment.*, COALESCE(ClientJob.title, 'Project payment') AS jobTitle
@@ -728,8 +737,14 @@ async function route(request: Request, url: URL): Promise<Response> {
           COALESCE(SUM(CASE WHEN status='PENDING' THEN amount ELSE 0 END), 0) AS pending
          FROM "Payment" WHERE clientId=?`,
       )
-      .get(user.id);
-    return json({ payments, totals });
+      .get(user.id) as { committed: number; paid: number; pending: number };
+    return json({
+      payments,
+      totals: {
+        ...totals,
+        projectBudget,
+      },
+    });
   }
   if (method === "POST" && pathname === `${API_PREFIX}/payments`) {
     const user = currentUser(request, ["CLIENT"]);

@@ -66,7 +66,7 @@ class _ClientFindProsScreenState extends State<ClientFindProsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.go('/dashboard')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/dashboard')),
         title: const Text('Find professionals', style: TextStyle(color: AppTheme.brandNavy, fontWeight: FontWeight.w800)),
       ),
       body: _loading
