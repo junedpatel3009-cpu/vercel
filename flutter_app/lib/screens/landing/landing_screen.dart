@@ -35,6 +35,10 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Future<void> _loadData() async {
     final user = await AuthService().getUser();
+    if (user?['role'].toString().toLowerCase() == 'professional' && mounted) {
+      context.go('/professional-workspace');
+      return;
+    }
     final cached = await _readDashboardCache(user);
     // Resolve the local session first. Remote dashboard requests can be slow
     // or fail, but neither case means that the user has been logged out.

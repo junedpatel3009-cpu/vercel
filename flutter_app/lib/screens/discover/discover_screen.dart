@@ -21,6 +21,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   bool _isLoading = true;
   bool _verifiedOnly = false;
   bool _ratingOnly = false;
+  bool get _isProfessional => _currentUser?['role'].toString().toLowerCase() == 'professional';
 
   @override
   void initState() {
@@ -36,7 +37,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Future<void> _performSearch({String? query}) async {
     setState(() => _isLoading = true);
     try {
-      if (_currentUser?['role'] == 'professional') {
+      if (_isProfessional) {
         final db = DatabaseHelper();
         _results = await db.getJobs(status: 'active', query: query);
       } else {
@@ -91,10 +92,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     const SizedBox(height: 24),
                     _buildFilterChips(context),
                     const SizedBox(height: 32),
-                    Text('${_results.length} ${_currentUser?['role'] == 'professional' ? 'jobs' : 'professionals'} found', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.brandNavy)),
+                    Text('${_results.length} ${_isProfessional ? 'jobs' : 'professionals'} found', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.brandNavy)),
                     const Text('Based on your current search and location', style: TextStyle(color: AppTheme.textGray, fontSize: 12)),
                     const SizedBox(height: 24),
-                    _currentUser?['role'] == 'professional' ? _buildJobsList(context) : _buildProList(context),
+                    _isProfessional ? _buildJobsList(context) : _buildProList(context),
                     const SizedBox(height: 40),
                     _buildFooter(context),
                     const SizedBox(height: 40),
@@ -130,7 +131,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ),
       title: Text('SERVIO', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
       actions: [
-        if (_currentUser?['role'] != 'professional')
+        if (!_isProfessional)
           ElevatedButton(
             onPressed: () => context.push('/post-job'),
             style: ElevatedButton.styleFrom(
@@ -151,7 +152,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         TextField(
           controller: _searchController,
           decoration: InputDecoration(
-            hintText: _currentUser?['role'] == 'professional' ? 'Search for jobs (e.g. Flutter, Plumbing)' : 'Search for experts (e.g. UI Designer, Plumber)',
+            hintText: _isProfessional ? 'Search for jobs (e.g. Flutter, Plumbing)' : 'Search for experts (e.g. UI Designer, Plumber)',
             prefixIcon: const Icon(Icons.search),
             fillColor: Colors.white,
             filled: true,

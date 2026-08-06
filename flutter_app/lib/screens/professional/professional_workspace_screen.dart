@@ -17,6 +17,7 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
   Map<String, dynamic>? _profile;
   List<Map<String, dynamic>> _applications = [];
   List<Map<String, dynamic>> _transactions = [];
+  List<Map<String, dynamic>> _hireRequests = [];
   bool _loading = true;
 
   @override
@@ -31,6 +32,7 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
         ApiClient.instance.get('/api/v1/profile'),
         ApiClient.instance.getList('/api/v1/professional/jobs/history'),
         ApiClient.instance.get('/api/v1/professional/earnings'),
+        ApiClient.instance.getList('/api/v1/professional/hire-requests'),
       ]);
       final earnings = results[2] as Map<String, dynamic>;
       if (mounted) {
@@ -41,6 +43,7 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
               .whereType<Map>()
               .map((item) => Map<String, dynamic>.from(item))
               .toList();
+          _hireRequests = results[3] as List<Map<String, dynamic>>;
         });
       }
     } on ApiException catch (error) {
@@ -77,13 +80,39 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
       const Text('Your professional stats', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: AppTheme.brandNavy)), const SizedBox(height: 16),
       Row(children: [_metric('$active', 'Active projects', Icons.rocket_launch_outlined, const Color(0xFF0F8C77)), const SizedBox(width: 12), _metric('\$${earned.toStringAsFixed(0)}', 'Total earned', Icons.payments_outlined, const Color(0xFF7C3AED))]), const SizedBox(height: 12),
       Row(children: [_metric('${_applications.length}', 'Applications sent', Icons.description_outlined, AppTheme.brandBlue)]), const SizedBox(height: 24),
+      const Text('Hire requests', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.brandNavy)), const SizedBox(height: 10),
+      if (_hireRequests.isEmpty)
+        const Text('No client hire requests yet.', style: TextStyle(color: AppTheme.textGray))
+      else
+        ..._hireRequests.take(4).map(_hireRequestCard),
+      const SizedBox(height: 24),
       const Text('Quick actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.brandNavy)), const SizedBox(height: 10),
-      ListTile(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), tileColor: Colors.white, leading: const Icon(Icons.work_outline, color: AppTheme.brandBlue), title: const Text('Find available jobs'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/jobs')),
+      ListTile(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), tileColor: Colors.white, leading: const Icon(Icons.work_outline, color: AppTheme.brandBlue), title: const Text('Find available jobs'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/discover')),
       const SizedBox(height: 10), ListTile(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), tileColor: Colors.white, leading: const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.brandBlue), title: const Text('View earnings'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/earnings')),
     ]));
   }
 
   Widget _messagesTab() => Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.forum_outlined, size: 56, color: AppTheme.brandBlue), const SizedBox(height: 15), const Text('Messages', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)), const SizedBox(height: 6), const Text('Keep all client conversations in one place.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textGray)), const SizedBox(height: 18), ElevatedButton.icon(onPressed: () => context.push('/messages'), icon: const Icon(Icons.chat_bubble_outline), label: const Text('Open messages'))])));
+
+  Widget _hireRequestCard(Map<String, dynamic> request) {
+    final status = (request['status'] ?? 'pending').toString().toUpperCase();
+    final pending = status == 'PENDING';
+    return Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text((request['contractTitle'] ?? request['jobTitle'] ?? 'New hire request').toString(), style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.brandNavy)), const SizedBox(height: 4),
+      Text('${request['clientName'] ?? 'Client'} • \$${request['totalAmount'] ?? request['fixedPrice'] ?? 0}', style: const TextStyle(color: AppTheme.textGray, fontSize: 12)), const SizedBox(height: 10),
+      if (pending) Row(children: [Expanded(child: OutlinedButton(onPressed: () => _updateHireRequest(request, 'rejected'), child: const Text('Decline'))), const SizedBox(width: 10), Expanded(child: ElevatedButton(onPressed: () => _updateHireRequest(request, 'accepted'), child: const Text('Accept')))]) else Text(status, style: TextStyle(color: status == 'ACCEPTED' ? const Color(0xFF0F8C77) : AppTheme.textGray, fontWeight: FontWeight.w800, fontSize: 12)),
+    ]));
+  }
+
+  Future<void> _updateHireRequest(Map<String, dynamic> request, String status) async {
+    try {
+      await ApiClient.instance.patch('/api/v1/professional/hire-requests/${request['id']}', data: {'status': status});
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(status == 'accepted' ? 'Hire request accepted.' : 'Hire request declined.')));
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
 
   Widget _infoTab(String name) => ListView(padding: const EdgeInsets.all(20), children: [
     CircleAvatar(radius: 44, backgroundColor: const Color(0xFFEAF0FF), backgroundImage: (_profile?['avatarUrl'] ?? '').toString().startsWith('http') ? NetworkImage(_profile!['avatarUrl'].toString()) : null, child: (_profile?['avatarUrl'] ?? '').toString().startsWith('http') ? null : const Icon(Icons.person_outline, size: 42, color: AppTheme.brandBlue)), const SizedBox(height: 16),

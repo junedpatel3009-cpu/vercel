@@ -48,7 +48,11 @@ import {
   getOrCreateProjectTrackingDetails,
   rateCompletedProject,
 } from "@/lib/project-request-db.server";
-import { createHireContract } from "@/lib/hire-db.server";
+import {
+  createHireContract,
+  getProfessionalHireRequests,
+  updateProfessionalHireContractStatus,
+} from "@/lib/hire-db.server";
 import { getUserNotifications, markUserNotificationsRead } from "@/lib/notification-db.server";
 import {
   getAdminDashboardSnapshot,
@@ -615,6 +619,21 @@ async function route(request: Request, url: URL): Promise<Response> {
   if (method === "GET" && pathname === `${API_PREFIX}/professional/jobs/history`) {
     const user = currentUser(request, ["PROFESSIONAL"]);
     return json(getProfessionalProjectRequests(user.id));
+  }
+  if (method === "GET" && pathname === `${API_PREFIX}/professional/hire-requests`) {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    return json(await getProfessionalHireRequests(user.id));
+  }
+  const professionalHireMatch = match(
+    pathname,
+    new RegExp(`^${API_PREFIX}/professional/hire-requests/([^/]+)$`),
+  );
+  if (professionalHireMatch && method === "PATCH") {
+    const user = currentUser(request, ["PROFESSIONAL"]);
+    const input = parse(z.object({ status: z.enum(["accepted", "rejected"]) }), await body(request));
+    return json(
+      await updateProfessionalHireContractStatus(user.id, professionalHireMatch[1], input.status),
+    );
   }
   if (method === "GET" && pathname === `${API_PREFIX}/professional/earnings`) {
     const user = currentUser(request, ["PROFESSIONAL"]);
