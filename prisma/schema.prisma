@@ -135,6 +135,8 @@ model User {
   address                String?
   professionalCategory   String?
   professionalCity       String?
+  professionalLatitude   Float?
+  professionalLongitude  Float?
   professionalSkillsJson String?
   experienceYears        Int?
   hourlyRate             Int?

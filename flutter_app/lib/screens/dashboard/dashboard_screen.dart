@@ -96,16 +96,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Text('Here is what is happening with your projects today.', style: TextStyle(color: AppTheme.textGray)),
           const SizedBox(height: 20),
           Row(children: [
-            _stat('${metrics.running}', 'Running projects', Icons.rocket_launch_outlined, const Color(0xFF0F8C77)),
+            _stat('${metrics.running}', 'Running projects', Icons.rocket_launch_outlined, const Color(0xFF0F8C77), onTap: _openActiveProject),
             const SizedBox(width: 11),
-            _stat('${metrics.hiring}', 'Waiting to hire', Icons.person_search_outlined, const Color(0xFF2450B8)),
+            _stat('${metrics.hiring}', 'Waiting to hire', Icons.person_search_outlined, const Color(0xFF2450B8), onTap: () => context.push('/jobs')),
           ]),
           const SizedBox(height: 11),
           Row(children: [
-            _stat(_money(metrics.paid), 'Paid to pros', Icons.payments_outlined, const Color(0xFF7C3AED)),
+            _stat(_money(metrics.paid), 'Paid to pros', Icons.payments_outlined, const Color(0xFF7C3AED), onTap: () => context.push('/earnings')),
             const SizedBox(width: 11),
-            _stat(_money(metrics.committed), 'Project budget', Icons.account_balance_wallet_outlined, const Color(0xFFB45309)),
+            _stat(_money(metrics.committed), 'Project budget', Icons.account_balance_wallet_outlined, const Color(0xFFB45309), onTap: () => context.push('/jobs')),
           ]),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _openActiveProject,
+              icon: const Icon(Icons.track_changes_outlined),
+              label: const Text('Track project'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.brandBlue, foregroundColor: Colors.white),
+            ),
+          ),
           const SizedBox(height: 24),
           _latestActivity(metrics),
           const SizedBox(height: 25),
@@ -122,10 +132,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _stat(String value, String label, IconData icon, Color color) => Expanded(child: Container(
+  void _openActiveProject() {
+    final active = _projects.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() == 'ACTIVE').cast<Map<String, dynamic>>().firstOrNull;
+    final project = active?['project'];
+    final trackingId = project is Map ? project['trackingId'] : null;
+    if (trackingId != null) {
+      context.push('/project-track/$trackingId');
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No running project is available to track yet.')));
+  }
+
+  Widget _stat(String value, String label, IconData icon, Color color, {VoidCallback? onTap}) => Expanded(child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
         padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE5EAF2))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color), const SizedBox(height: 14), Text(value, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: color)), const SizedBox(height: 3), Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textGray))]),
-      ));
+      )));
 
   Widget _latestActivity(_Metrics metrics) {
     final active = _projects.where((job) => job['project'] is Map && ((job['project'] as Map)['status'] ?? '').toString().toUpperCase() == 'ACTIVE').cast<Map<String, dynamic>>().firstOrNull;
@@ -203,7 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       const SizedBox(height: 11),
       Text(project == null ? 'No professional hired yet' : 'Working with ${project['professionalName'] ?? 'Professional'}', style: const TextStyle(color: AppTheme.textGray)),
       const SizedBox(height: 13), LinearProgressIndicator(value: progress, minHeight: 6, borderRadius: BorderRadius.circular(10), color: color, backgroundColor: const Color(0xFFE9EEF5)),
-      const SizedBox(height: 9), Row(children: [Icon(Icons.calendar_today_outlined, size: 14, color: color), const SizedBox(width: 5), Text(deadline == null ? 'Deadline not set' : 'Due ${DateFormat.MMMd().format(deadline)}', style: const TextStyle(fontSize: 12, color: AppTheme.textGray)), const Spacer(), TextButton(onPressed: () => context.push('${project != null ? '/project' : '/job'}/${job['id']}'), child: Text(project != null ? 'Open project' : 'Open job'))]),
+      const SizedBox(height: 9), Row(children: [Icon(Icons.calendar_today_outlined, size: 14, color: color), const SizedBox(width: 5), Text(deadline == null ? 'Deadline not set' : 'Due ${DateFormat.MMMd().format(deadline)}', style: const TextStyle(fontSize: 12, color: AppTheme.textGray)), const Spacer(), TextButton(onPressed: () { final trackingId = project?['trackingId']; context.push(trackingId != null ? '/project-track/$trackingId' : '/job/${job['id']}'); }, child: Text(project != null ? 'Track project' : 'Open job'))]),
     ]));
   }
 

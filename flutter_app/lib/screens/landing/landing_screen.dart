@@ -684,7 +684,7 @@ class _LandingScreenState extends State<LandingScreen> {
       {'name': 'Post a Job', 'icon': Icons.add_circle_outline, 'route': '/post-job'},
       {'name': 'Search', 'icon': Icons.search_outlined, 'route': '/discover'},
       {'name': 'Categories', 'icon': Icons.grid_view_outlined, 'route': '/services'},
-      {'name': 'Saved', 'icon': Icons.dashboard, 'route': '/dashboard'},
+      {'name': 'Saved jobs', 'icon': Icons.bookmark_outline, 'route': '/saved-jobs'},
     ];
     return LayoutBuilder(
       builder: (context, constraints) {

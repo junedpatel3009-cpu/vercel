@@ -43,6 +43,9 @@ import {
   getProfessionalTransactions,
   getProfessionalWithdrawals,
   createProfessionalWithdrawalRequest,
+  createProjectMilestone,
+  createProjectRevisionRequest,
+  getOrCreateProjectTrackingDetails,
   rateCompletedProject,
 } from "@/lib/project-request-db.server";
 import { createHireContract } from "@/lib/hire-db.server";
@@ -89,6 +92,8 @@ const profile = z.object({
   address: z.string().trim().max(300).nullable().optional(),
   professionalCategory: z.string().trim().max(120).nullable().optional(),
   professionalCity: z.string().trim().max(120).nullable().optional(),
+  professionalLatitude: z.number().min(-90).max(90).nullable().optional(),
+  professionalLongitude: z.number().min(-180).max(180).nullable().optional(),
   skills: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
   hourlyRate: z.number().int().nonnegative().nullable().optional(),
   serviceRadiusKm: z.number().int().positive().max(1000).nullable().optional(),
@@ -463,6 +468,43 @@ async function route(request: Request, url: URL): Promise<Response> {
         };
       }),
     );
+  }
+  const trackingRouteMatch = match(pathname, new RegExp(`^${API_PREFIX}/project-tracking/(\\d+)$`));
+  if (trackingRouteMatch && method === "GET") {
+    const user = currentUser(request);
+    const tracking = getOrCreateProjectTrackingDetails(user.id, Number(trackingRouteMatch[1]));
+    if (!tracking) throw new ApiError(404, "Project tracking record not found.");
+    return json(tracking);
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/project-tracking/milestones`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const input = parse(
+      z.object({
+        trackingId: z.number().int().positive(),
+        title: z.string().trim().min(3).max(160),
+        description: z.string().trim().max(2000).nullable().optional(),
+        dueDate: z.string().trim().max(40).nullable().optional(),
+      }),
+      await body(request),
+    );
+    return json(createProjectMilestone(user.id, input));
+  }
+  const milestoneRouteMatch = match(pathname, new RegExp(`^${API_PREFIX}/project-tracking/milestones/(\\d+)$`));
+  if (milestoneRouteMatch && method === "PATCH") {
+    const user = currentUser(request);
+    const input = parse(
+      z.object({ status: z.enum(["PENDING", "IN_PROGRESS", "SUBMITTED", "APPROVED", "PAID", "REVISION_REQUESTED"]) }),
+      await body(request),
+    );
+    return json(updateProjectMilestoneStatus(user.id, Number(milestoneRouteMatch[1]), input.status));
+  }
+  if (method === "POST" && pathname === `${API_PREFIX}/project-tracking/revisions`) {
+    const user = currentUser(request, ["CLIENT"]);
+    const input = parse(
+      z.object({ trackingId: z.number().int().positive(), note: z.string().trim().min(3).max(2000) }),
+      await body(request),
+    );
+    return json(createProjectRevisionRequest(user.id, input));
   }
   if (method === "POST" && pathname === `${API_PREFIX}/client/jobs`) {
     const user = currentUser(request, ["CLIENT"]);

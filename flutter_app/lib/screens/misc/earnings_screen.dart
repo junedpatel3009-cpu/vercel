@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_service.dart';
-import '../../core/database/database_helper.dart';
 import '../../core/theme/app_theme.dart';
 
 class EarningsScreen extends StatefulWidget {
@@ -51,12 +50,20 @@ class _EarningsScreenState extends State<EarningsScreen> {
           });
         }
       } else {
-        final db = DatabaseHelper();
-        final transactions = await db.getTransactions(user['id']);
+        final earnings = await ApiClient.instance.get('/api/v1/professional/earnings');
+        final transactions = (earnings['transactions'] as List? ?? [])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        final totalEarnings = transactions.fold<double>(
+          0,
+          (total, transaction) => total + _amount(transaction['amount']),
+        );
         if (mounted) {
           setState(() {
             _user = user;
             _transactions = transactions;
+            _totals = {'earned': totalEarnings};
           });
         }
       }
@@ -135,15 +142,15 @@ class _EarningsScreenState extends State<EarningsScreen> {
       ]);
 
   Widget _buildProfessionalBalance() {
-    final balance = _amount(_user?['wallet_balance']);
+    final earnings = _amount(_totals['earned']);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFF1E3A8A), Color(0xFF1E40AF)]), borderRadius: BorderRadius.circular(26)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('TOTAL BALANCE', style: TextStyle(color: Colors.white.withValues(alpha: .72), fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+        Text('TOTAL EARNINGS', style: TextStyle(color: Colors.white.withValues(alpha: .72), fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
         const SizedBox(height: 8),
-        Text('\$${balance.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 35, fontWeight: FontWeight.w900)),
+        Text('\$${earnings.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 35, fontWeight: FontWeight.w900)),
       ]),
     );
   }
@@ -160,7 +167,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
 
   Widget _buildTransactionItem(Map<String, dynamic> tx) {
     final status = (tx['status'] ?? '').toString().toUpperCase();
-    final isCredit = !_isClient && (tx['type'] ?? '').toString().toUpperCase() == 'CREDIT';
+    final isCredit = !_isClient && (tx['type'] ?? '').toString().toUpperCase() != 'DEBIT';
     final isPaid = status == 'COMPLETED';
     final dateText = (tx['createdAt'] ?? tx['created_at'] ?? '').toString();
     DateTime? date = DateTime.tryParse(dateText);
@@ -176,7 +183,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text((tx['jobTitle'] ?? tx['description'] ?? 'Project payment').toString(), style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text((tx['projectTitle'] ?? tx['jobTitle'] ?? tx['description'] ?? 'Project payment').toString(), style: const TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 3),
           Text(date == null ? status : '${DateFormat.yMMMd().format(date)}  •  $status', style: const TextStyle(color: AppTheme.textGray, fontSize: 12)),
         ])),

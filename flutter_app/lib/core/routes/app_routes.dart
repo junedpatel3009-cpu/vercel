@@ -23,6 +23,8 @@ import '../../screens/admin/admin_screen.dart';
 import '../../screens/misc/earnings_screen.dart';
 import '../../screens/pro/pro_screen.dart';
 import '../../screens/project/project_screen.dart';
+import '../../screens/project/track_project_screen.dart';
+import '../../screens/professional/professional_workspace_screen.dart';
 import '../../screens/job/job_screen.dart';
 import '../../screens/job/jobs_screen.dart';
 import '../../screens/job/saved_jobs_screen.dart';
@@ -84,7 +86,8 @@ class AppRoutes {
       if (location == '/' && !hasSeenWelcome && !isLoggedIn) return '/welcome';
       final needsAuth = state.matchedLocation == '/dashboard' || 
                         state.matchedLocation == '/profile' ||
-                        state.matchedLocation == '/post-job';
+                        state.matchedLocation == '/post-job' ||
+                        state.matchedLocation.startsWith('/project-track/');
 
       // Do not force the login page on app start or after a restored-session
       // race. Guests can browse the home screen and choose to sign in when
@@ -123,9 +126,11 @@ class AppRoutes {
       _route('/verify', (context, state) => const VerifyScreen()),
       _route('/admin', (context, state) => const AdminScreen()),
       _route('/earnings', (context, state) => const EarningsScreen()),
+      _route('/professional-workspace', (context, state) => const ProfessionalWorkspaceScreen()),
       _route('/services/:proId', (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
       _route('/pro/:proId', (context, state) => ProScreen(proId: state.pathParameters['proId']!)),
       _route('/project/:projectId', (context, state) => ProjectScreen(projectId: state.pathParameters['projectId']!)),
+      _route('/project-track/:trackingId', (context, state) => TrackProjectScreen(trackingId: state.pathParameters['trackingId']!)),
       _route('/job/:jobId', (context, state) => JobScreen(jobId: state.pathParameters['jobId'])),
       _route('/db-view', (context, state) => const DatabaseViewScreen()),
     ],
@@ -157,7 +162,7 @@ class _ProfileDestinationState extends State<_ProfileDestination> {
         final role = (snapshot.data?['role'] ?? 'client').toString();
         return role.toLowerCase() == 'client'
             ? const DashboardScreen()
-            : ProfileSetupScreen(role: role);
+            : const ProfessionalWorkspaceScreen();
       },
     );
   }
