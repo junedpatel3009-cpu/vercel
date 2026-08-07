@@ -321,16 +321,13 @@ function Projects() {
   const completedProjects = trackedProjects.filter((project) => project.status === "COMPLETED");
   const visibleHireRequests = hireRequests.filter(
     (request) =>
-      request.status !== "started" &&
       request.status !== "cancelled" &&
       !isExpiredRejectedHireRequest(request, now),
   );
   const acceptedHireRequests = visibleHireRequests.filter(
     (request) => request.status === "accepted",
   );
-  const startedHireRequests = hireRequests.filter(
-    (request) => request.status === "started" && !request.trackingId,
-  );
+  const startedHireRequests = hireRequests.filter((request) => request.status === "started");
   const runningProjectCount = runningProjects.length + startedHireRequests.length;
   const showAllProjectBuckets = activeProjectFilter === null;
   const activeProjectFilterLabel = activeProjectFilter

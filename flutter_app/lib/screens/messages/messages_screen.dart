@@ -151,13 +151,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _openProfessional(String professionalId, String name, String? avatarUrl) {
-    final ids = [_user?['id']?.toString() ?? '', professionalId]..sort();
-    final id = 'direct-${ids.join('-')}';
-    final existing = _conversations.indexWhere((item) => item['id'] == id);
+    final conversationId = _buildConversationId(_user?['id']?.toString() ?? '', professionalId);
+    final existing = _conversations.indexWhere((item) => item['id'] == conversationId);
     final conversation = existing >= 0
         ? _conversations[existing]
         : <String, dynamic>{
-            'id': id,
+            'id': conversationId,
             'otherUserId': professionalId,
             'name': name,
             'avatarUrl': avatarUrl,
@@ -170,7 +169,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
       _unreadCounts.remove(professionalId);
       _typingProfessionalIds.remove(professionalId);
     });
-    _socket?.emit('conversation:join', {'conversationId': id});
+    _socket?.emit('conversation:join', {'conversationId': conversationId});
+  }
+
+  String _buildConversationId(String clientId, String professionalId) {
+    return 'client-$clientId-pro-$professionalId';
   }
 
   void _receiveConversationUpdate(dynamic raw) {

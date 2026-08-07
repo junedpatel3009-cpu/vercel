@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final isComplete = await AuthService().checkProfileCompletion(user['id'], role);
     if (mounted) {
       if (isComplete) {
-        context.go(role.toString().toLowerCase() == 'professional' ? '/professional-workspace' : '/');
+        context.go('/');
       } else {
         context.go('/setup/$role');
       }

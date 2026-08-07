@@ -45,7 +45,12 @@ class _SiteDrawerState extends State<SiteDrawer> {
             title: const Text('Home'),
             onTap: () {
               Navigator.pop(context);
-              context.go('/');
+              final role = _currentUser?['role']?.toString().toLowerCase();
+              if (role == 'professional') {
+                context.go('/professional-workspace');
+              } else {
+                context.go('/');
+              }
             },
           ),
           if (_currentUser != null) ...[
@@ -62,7 +67,12 @@ class _SiteDrawerState extends State<SiteDrawer> {
               title: const Text('Dashboard'),
               onTap: () {
                 Navigator.pop(context);
-                context.push('/dashboard');
+                final role = _currentUser?['role']?.toString().toLowerCase();
+                if (role == 'professional') {
+                  context.go('/professional-workspace');
+                } else {
+                  context.push('/dashboard');
+                }
               },
             ),
           ],

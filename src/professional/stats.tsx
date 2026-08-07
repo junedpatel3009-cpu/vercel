@@ -310,7 +310,6 @@ function ProfessionalStats() {
   );
   const visibleHireRequests = hireRequests.filter(
     (request) =>
-      request.status !== "started" &&
       request.status !== "cancelled" &&
       !isExpiredRejectedHireRequest(request, now),
   );
@@ -318,9 +317,7 @@ function ProfessionalStats() {
   const completedTrackedProjects = trackedProjects.filter(
     (project) => project.status === "COMPLETED",
   );
-  const startedDirectHires = hireRequests.filter(
-    (request) => request.status === "started" && !request.trackingId,
-  );
+  const startedDirectHires = hireRequests.filter((request) => request.status === "started");
   const completedEarnings = transactions
     .filter(
       (transaction) =>

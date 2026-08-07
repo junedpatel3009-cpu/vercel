@@ -240,7 +240,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       
       if (mounted) {
         _showFriendlyMsg('Profile completed successfully!');
-        context.go(widget.role == 'professional' ? '/professional-workspace' : '/');
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {
