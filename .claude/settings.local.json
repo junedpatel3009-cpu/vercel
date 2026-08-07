@@ -9,7 +9,9 @@
       "Bash(netstat -ano)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 3 http://192.168.31.114:5173/)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 3 http://localhost:5173/)",
-      "Bash(systeminfo)"
+      "Bash(systeminfo)",
+      "Bash(./gradlew --stop)",
+      "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; & \"D:\\\\skill-shine-gateway-main-main-main\\\\flutter_app\\\\android\\\\gradlew.bat\" --stop)"
     ]
   }
 }

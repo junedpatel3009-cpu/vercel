@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/auth/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Professional-only profile workspace. Client accounts continue to use the
@@ -122,7 +123,19 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
     Center(child: Text(name.isEmpty ? 'Professional' : name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.brandNavy))), const SizedBox(height: 24),
     _infoRow(Icons.work_outline, 'Category', (_profile?['professionalCategory'] ?? 'Not set').toString()), _infoRow(Icons.location_on_outlined, 'City', (_profile?['professionalCity'] ?? 'Not set').toString()), _infoRow(Icons.payments_outlined, 'Hourly rate', '\$${_profile?['hourlyRate'] ?? 0}/hr'), _infoRow(Icons.email_outlined, 'Email', (_profile?['email'] ?? 'Not set').toString()), const SizedBox(height: 18),
     ElevatedButton.icon(onPressed: () => context.push('/setup/professional'), icon: const Icon(Icons.edit_outlined), label: const Text('Edit my info')),
+    const SizedBox(height: 10),
+    OutlinedButton.icon(
+      onPressed: _logout,
+      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFB42318), side: const BorderSide(color: Color(0xFFB42318))),
+      icon: const Icon(Icons.logout_rounded),
+      label: const Text('Log out'),
+    ),
   ]);
+
+  Future<void> _logout() async {
+    await AuthService().logout();
+    if (mounted) context.go('/');
+  }
 
   Widget _metric(String value, String label, IconData icon, Color color) => Expanded(child: Container(padding: const EdgeInsets.all(17), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color), const SizedBox(height: 13), Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color)), Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textGray))])));
   Widget _infoRow(IconData icon, String label, String value) => Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)), child: Row(children: [Icon(icon, color: AppTheme.brandBlue), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textGray)), Text(value, style: const TextStyle(fontWeight: FontWeight.w700))]))]));

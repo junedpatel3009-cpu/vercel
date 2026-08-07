@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/database/database_helper.dart';
+import '../../core/api/api_client.dart';
 import '../../core/auth/auth_service.dart';
 import '../../widgets/motion.dart';
 
@@ -28,8 +28,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final user = await AuthService().getUser();
       if (user != null) {
-        final db = DatabaseHelper();
-        final notes = await db.getNotifications(user['id']);
+        final notes = await ApiClient.instance.getList('/api/v1/notifications');
         if (mounted) {
           setState(() {
             _notifications = notes;
@@ -49,6 +48,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  Future<void> _markAllRead() async {
+    try {
+      await ApiClient.instance.post('/api/v1/notifications/read', data: const {});
+      await _loadNotifications();
+    } on ApiException catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,7 +66,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         elevation: 0,
         title: Text('Notifications', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
         actions: [
-          TextButton(onPressed: () {}, child: const Text('Mark all read')),
+          TextButton(onPressed: _markAllRead, child: const Text('Mark all read')),
           const SizedBox(width: 8),
         ],
       ),
@@ -93,7 +101,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildNotificationItem(Map<String, dynamic> note) {
-    final isRead = note['is_read'] == 1;
+    final isRead = note['readAt'] != null;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -117,9 +125,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               children: [
                 Text(note['title'] ?? 'Notification', style: TextStyle(fontWeight: isRead ? FontWeight.bold : FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text(note['message'] ?? '', style: const TextStyle(color: AppTheme.textGray, fontSize: 13, height: 1.4)),
+                Text(note['description'] ?? '', style: const TextStyle(color: AppTheme.textGray, fontSize: 13, height: 1.4)),
                 const SizedBox(height: 8),
-                Text(DateFormat.jm().add_yMMMd().format(DateTime.parse(note['created_at'])), style: const TextStyle(color: AppTheme.textGray, fontSize: 10)),
+                Text(DateFormat.jm().add_yMMMd().format(DateTime.parse(note['createdAt'])), style: const TextStyle(color: AppTheme.textGray, fontSize: 10)),
               ],
             ),
           ),

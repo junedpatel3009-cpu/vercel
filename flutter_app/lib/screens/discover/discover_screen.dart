@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/database/database_helper.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/api/api_client.dart';
 import '../../widgets/motion.dart';
@@ -38,8 +37,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     setState(() => _isLoading = true);
     try {
       if (_isProfessional) {
-        final db = DatabaseHelper();
-        _results = await db.getJobs(status: 'active', query: query);
+        final rows = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
+        final normalizedQuery = (query ?? _searchController.text).trim().toLowerCase();
+        _results = rows.map((job) => <String, dynamic>{
+          'id': job['id'],
+          'title': job['title'],
+          'description': job['description'] ?? '',
+          'city': job['locationLabel'] ?? (job['workMode'] == 'REMOTE' ? 'Remote' : ''),
+          'service_type': job['category'],
+          'min_budget': job['budgetMin'],
+        }).where((job) {
+          final text = '${job['title']} ${job['service_type']} ${job['description']}'.toLowerCase();
+          return normalizedQuery.isEmpty || text.contains(normalizedQuery);
+        }).toList();
       } else {
         final rows = await ApiClient.instance.getList('/api/v1/professionals?limit=50', authenticated: false);
       final normalizedQuery = (query ?? _searchController.text).trim().toLowerCase();
