@@ -3,6 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 import { prisma } from "@/lib/prisma";
+import { ApiError } from "@/backend/http.server";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -851,7 +852,7 @@ export async function updateProfessionalHireContractStatus(
     });
 
     if (!result.count) {
-      throw new Error("Only pending hire requests can be updated.");
+      throw new ApiError(409, "Only pending hire requests can be updated.");
     }
 
     const contract = await prisma.hireContract.findFirst({
@@ -884,7 +885,7 @@ export async function updateProfessionalHireContractStatus(
     .run(status, timestamp, contractId, String(professionalId));
 
   if (!result.changes) {
-    throw new Error("Only pending hire requests can be updated.");
+    throw new ApiError(409, "Only pending hire requests can be updated.");
   }
 
   if (status === "accepted") {

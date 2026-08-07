@@ -126,7 +126,7 @@ class _EarningsScreenState extends State<EarningsScreen> {
         ]),
         const SizedBox(height: 22),
         OutlinedButton.icon(
-          onPressed: () => context.push('/jobs'),
+          onPressed: () => context.push('/projects'),
           icon: const Icon(Icons.business_center_outlined),
           label: const Text('View projects'),
           style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),

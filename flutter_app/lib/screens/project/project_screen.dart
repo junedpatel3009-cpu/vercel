@@ -64,7 +64,7 @@ class _ProjectScreenState extends State<ProjectScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text('Project Status', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w900, color: AppTheme.brandNavy)),
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/jobs')),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/projects')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

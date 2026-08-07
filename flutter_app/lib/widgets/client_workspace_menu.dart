@@ -99,7 +99,7 @@ class _ClientWorkspaceMenuState extends State<ClientWorkspaceMenu> {
         _item(dialogContext, Icons.person_outline_rounded, 'My info', '/setup/client'),
         _item(dialogContext, Icons.group_outlined, 'Find pros', '/client/find-pros'),
         _item(dialogContext, Icons.add_circle_outline_rounded, 'Post a job', '/post-job'),
-        _item(dialogContext, Icons.business_center_outlined, 'Projects', '/jobs'),
+        _item(dialogContext, Icons.business_center_outlined, 'Projects', '/projects'),
         _item(dialogContext, Icons.chat_bubble_outline_rounded, 'Messages', '/messages'),
         _item(dialogContext, Icons.account_balance_wallet_outlined, 'Earnings', '/earnings'),
         _item(dialogContext, Icons.description_outlined, 'Reports', '/reports'),

@@ -468,7 +468,7 @@ class _LandingScreenState extends State<LandingScreen> {
           icon: Icons.check_box_outlined,
           bgColor: const Color(0xFF1E40AF),
           textColor: Colors.white,
-          onTap: () => context.push('/jobs'),
+          onTap: () => context.push(isPro ? '/jobs' : '/projects'),
         ),
         const SizedBox(width: 16),
         _buildSummaryCard(
@@ -786,6 +786,7 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildBottomNav(BuildContext context) {
     if (_currentUser == null) return const SizedBox.shrink();
+    final isPro = _currentUser?['role'] == 'professional';
     return Container(
       padding: const EdgeInsets.only(top: 12, bottom: 24),
       decoration: const BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Color(0xFFF1F5F9)))),
@@ -794,7 +795,9 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           _navItem(context, Icons.home, 'HOME', true, '/'),
           _navItem(context, Icons.search, 'SEARCH', false, '/discover'),
-          _navItem(context, Icons.work_outline, 'JOBS', false, '/jobs'),
+          isPro
+              ? _navItem(context, Icons.work_outline, 'JOBS', false, '/jobs')
+              : _navItem(context, Icons.business_center_outlined, 'PROJECTS', false, '/projects'),
           _navItem(context, Icons.chat_bubble_outline, 'MESSAGES', false, '/messages'),
           _navItem(context, Icons.person_outline, 'PROFILE', false, '/profile'),
         ],

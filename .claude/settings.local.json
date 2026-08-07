@@ -1,5 +1,14 @@
 {
   "permissions": {
-    "allow": ["Bash(timeout 2 npm run *)"]
+    "allow": [
+      "Bash(timeout 2 npm run *)",
+      "Bash(dart analyze *)",
+      "Bash(flutter --version)",
+      "Bash(flutter analyze *)",
+      "PowerShell(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch 'Loopback' -and $_.IPAddress -notmatch '^169\\\\.254' } | Select-Object InterfaceAlias, IPAddress)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 3 http://192.168.31.114:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 3 http://localhost:5173/)"
+    ]
   }
 }

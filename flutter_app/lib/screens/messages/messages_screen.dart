@@ -37,6 +37,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   io.Socket? _socket;
   bool _connecting = true;
   bool _otherTyping = false;
+  bool _isProfessional = false;
   Timer? _typingTimer;
 
   String get _socketUrl => _configuredSocketUrl.isEmpty
@@ -57,7 +58,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return;
     }
     _user = user;
-    _loadProfessionals();
+    _isProfessional = user['role'].toString().toLowerCase() == 'professional';
+    if (!_isProfessional) _loadProfessionals();
     final socket = io.io(
       _socketUrl,
       io.OptionBuilder()
@@ -73,6 +75,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
     socket.onConnect((_) {
       socket.emit('notifications:subscribe', {'userId': user['id'], 'role': user['role']});
+      _loadHistory();
       if (mounted) setState(() => _connecting = false);
     });
     socket.onConnectError((_) {
@@ -101,6 +104,50 @@ class _MessagesScreenState extends State<MessagesScreen> {
         }).toList();
       });
     } catch (_) {}
+  }
+
+  /// Restores this user's saved conversations and messages from the
+  /// database so a professional (who never browses a "find pros" style
+  /// directory) sees the clients who already messaged them, and a client
+  /// sees prior chats after reopening the app.
+  void _loadHistory() {
+    final user = _user;
+    final socket = _socket;
+    if (user == null || socket == null) return;
+    socket.emitWithAck('history:load', {'userId': user['id']}, ack: (dynamic raw) {
+      if (!mounted || raw is! Map) return;
+      final conversationsRaw = raw['conversations'];
+      final messagesRaw = raw['messagesByConversation'];
+      if (conversationsRaw is! List) return;
+      final messagesByConversation = messagesRaw is Map ? Map<String, dynamic>.from(messagesRaw) : <String, dynamic>{};
+      setState(() {
+        for (final item in conversationsRaw) {
+          if (item is! Map) continue;
+          final conversation = Map<String, dynamic>.from(item);
+          final id = conversation['id']?.toString();
+          if (id == null) continue;
+          final rawMessages = messagesByConversation[id];
+          final messages = rawMessages is List
+              ? rawMessages.whereType<Map>().map((message) => Map<String, dynamic>.from(message)).toList()
+              : <Map<String, dynamic>>[];
+          final entry = <String, dynamic>{
+            'id': id,
+            'otherUserId': conversation['otherUserId']?.toString(),
+            'name': conversation['otherUserName'] ?? 'Conversation',
+            'avatarUrl': conversation['otherUserAvatarUrl'],
+            'preview': conversation['preview'] ?? '',
+            'messages': messages,
+          };
+          final index = _conversations.indexWhere((item) => item['id'] == id);
+          if (index >= 0) {
+            _conversations[index] = entry;
+          } else {
+            _conversations.add(entry);
+          }
+          socket.emit('conversation:join', {'conversationId': id});
+        }
+      });
+    });
   }
 
   void _openProfessional(String professionalId, String name, String? avatarUrl) {
@@ -229,10 +276,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
     super.dispose();
   }
 
+  /// Professionals never browse a "find professionals" directory here — they
+  /// only see the clients who have already messaged them, sourced from the
+  /// conversations loaded from the database.
+  List<Map<String, dynamic>> get _directorySource => _isProfessional
+      ? _conversations.map((conversation) => <String, dynamic>{
+          'id': conversation['otherUserId'],
+          'name': conversation['name'],
+          'profession': 'Client',
+          'avatarUrl': conversation['avatarUrl'],
+        }).toList()
+      : _professionals;
+
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim().toLowerCase();
-    final pros = _professionals.where((pro) => '${pro['name']} ${pro['profession']}'.toLowerCase().contains(query)).toList();
+    final pros = _directorySource.where((pro) => '${pro['name']} ${pro['profession']}'.toLowerCase().contains(query)).toList();
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
       appBar: AppBar(
@@ -264,19 +323,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
       child: TextField(
         controller: _searchController,
         onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'Search professionals or chats', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+        decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: _isProfessional ? 'Search client chats' : 'Search professionals or chats', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
       ),
     ),
     Expanded(child: ListView(children: [
-      const Padding(
-        padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
-        child: Text('Start a conversation', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF102A5C))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+        child: Text(_isProfessional ? 'Client messages' : 'Start a conversation', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: Color(0xFF102A5C))),
       ),
-      const Padding(
-        padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
-        child: Text('Choose a professional and start chatting instantly.', style: TextStyle(color: AppTheme.textGray, fontSize: 13)),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        child: Text(_isProfessional ? 'Clients who message you will appear here.' : 'Choose a professional and start chatting instantly.', style: const TextStyle(color: AppTheme.textGray, fontSize: 13)),
       ),
-      if (pros.isEmpty) const Padding(padding: EdgeInsets.all(20), child: Text('No professionals found.', style: TextStyle(color: AppTheme.textGray))),
+      if (pros.isEmpty) Padding(padding: const EdgeInsets.all(20), child: Text(_isProfessional ? 'No client messages yet.' : 'No professionals found.', style: const TextStyle(color: AppTheme.textGray))),
       ...pros.map(_professionalTile),
     ])),
   ]),

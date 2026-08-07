@@ -61,6 +61,12 @@ class _SiteHeaderWidgetState extends State<SiteHeaderWidget> {
               onPressed: () {
                 if (canPop) {
                   context.pop();
+                  return;
+                }
+
+                final role = _currentUser?['role']?.toString().toLowerCase();
+                if (role == 'professional') {
+                  context.go('/professional-workspace');
                 } else {
                   context.go('/');
                 }

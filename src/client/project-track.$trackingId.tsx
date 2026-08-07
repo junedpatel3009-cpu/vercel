@@ -2064,6 +2064,38 @@ function MilestoneForm({
   onDueDateChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [daysOffset, setDaysOffset] = useState<number>(() => {
+    if (dueDate) {
+      const today = getDateInputValue(new Date());
+      const diff = Math.round(
+        (new Date(`${dueDate}T00:00:00.000Z`).getTime() - new Date(`${today}T00:00:00.000Z`).getTime()) /
+          86400000,
+      );
+      return diff;
+    }
+
+    return 0;
+  });
+
+  useEffect(() => {
+    if (dueDate) {
+      const today = getDateInputValue(new Date());
+      const diff = Math.round(
+        (new Date(`${dueDate}T00:00:00.000Z`).getTime() - new Date(`${today}T00:00:00.000Z`).getTime()) /
+          86400000,
+      );
+      setDaysOffset(diff);
+    } else {
+      setDaysOffset(0);
+    }
+  }, [dueDate]);
+
+  useEffect(() => {
+    const now = new Date();
+    const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysOffset));
+    onDueDateChange(getDateInputValue(utc));
+  }, [daysOffset]);
+
   return (
     <form className="mt-5 rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/[0.05] via-background to-background p-4 shadow-sm sm:p-5" onSubmit={onSubmit}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -2077,7 +2109,42 @@ function MilestoneForm({
       </div>
       <div className="grid gap-3 lg:grid-cols-12">
         <label className="grid gap-1.5 lg:col-span-7"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Milestone title</span><input value={title} onChange={(event) => onTitleChange(event.target.value)} placeholder={`Milestone ${milestoneNumber} title`} className="h-11 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
-        <label className="grid gap-1.5 lg:col-span-5"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Due date</span><input value={dueDate} onChange={(event) => onDueDateChange(event.target.value)} type="date" min={minDate} max={maxDate} className="h-11 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+        <label className="grid gap-1.5 lg:col-span-5">
+          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Due date</span>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center rounded-xl border border-input bg-background px-2">
+              <button
+                type="button"
+                onClick={() => setDaysOffset((d) => d - 1)}
+                className="h-9 w-9 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted/10"
+                aria-label="Decrease days"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                value={daysOffset}
+                onChange={(e) => {
+                  const v = Number(e.target.value || 0);
+                  if (!Number.isNaN(v)) setDaysOffset(Math.round(v));
+                }}
+                className="mx-2 w-20 appearance-none border-none bg-transparent text-center text-sm outline-none"
+                aria-label="Days from today"
+              />
+              <button
+                type="button"
+                onClick={() => setDaysOffset((d) => d + 1)}
+                className="h-9 w-9 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted/10"
+                aria-label="Increase days"
+              >
+                +
+              </button>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {dueDate ? `Due ${formatScheduleDate(dueDate)}` : `Due ${formatScheduleDate(getDateInputValue(new Date()))}`}
+            </div>
+          </div>
+        </label>
         <label className="grid gap-1.5 lg:col-span-8"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Delivery details</span><textarea value={description} onChange={(event) => onDescriptionChange(event.target.value)} placeholder="Describe the expected result for this milestone" className="min-h-24 w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
         <div className="flex items-end lg:col-span-4">
           <Button type="submit" className="h-11 w-full rounded-xl" disabled={isSaving}>

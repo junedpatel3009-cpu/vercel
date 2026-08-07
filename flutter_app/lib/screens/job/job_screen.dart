@@ -102,7 +102,7 @@ class _JobScreenState extends State<JobScreen> {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             } else {
-              context.go('/jobs');
+              context.go(_currentUser?['role'] == 'client' ? '/projects' : '/jobs');
             }
           },
         ),

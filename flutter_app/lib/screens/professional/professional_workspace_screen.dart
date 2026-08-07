@@ -65,7 +65,10 @@ class _ProfessionalWorkspaceScreenState extends State<ProfessionalWorkspaceScree
           backgroundColor: Colors.white,
           elevation: 0,
           title: Text(name.isEmpty ? 'Professional profile' : name, style: const TextStyle(color: AppTheme.brandNavy, fontWeight: FontWeight.w800)),
-          leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy), onPressed: () => context.canPop() ? context.pop() : context.go('/')),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppTheme.brandNavy),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/dashboard'),
+          ),
           bottom: const TabBar(tabs: [Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Stats'), Tab(icon: Icon(Icons.chat_bubble_outline), text: 'Messages'), Tab(icon: Icon(Icons.person_outline), text: 'My info')]),
         ),
         body: TabBarView(children: [_statsTab(), _messagesTab(), _infoTab(name)]),

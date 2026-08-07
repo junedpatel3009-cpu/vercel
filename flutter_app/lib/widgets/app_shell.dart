@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AppShell extends StatelessWidget {
   final Widget child;
@@ -40,6 +41,18 @@ class AppShell extends StatelessWidget {
   }
 
   Widget _buildBottomNav(BuildContext context) {
+    final routes = ['/dashboard', '/discover', '/jobs', '/messages', '/profile'];
+    String location = '/';
+    try {
+      location = GoRouterState.of(context).matchedLocation;
+    } catch (_) {
+      // fallback to root if matchedLocation isn't available
+      location = '/';
+    }
+
+    int currentIndex = routes.indexWhere((r) => location == r || location.startsWith(r + '/'));
+    if (currentIndex == -1) currentIndex = 0;
+
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       items: const [
@@ -49,8 +62,13 @@ class AppShell extends StatelessWidget {
         BottomNavigationBarItem(icon: Icon(Icons.message), label: 'Messages'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
-      currentIndex: 0,
-      onTap: (i) {},
+      currentIndex: currentIndex,
+      onTap: (i) {
+        final target = routes[i];
+        if (location != target) {
+          context.go(target);
+        }
+      },
     );
   }
 }

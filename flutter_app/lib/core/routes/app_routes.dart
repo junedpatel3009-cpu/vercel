@@ -22,6 +22,7 @@ import '../../screens/misc/verify_screen.dart';
 import '../../screens/admin/admin_screen.dart';
 import '../../screens/misc/earnings_screen.dart';
 import '../../screens/pro/pro_screen.dart';
+import '../../screens/project/client_projects_screen.dart';
 import '../../screens/project/project_screen.dart';
 import '../../screens/project/track_project_screen.dart';
 import '../../screens/professional/professional_workspace_screen.dart';
@@ -106,6 +107,7 @@ class AppRoutes {
       _route('/client/find-pros', (context, state) => const ClientFindProsScreen()),
       _route('/services', (context, state) => const ServicesScreen()),
       _route('/jobs', (context, state) => const JobsScreen()),
+      _route('/projects', (context, state) => const ClientProjectsScreen()),
       _route('/saved-jobs', (context, state) => const SavedJobsScreen()),
       _route('/messages', (context, state) => MessagesScreen(
             initialProfessionalId: state.uri.queryParameters['proId'],

@@ -98,13 +98,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(children: [
             _stat('${metrics.running}', 'Running projects', Icons.rocket_launch_outlined, const Color(0xFF0F8C77), onTap: _openActiveProject),
             const SizedBox(width: 11),
-            _stat('${metrics.hiring}', 'Waiting to hire', Icons.person_search_outlined, const Color(0xFF2450B8), onTap: () => context.push('/jobs')),
+            _stat('${metrics.hiring}', 'Waiting to hire', Icons.person_search_outlined, const Color(0xFF2450B8), onTap: () => context.push('/projects')),
           ]),
           const SizedBox(height: 11),
           Row(children: [
             _stat(_money(metrics.paid), 'Paid to pros', Icons.payments_outlined, const Color(0xFF7C3AED), onTap: () => context.push('/earnings')),
             const SizedBox(width: 11),
-            _stat(_money(metrics.committed), 'Project budget', Icons.account_balance_wallet_outlined, const Color(0xFFB45309), onTap: () => context.push('/jobs')),
+            _stat(_money(metrics.committed), 'Project budget', Icons.account_balance_wallet_outlined, const Color(0xFFB45309), onTap: () => context.push('/projects')),
           ]),
           const SizedBox(height: 14),
           SizedBox(
@@ -121,7 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 25),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             const Text('Current projects', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.brandNavy)),
-            TextButton(onPressed: () => context.push('/jobs'), child: const Text('View all')),
+            TextButton(onPressed: () => context.push('/projects'), child: const Text('View all')),
           ]),
           const SizedBox(height: 10),
           if (_projects.isEmpty) _emptyProjects() else ..._projects.take(3).map(_projectCard),

@@ -257,7 +257,8 @@ export async function createClientJob(userId: number, input: ClientJobInput) {
   // deployments on Vercel that use Supabase/Postgres persist jobs.
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
   if (isPostgres) {
-    const job = await prisma.clientJob.create({
+    try {
+      const job = await prisma.clientJob.create({
       data: {
         userId,
         category: input.category.trim(),
@@ -288,58 +289,66 @@ export async function createClientJob(userId: number, input: ClientJobInput) {
           : undefined,
       },
       include: { user: true, attachments: true },
-    });
+      });
 
-    // Notify admin room via socket server (best-effort, do not fail job creation)
-    try {
-      const socketUrl =
-        process.env.SOCKET_URL || `http://localhost:${process.env.SOCKET_PORT || 4001}`;
-      const sock = clientIo(socketUrl, { autoConnect: false });
-      sock.connect();
-      sock.emit("admin:activity", { reason: "client job posted" });
-      sock.disconnect();
-    } catch (e) {
-      // ignore errors — admin refresh is best-effort
+      // Notify admin room via socket server (best-effort, do not fail job creation)
+      try {
+        const socketUrl =
+          process.env.SOCKET_URL || `http://localhost:${process.env.SOCKET_PORT || 4001}`;
+        const sock = clientIo(socketUrl, { autoConnect: false });
+        sock.connect();
+        sock.emit("admin:activity", { reason: "client job posted" });
+        sock.disconnect();
+      } catch (e) {
+        // ignore errors — admin refresh is best-effort
+      }
+
+      return {
+        ...mapJob(
+          {
+            id: job.id,
+            userId: job.userId,
+            category: job.category,
+            title: job.title,
+            description: job.description,
+            budgetMin: job.budgetMin,
+            budgetMax: job.budgetMax,
+            urgency: job.urgency as unknown as JobUrgency,
+            timingType: job.timingType as unknown as JobTimingType,
+            hourlyRate: job.hourlyRate ?? null,
+            jobDate: job.jobDate ? job.jobDate.toISOString() : null,
+            deadline: job.deadline.toISOString(),
+            workMode: job.workMode as unknown as JobWorkMode,
+            locationLabel: job.locationLabel,
+            locationAddress: job.locationAddress,
+            locationLat: job.locationLat ?? null,
+            locationLng: job.locationLng ?? null,
+            status: job.status as unknown as JobStatus,
+            createdAt: job.createdAt.toISOString(),
+            updatedAt: job.updatedAt.toISOString(),
+          },
+          job.attachments.map((a) => ({
+            id: a.id,
+            jobId: a.jobId,
+            fileName: a.fileName,
+            fileType: a.fileType ?? null,
+            fileSize: a.fileSize ?? null,
+            previewUrl: a.previewUrl ?? null,
+            createdAt: a.createdAt.toISOString(),
+          })),
+        ),
+        clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
+        clientCompanyName: job.user.companyName || null,
+        clientAvatarUrl: job.user.avatarUrl || null,
+      };
+    } catch (error) {
+      console.warn(
+        "Postgres create job failed; falling back to local SQLite implementation.",
+        error instanceof Error ? error.message : error,
+      );
     }
 
-    return {
-      ...mapJob(
-        {
-          id: job.id,
-          userId: job.userId,
-          category: job.category,
-          title: job.title,
-          description: job.description,
-          budgetMin: job.budgetMin,
-          budgetMax: job.budgetMax,
-          urgency: job.urgency as unknown as JobUrgency,
-          timingType: job.timingType as unknown as JobTimingType,
-          hourlyRate: job.hourlyRate ?? null,
-          jobDate: job.jobDate ? job.jobDate.toISOString() : null,
-          deadline: job.deadline.toISOString(),
-          workMode: job.workMode as unknown as JobWorkMode,
-          locationLabel: job.locationLabel,
-          locationAddress: job.locationAddress,
-          locationLat: job.locationLat ?? null,
-          locationLng: job.locationLng ?? null,
-          status: job.status as unknown as JobStatus,
-          createdAt: job.createdAt.toISOString(),
-          updatedAt: job.updatedAt.toISOString(),
-        },
-        job.attachments.map((a) => ({
-          id: a.id,
-          jobId: a.jobId,
-          fileName: a.fileName,
-          fileType: a.fileType ?? null,
-          fileSize: a.fileSize ?? null,
-          previewUrl: a.previewUrl ?? null,
-          createdAt: a.createdAt.toISOString(),
-        })),
-      ),
-      clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
-      clientCompanyName: job.user.companyName || null,
-      clientAvatarUrl: job.user.avatarUrl || null,
-    };
+    
   }
 
   const db = getDatabase();
@@ -476,17 +485,24 @@ export async function getClientJobsByUserId(userId: number) {
   const isPostgres = (process.env.DATABASE_URL || "").startsWith("postgres");
 
   if (isPostgres) {
-    const jobs = await prisma.clientJob.findMany({
-      where: { userId },
-      orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
-      include: { attachments: true },
-    });
+    try {
+      const jobs = await prisma.clientJob.findMany({
+        where: { userId },
+        orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+        include: { attachments: true },
+      });
 
-    if (!jobs.length) {
-      return [];
+      if (!jobs.length) {
+        return [];
+      }
+
+      return jobs.map(mapPrismaClientJob);
+    } catch (error) {
+      console.warn(
+        "Postgres job query failed; returning local SQLite jobs until the connection recovers.",
+        error instanceof Error ? error.message : error,
+      );
     }
-
-    return jobs.map(mapPrismaClientJob);
   }
 
   const db = getDatabase();
@@ -699,22 +715,29 @@ export async function getPublicOpenClientJobById(jobId: number) {
   if (!isPostgres) {
     return getOpenClientJobById(jobId);
   }
+  try {
+    const job = await prisma.clientJob.findFirst({
+      where: { id: jobId, status: "OPEN" as any },
+      include: { user: true, attachments: true },
+    });
 
-  const job = await prisma.clientJob.findFirst({
-    where: { id: jobId, status: "OPEN" as any },
-    include: { user: true, attachments: true },
-  });
+    if (!job) {
+      return null;
+    }
 
-  if (!job) {
-    return null;
+    return {
+      ...mapPrismaClientJob(job),
+      clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
+      clientCompanyName: job.user.companyName || null,
+      clientAvatarUrl: job.user.avatarUrl || null,
+    };
+  } catch (error) {
+    console.warn(
+      "Postgres job lookup failed; falling back to local SQLite lookup.",
+      error instanceof Error ? error.message : error,
+    );
+    return getOpenClientJobById(jobId);
   }
-
-  return {
-    ...mapPrismaClientJob(job),
-    clientName: `${job.user.firstName || ""} ${job.user.lastName || ""}`.trim(),
-    clientCompanyName: job.user.companyName || null,
-    clientAvatarUrl: job.user.avatarUrl || null,
-  };
 }
 
 export function getFavoriteJobIds(userId: number) {

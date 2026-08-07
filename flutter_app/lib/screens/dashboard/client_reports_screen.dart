@@ -113,7 +113,7 @@ class _ClientReportsScreenState extends State<ClientReportsScreen> {
                   _metric('Committed budget', _money(metrics.committed), Icons.account_balance_wallet_outlined, const Color(0xFF0B7285)),
                   _metric('Paid to professionals', _money(metrics.paid), Icons.payments_outlined, const Color(0xFF1E7A45)),
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(onPressed: () => context.push('/jobs'), icon: const Icon(Icons.list_alt_rounded), label: const Text('Open project workspace')),
+                  OutlinedButton.icon(onPressed: () => context.push('/projects'), icon: const Icon(Icons.list_alt_rounded), label: const Text('Open project workspace')),
                 ],
               ),
             ),

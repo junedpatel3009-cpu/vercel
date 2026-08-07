@@ -20,7 +20,7 @@ class ApiClient {
   // Current development computer Wi-Fi address. For a different network or a
   // deployed backend, pass API_BASE_URL with --dart-define when running/building
   // the Android app instead of relying on this local development fallback.
-  static const String _localNetworkBaseUrl = 'http://10.48.108.18:5173';
+  static const String _localNetworkBaseUrl = 'http://192.168.31.114:5173';
 
   String? _accessToken;
   static const Duration _requestTimeout = Duration(seconds: 12);
