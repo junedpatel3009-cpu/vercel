@@ -36,7 +36,9 @@ export function Project() {
   const displayName = viewer ? `${viewer.firstName} ${viewer.lastName}`.trim() : undefined;
   const projectNumber = projectId.replace(/^p-/i, "").toUpperCase() || String(job.id);
   const budgetLabel = formatBudget(job.budgetMin, job.budgetMax, job.timingType);
-  const isTimedOut = job.status === "OPEN" && hasProjectTimedOut(job.deadline);
+  // A deadline only times out an unassigned job. Once it has tracking, work is in progress
+  // and the tracking status is the source of truth instead.
+  const isTimedOut = job.status === "OPEN" && !tracking && hasProjectTimedOut(job.deadline);
   const statusLabel = isTimedOut ? "Time out" : job.status === "OPEN" ? "Active" : formatEnum(job.status);
   const isDraft = job.status === "DRAFT";
 

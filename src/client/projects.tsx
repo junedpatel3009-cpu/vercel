@@ -286,9 +286,9 @@ function Projects() {
   const [ratingDrafts, setRatingDrafts] = useState<
     Record<number, { rating: number; comment: string }>
   >({});
-  // Start on live work. The summary tiles switch the board to the selected
-  // database-backed project state instead of rendering every large section.
   const [activeProjectFilter, setActiveProjectFilter] = useState<ProjectBucketFilter | null>(null);
+  const [isCompletedSectionOpen, setIsCompletedSectionOpen] = useState(false);
+  const [isRequestsSectionOpen, setIsRequestsSectionOpen] = useState(false);
   const [selectedPostedProjectId, setSelectedPostedProjectId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -329,7 +329,10 @@ function Projects() {
   );
   const startedHireRequests = hireRequests.filter((request) => request.status === "started");
   const runningProjectCount = runningProjects.length + startedHireRequests.length;
-  const showAllProjectBuckets = activeProjectFilter === null;
+  const pendingProjectRequestCount = projectRequests.filter((request) => request.status === "PENDING").length;
+  const newDirectHireCount = acceptedHireRequests.length;
+  const completedSectionOpen = activeProjectFilter === "completed" || isCompletedSectionOpen;
+  const requestsSectionOpen = activeProjectFilter === "requests" || isRequestsSectionOpen;
   const activeProjectFilterLabel = activeProjectFilter
     ? getProjectBucketLabel(activeProjectFilter)
     : null;
@@ -610,13 +613,15 @@ function Projects() {
         <ProjectStat
           label="Requests"
           value={projectRequests.length}
+          newCount={pendingProjectRequestCount}
           icon={Send}
           isActive={activeProjectFilter === "requests"}
           onClick={() => toggleProjectFilter("requests")}
         />
         <ProjectStat
           label="Direct hires"
-          value={acceptedHireRequests.length}
+          value={visibleHireRequests.length}
+          newCount={newDirectHireCount}
           icon={Handshake}
           isActive={activeProjectFilter === "direct-hires"}
           onClick={() => toggleProjectFilter("direct-hires")}
@@ -624,23 +629,24 @@ function Projects() {
       </section>
 
       {activeProjectFilterLabel ? (
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-primary/15 bg-primary/[0.05] px-4 py-3 sm:flex-row sm:items-center">
-          <p className="text-sm font-medium">
-            Showing only {activeProjectFilterLabel.toLowerCase()}.
-          </p>
+        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/[0.09] via-primary/[0.04] to-transparent px-5 py-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Project view</p>
+            <p className="mt-1 text-sm font-medium">Showing {activeProjectFilterLabel.toLowerCase()}.</p>
+          </div>
           <Button
             type="button"
             size="sm"
             variant="outline"
             onClick={() => setActiveProjectFilter(null)}
           >
-            Show all projects
+            Close view
           </Button>
         </div>
       ) : null}
 
       <div className="space-y-6">
-        {showAllProjectBuckets || activeProjectFilter === "running" ? (
+        {activeProjectFilter === "running" ? (
           <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
             <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
@@ -693,7 +699,7 @@ function Projects() {
           </section>
         ) : null}
 
-        {showAllProjectBuckets || activeProjectFilter === "direct-hires" ? (
+        {activeProjectFilter === "direct-hires" ? (
           <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
             <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
               <div>
@@ -726,18 +732,26 @@ function Projects() {
           </section>
         ) : null}
 
-        {showAllProjectBuckets || activeProjectFilter === "completed" ? (
+        {activeProjectFilter === "completed" ? (
           <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
-            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
+            <button
+              type="button"
+              onClick={() => setIsCompletedSectionOpen((open) => !open)}
+              className="flex w-full flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 text-left transition-colors hover:bg-primary/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:flex-row sm:items-center sm:px-6"
+              aria-expanded={completedSectionOpen}
+            >
               <div>
                 <h2 className="text-lg font-semibold">Completed projects</h2>
                 <p className="text-sm text-muted-foreground">
                   Finished work ready for review history.
                 </p>
               </div>
-              <Badge variant="secondary">{completedProjects.length} completed</Badge>
-            </div>
-            {completedProjects.length ? (
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary">{completedProjects.length} completed</Badge>
+                <span className="text-sm font-semibold text-primary">{completedSectionOpen ? "Hide" : "View"} →</span>
+              </div>
+            </button>
+            {completedSectionOpen && (completedProjects.length ? (
               <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {completedProjects.map((project) => (
                   <TrackedProjectCard
@@ -766,23 +780,32 @@ function Projects() {
                 title="No completed projects"
                 description="Projects accepted as finished will appear here."
               />
-            )}
+            ))}
           </section>
         ) : null}
 
-        {showAllProjectBuckets || activeProjectFilter === "requests" ? (
+        {activeProjectFilter === "requests" ? (
           <section className="overflow-hidden rounded-3xl border border-border/80 bg-card shadow-sm">
-            <div className="flex flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 sm:flex-row sm:items-center sm:px-6">
+            <button
+              type="button"
+              onClick={() => setIsRequestsSectionOpen((open) => !open)}
+              className="flex w-full flex-col justify-between gap-3 border-b border-border/60 bg-muted/20 p-5 text-left transition-colors hover:bg-primary/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:flex-row sm:items-center sm:px-6"
+              aria-expanded={requestsSectionOpen}
+            >
               <div>
                 <h2 className="text-lg font-semibold">Request projects</h2>
                 <p className="text-sm text-muted-foreground">
                   Professional requests waiting for your action.
                 </p>
               </div>
-              <Badge variant="secondary">{projectRequests.length} requests</Badge>
-            </div>
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary">{projectRequests.length} requests</Badge>
+                {pendingProjectRequestCount ? <Badge className="bg-emerald-600 hover:bg-emerald-600">+{pendingProjectRequestCount} new</Badge> : null}
+                <span className="text-sm font-semibold text-primary">{requestsSectionOpen ? "Hide" : "View"} →</span>
+              </div>
+            </button>
 
-            {projectRequests.length ? (
+            {requestsSectionOpen && (projectRequests.length ? (
               <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
                 {projectRequests.map((request) => (
                   <ProjectRequestCard
@@ -806,7 +829,7 @@ function Projects() {
                 title="No project requests"
                 description="New professional requests will appear here."
               />
-            )}
+            ))}
           </section>
         ) : null}
       </div>
@@ -1698,12 +1721,14 @@ function InfoPill({
 function ProjectStat({
   label,
   value,
+  newCount = 0,
   icon: Icon,
   isActive = false,
   onClick,
 }: {
   label: string;
   value: number;
+  newCount?: number;
   icon: React.ComponentType<{ className?: string }>;
   isActive?: boolean;
   onClick?: () => void;
@@ -1713,13 +1738,29 @@ function ProjectStat({
       type="button"
       onClick={onClick}
       aria-pressed={isActive}
-      className={`border-b border-border/70 p-5 text-left transition-colors hover:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0 ${
-        isActive ? "bg-primary/[0.08]" : "bg-card"
+      className={`group relative min-h-36 border-b border-border/70 p-5 text-left transition-all hover:-translate-y-0.5 hover:bg-primary/[0.05] hover:shadow-lg hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:[&:nth-child(odd)]:border-r lg:border-b-0 lg:border-r lg:last:border-r-0 ${
+        isActive ? "bg-primary/[0.10] shadow-inner shadow-primary/10" : "bg-card"
       }`}
     >
-      <Icon className="h-5 w-5 text-primary" />
-      <p className="mt-4 text-2xl font-semibold">{value}</p>
-      <p className="text-sm text-muted-foreground">{label} projects</p>
+      <div className="flex items-start justify-between gap-3">
+        <span className={`grid h-10 w-10 place-items-center rounded-xl transition-colors ${isActive ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary/15"}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        {newCount > 0 ? (
+          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+            +{newCount} new
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-3xl font-bold tracking-tight">{value}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{label} projects</p>
+        </div>
+        <span className={`text-xs font-semibold ${isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"}`}>
+          {isActive ? "Viewing" : "View"} →
+        </span>
+      </div>
     </button>
   );
 }

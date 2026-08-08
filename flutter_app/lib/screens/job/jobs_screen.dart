@@ -36,8 +36,9 @@ class _JobsScreenState extends State<JobsScreen> {
 
   Future<void> _loadJobs() async {
     try {
-      // This screen is the professional job marketplace only. Clients have
-      // their own dedicated Projects screen and never land here.
+      // Public marketplace of every open client-posted job. Reachable from the
+      // footer for both roles; clients manage their own postings separately
+      // from the Dashboard's Projects link.
       final jobs = await ApiClient.instance.getList('/api/v1/jobs', authenticated: false);
       if (mounted) setState(() => _jobs = jobs);
     } on ApiException catch (error) {

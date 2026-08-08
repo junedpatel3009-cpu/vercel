@@ -312,12 +312,23 @@ io.on("connection", (socket) => {
     saveMessage(message);
 
     io.to(`conversation:${message.conversationId}`).emit("message:new", message);
-    io.to(`user:${message.receiverId}`).emit("conversation:upsert", {
+    const recipientConversation = {
       conversationId: message.conversationId,
       message,
       fromUser: payload.fromUser,
       job: payload.job || "Direct message",
-    });
+    };
+    const senderConversation = {
+      conversationId: message.conversationId,
+      message,
+      fromUser: payload.toUser,
+      job: payload.job || "Direct message",
+    };
+
+    // Notify every signed-in session for both people. This keeps the website
+    // and Flutter app in sync when the same account is open in more than one place.
+    io.to(`user:${message.receiverId}`).emit("conversation:upsert", recipientConversation);
+    io.to(`user:${message.senderId}`).emit("conversation:upsert", senderConversation);
     io.to(`user:${message.receiverId}`).emit("notifications:refresh", { reason: "message" });
     io.to("admin").emit("admin:refresh", { reason: "message activity" });
 

@@ -186,13 +186,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
     setState(() {
       final index = _conversations.indexWhere((item) => item['id'] == id);
       final old = index >= 0 ? _conversations[index] : null;
+      final previousMessages = List<Map<String, dynamic>>.from(old?['messages'] ?? []);
+      final messageId = message['id']?.toString();
+      final alreadyPresent = messageId != null &&
+          previousMessages.any((item) => item['id']?.toString() == messageId);
       final entry = <String, dynamic>{
         'id': id,
         'otherUserId': old?['otherUserId'] ?? from['id']?.toString(),
         'name': old?['name'] ?? from['name'] ?? 'Conversation',
         'avatarUrl': old?['avatarUrl'] ?? from['avatarUrl'],
         'preview': message['body'] ?? 'New message',
-        'messages': [...List<Map<String, dynamic>>.from(old?['messages'] ?? []), message],
+        'messages': alreadyPresent ? previousMessages : [...previousMessages, message],
       };
       if (index >= 0) {
         _conversations[index] = entry;
@@ -487,17 +491,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final body = _messageController.text.trim();
     final receiverId = conversation?['otherUserId']?.toString();
     if (conversation == null || user == null || receiverId == null || receiverId.isEmpty || body.isEmpty) return;
-    final message = <String, dynamic>{'body': body, 'createdAt': DateTime.now().toIso8601String(), 'senderId': user['id']};
-    _socket?.emit('message:send', {
+    _socket?.emitWithAck('message:send', {
       'conversationId': conversation['id'], 'senderId': user['id'], 'receiverId': receiverId, 'body': body, 'kind': 'text',
       'toUser': {'id': receiverId, 'name': conversation['name'], 'avatarUrl': conversation['avatarUrl']},
       'fromUser': {'id': user['id'], 'name': user['full_name'] ?? user['firstName'] ?? 'Servio user', 'avatarUrl': user['profile_image'] ?? user['avatarUrl']},
+    }, ack: (dynamic raw) {
+      if (raw is Map && raw['ok'] == true && raw['message'] is Map) {
+        _receiveConversationUpdate({
+          'conversationId': conversation['id'],
+          'message': Map<String, dynamic>.from(raw['message'] as Map),
+          'fromUser': {'id': receiverId, 'name': conversation['name'], 'avatarUrl': conversation['avatarUrl']},
+        });
+      }
     });
     _stopTyping();
-    setState(() {
-      conversation['messages'] = [...List<Map<String, dynamic>>.from(conversation['messages'] ?? []), message];
-      conversation['preview'] = body;
-    });
     _messageController.clear();
   }
 
