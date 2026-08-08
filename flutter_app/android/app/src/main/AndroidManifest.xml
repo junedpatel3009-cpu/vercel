@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
     <application
-        android:label="servio_flutter"
+        android:label="Servio"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">

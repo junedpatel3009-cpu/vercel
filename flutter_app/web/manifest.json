@@ -1,6 +1,6 @@
 {
-    "name": "servio_flutter",
-    "short_name": "servio_flutter",
+    "name": "Servio",
+    "short_name": "Servio",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

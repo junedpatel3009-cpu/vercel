@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "servio_flutter" "\0"
+            VALUE "FileDescription", "Servio" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "servio_flutter" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "servio_flutter.exe" "\0"
-            VALUE "ProductName", "servio_flutter" "\0"
+            VALUE "ProductName", "Servio" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

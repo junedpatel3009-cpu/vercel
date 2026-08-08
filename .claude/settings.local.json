@@ -12,7 +12,11 @@
       "Bash(systeminfo)",
       "Bash(./gradlew --stop)",
       "PowerShell($env:JAVA_HOME = \"C:\\\\Program Files\\\\Android\\\\Android Studio\\\\jbr\"; & \"D:\\\\skill-shine-gateway-main-main-main\\\\flutter_app\\\\android\\\\gradlew.bat\" --stop)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(ipconfig)",
+      "PowerShell(Get-NetFirewallRule *)",
+      "PowerShell(Get-NetConnectionProfile *)",
+      "Bash(curl *)"
     ]
   }
 }
