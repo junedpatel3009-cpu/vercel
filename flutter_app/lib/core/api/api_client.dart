@@ -17,9 +17,12 @@ class ApiClient {
   static const String _configuredBaseUrl =
       String.fromEnvironment('API_BASE_URL', defaultValue: '');
 
-  // Current development computer Wi-Fi address. For a different network or a
-  // deployed backend, pass API_BASE_URL with --dart-define when running/building
-  // the Android app instead of relying on this local development fallback.
+  // Development computer's current Wi-Fi LAN address. Works for both a physical
+  // device and the Android emulator (which NATs out to the LAN), as long as the
+  // phone is on the same Wi-Fi network and Windows Firewall allows inbound
+  // connections on this port. If your computer's IP changes (run `ipconfig`),
+  // or you deploy the backend elsewhere, pass API_BASE_URL with --dart-define
+  // instead of relying on this fallback.
   static const String _localNetworkBaseUrl = 'http://192.168.31.114:5173';
 
   String? _accessToken;
@@ -66,10 +69,12 @@ class ApiClient {
     );
 
     try {
-      final response = await http.Response.fromStream(await request.send());
+      final response = await http.Response.fromStream(await request.send().timeout(_requestTimeout));
       return _decodeMapResponse(response);
     } on ApiException {
       rethrow;
+    } on TimeoutException {
+      throw ApiException('The server took too long to respond. Please try again.');
     } on Exception {
       throw ApiException('Unable to reach the website server at $baseUrl.');
     }
@@ -185,6 +190,8 @@ class ApiClient {
             .timeout(_requestTimeout),
         _ => throw UnsupportedError('Unsupported HTTP method: $method'),
       };
+    } on TimeoutException {
+      throw ApiException('The server took too long to respond. Please try again.');
     } on Exception catch (_) {
       throw ApiException('Unable to reach the website server at $baseUrl.');
     }

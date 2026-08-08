@@ -58,3 +58,20 @@ export const prisma = globalForPrisma.prisma ?? (await createPrismaClient());
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+// The Supabase pooler backing DATABASE_URL has proven slow/unreliable (see
+// comment above), and callers fall back to a local SQLite mirror on failure.
+// Without a bound, a slow-but-not-erroring query hangs for however long the
+// pooler takes instead of triggering that fallback — race it against a short
+// timeout so callers fail fast and fall back promptly.
+export async function withPostgresTimeout<T>(fn: () => Promise<T>, ms = 4000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Postgres query timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([fn(), timeout]);
+  } finally {
+    clearTimeout(timer!);
+  }
+}

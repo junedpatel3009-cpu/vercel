@@ -117,7 +117,14 @@ class ClientHomeScreen extends StatelessWidget {
               child: const Row(children: [
                 Icon(Icons.search, color: Color(0xFF64748B)),
                 SizedBox(width: 12),
-                Text('Search for experts (e.g. UI Designer, Plumber)', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5)),
+                Expanded(
+                  child: Text(
+                    'Search for experts (e.g. UI Designer, Plumber)',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
               ]),
             ),
           ),

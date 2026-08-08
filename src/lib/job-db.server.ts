@@ -1,6 +1,6 @@
 import path from "node:path";
 import Database from "better-sqlite3";
-import { prisma } from "@/lib/prisma";
+import { prisma, withPostgresTimeout } from "@/lib/prisma";
 import { io as clientIo } from "socket.io-client";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
 
@@ -486,11 +486,13 @@ export async function getClientJobsByUserId(userId: number) {
 
   if (isPostgres) {
     try {
-      const jobs = await prisma.clientJob.findMany({
-        where: { userId },
-        orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
-        include: { attachments: true },
-      });
+      const jobs = await withPostgresTimeout(() =>
+        prisma.clientJob.findMany({
+          where: { userId },
+          orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+          include: { attachments: true },
+        }),
+      );
 
       if (!jobs.length) {
         return [];
@@ -545,11 +547,13 @@ export async function getOpenClientJobs() {
 
   if (isPostgres) {
     try {
-      const rows = await prisma.clientJob.findMany({
-      where: { status: "OPEN" as any },
-      orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
-      include: { user: true, attachments: true },
-    });
+      const rows = await withPostgresTimeout(() =>
+        prisma.clientJob.findMany({
+          where: { status: "OPEN" as any },
+          orderBy: [{ createdAt: "desc" as const }, { id: "desc" as const }],
+          include: { user: true, attachments: true },
+        }),
+      );
 
     // Map Prisma results to the public client job shape used by the rest of the app
       return rows.map((job) => ({
