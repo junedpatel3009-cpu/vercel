@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/database/database_helper.dart';
 import 'package:flutter/services.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/api/api_client.dart';
@@ -52,6 +53,8 @@ class _LandingScreenState extends State<LandingScreen> {
       });
     }
 
+    final db = DatabaseHelper();
+    
     List<Map<String, dynamic>> jobs = [];
     List<Map<String, dynamic>> publicJobs = [];
     List<Map<String, dynamic>> pros = [];
@@ -65,36 +68,11 @@ class _LandingScreenState extends State<LandingScreen> {
           final responses = await Future.wait([
             ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
             ApiClient.instance.getList('/api/v1/jobs'),
-            ApiClient.instance.get("/api/v1/professionals/${user['id']}", authenticated: false),
-            ApiClient.instance.getList('/api/v1/professional/jobs/history'),
-            ApiClient.instance.get('/api/v1/professional/earnings'),
-            ApiClient.instance.getList('/api/v1/professional/hire-requests'),
           ]);
-          publicJobs = responses[0] as List<Map<String, dynamic>>;
-          jobs = responses[1] as List<Map<String, dynamic>>;
-          final profile = responses[2] as Map<String, dynamic>;
-          final applications = responses[3] as List<Map<String, dynamic>>;
-          final earnings = responses[4] as Map<String, dynamic>;
-          final hireRequests = responses[5] as List<Map<String, dynamic>>;
-          final totalEarnings = (earnings['transactions'] as List? ?? [])
-              .whereType<Map>()
-              .fold<double>(0, (total, item) => total + (double.tryParse('${item['amount'] ?? 0}') ?? 0));
-          final activeHires = hireRequests
-              .where((request) => (request['status'] ?? '').toString().toUpperCase() == 'ACCEPTED')
-              .toList();
-          stats = {
-            'jobs_applied': applications.length,
-            'active_jobs': activeHires.length,
-            'total_earnings': totalEarnings,
-            'average_rating': profile['averageRating'] ?? 0,
-            'total_reviews': profile['reviewCount'] ?? 0,
-          };
-          focus = activeHires
-              .map((request) => <String, dynamic>{
-                    'title': request['contractTitle'] ?? request['jobTitle'] ?? 'Active job',
-                    'status': 'in_progress',
-                  })
-              .toList();
+          publicJobs = responses[0];
+          jobs = responses[1];
+          stats = await db.getProfessionalStats(user['id']);
+          focus = await db.getJobs(status: 'assigned');
         } else {
           final responses = await Future.wait([
             ApiClient.instance.getList('/api/v1/jobs', authenticated: false),
@@ -111,11 +89,8 @@ class _LandingScreenState extends State<LandingScreen> {
           stats = {'total_jobs_posted': focus.length, 'active_jobs': activeJobs};
         }
 
-        final notifications = await ApiClient.instance.getList('/api/v1/notifications');
-        if (notifications.isNotEmpty) {
-          final latest = notifications.first;
-          update = {'message': (latest['description'] ?? latest['title'] ?? '').toString()};
-        }
+        final notifications = await db.getNotifications(user['id']);
+        if (notifications.isNotEmpty) update = notifications.first;
         if (update == null && focus.isNotEmpty) {
           final job = focus.first;
           update = {'message': 'Your job "${job['title'] ?? 'Project'}" is ${((job['status'] ?? 'OPEN').toString()).toLowerCase()}.'};
