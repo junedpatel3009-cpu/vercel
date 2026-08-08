@@ -523,8 +523,8 @@ function Projects() {
                       {project.category} · {formatBudget(project.budgetMin, project.budgetMax, project.timingType)}
                     </span>
                   </span>
-                  <Badge variant={project.status === "OPEN" ? "default" : "secondary"}>
-                    {project.status === "OPEN" ? "Active" : formatEnum(project.status)}
+                  <Badge variant={project.status === "OPEN" && hasProjectTimedOut(project.deadline) ? "destructive" : project.status === "OPEN" ? "default" : "secondary"}>
+                    {project.status === "OPEN" && hasProjectTimedOut(project.deadline) ? "Time out" : project.status === "OPEN" ? "Active" : formatEnum(project.status)}
                   </Badge>
                 </button>
               ))}
@@ -536,8 +536,8 @@ function Projects() {
                     <div>
                       <div className="flex flex-wrap gap-2">
                         <Badge variant="secondary">{selectedPostedProject.category}</Badge>
-                        <Badge variant={selectedPostedProject.status === "OPEN" ? "default" : "secondary"}>
-                          {selectedPostedProject.status === "OPEN" ? "Active" : formatEnum(selectedPostedProject.status)}
+                        <Badge variant={selectedPostedProject.status === "OPEN" && hasProjectTimedOut(selectedPostedProject.deadline) ? "destructive" : selectedPostedProject.status === "OPEN" ? "default" : "secondary"}>
+                          {selectedPostedProject.status === "OPEN" && hasProjectTimedOut(selectedPostedProject.deadline) ? "Time out" : selectedPostedProject.status === "OPEN" ? "Active" : formatEnum(selectedPostedProject.status)}
                         </Badge>
                       </div>
                       <h3 className="mt-3 text-xl font-bold tracking-tight">{selectedPostedProject.title}</h3>
@@ -1747,6 +1747,17 @@ function formatEnum(value: string) {
 
 function formatWorkMode(value: string) {
   return value === "ON_SITE" ? "On-site" : formatEnum(value);
+}
+
+function hasProjectTimedOut(deadline: string) {
+  const deadlineDate = new Date(deadline);
+  if (Number.isNaN(deadlineDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+
+  return deadlineDate < today;
 }
 
 function formatDate(value: string) {

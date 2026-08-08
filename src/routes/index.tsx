@@ -6,6 +6,7 @@ import { logoutAction } from "@/lib/logout.server";
 import { getFavoriteJobIds, getOpenClientJobs } from "@/lib/job-db.server";
 import { getProfessionalUsers } from "@/lib/user-db.server";
 import { getProfessionalVerificationByUserId } from "@/lib/pro-verification-db.server";
+import { withPostgresTimeout } from "@/lib/prisma";
 
 const getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
   const user = getCurrentUser();
@@ -15,13 +16,24 @@ const getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
 const getHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const user = getCurrentUser();
   const { getPublishedWebsitePage } = await import("@/lib/website-page-cms.server");
-  const editorPage = await getPublishedWebsitePage("home");
+
+  // These are independent remote reads (CMS content, open jobs, professionals)
+  // fetched in parallel rather than one-at-a-time so the page's latency is
+  // bounded by the slowest single call, not their sum.
+  const [editorPage, openJobs, professionalRows] = await Promise.all([
+    withPostgresTimeout(() => getPublishedWebsitePage("home")).catch((error) => {
+      console.warn("CMS home page fetch timed out/failed; skipping intro content.", error);
+      return undefined;
+    }),
+    getOpenClientJobs(),
+    getProfessionalUsers({ limit: 50 }),
+  ]);
 
   return {
     homeIntroHtml: editorPage ? extractFirstSection(editorPage.content) : null,
-    openJobs: await getOpenClientJobs(),
+    openJobs,
     favoriteJobIds: user ? getFavoriteJobIds(user.id) : [],
-    professionals: (await getProfessionalUsers({ limit: 50 })).map((professional) => ({
+    professionals: professionalRows.map((professional) => ({
       ...professional,
       verification: getProfessionalVerificationByUserId(professional.id),
     })),

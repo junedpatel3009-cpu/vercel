@@ -36,7 +36,8 @@ export function Project() {
   const displayName = viewer ? `${viewer.firstName} ${viewer.lastName}`.trim() : undefined;
   const projectNumber = projectId.replace(/^p-/i, "").toUpperCase() || String(job.id);
   const budgetLabel = formatBudget(job.budgetMin, job.budgetMax, job.timingType);
-  const statusLabel = job.status === "OPEN" ? "Active" : formatEnum(job.status);
+  const isTimedOut = job.status === "OPEN" && hasProjectTimedOut(job.deadline);
+  const statusLabel = isTimedOut ? "Time out" : job.status === "OPEN" ? "Active" : formatEnum(job.status);
   const isDraft = job.status === "DRAFT";
 
   async function handleDeleteProject() {
@@ -77,7 +78,7 @@ export function Project() {
             <Badge variant="secondary">{job.category}</Badge>
             <Badge
               variant={
-                job.status === "OPEN" ? "default" : job.status === "DRAFT" ? "secondary" : "outline"
+                isTimedOut ? "destructive" : job.status === "OPEN" ? "default" : job.status === "DRAFT" ? "secondary" : "outline"
               }
             >
               {statusLabel}
@@ -148,7 +149,7 @@ export function Project() {
           { label: "Deadline", value: formatDate(job.deadline), icon: CalendarDays },
           {
             label: "Tracking",
-            value: isDraft ? "Incomplete" : tracking ? "Active" : "Ready",
+            value: isTimedOut ? "Time out" : isDraft ? "Incomplete" : tracking ? "Active" : "Ready",
             icon: Send,
           },
         ].map((item) => (
@@ -415,6 +416,17 @@ function formatEnum(value: string) {
 
 function formatWorkMode(value: string) {
   return value === "ON_SITE" ? "On-site" : formatEnum(value);
+}
+
+function hasProjectTimedOut(deadline: string) {
+  const deadlineDate = new Date(deadline);
+  if (Number.isNaN(deadlineDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+
+  return deadlineDate < today;
 }
 
 function formatDate(value: string) {

@@ -1,7 +1,7 @@
 import path from "node:path";
 import Database from "better-sqlite3";
 import { getSqliteDatabasePath } from "@/lib/sqlite-database.server";
-import { prisma } from "@/lib/prisma";
+import { prisma, withPostgresTimeout } from "@/lib/prisma";
 
 type BetterSqlite3Database = InstanceType<typeof Database>;
 
@@ -1294,7 +1294,7 @@ export async function getProfessionalUsers(options?: { limit?: number }) {
 
   if (isPostgres) {
     try {
-      const rows = await prisma.user.findMany({
+      const rows = await withPostgresTimeout(() => prisma.user.findMany({
       where: { role: "PROFESSIONAL", isActive: true },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       ...(limit ? { take: limit } : {}),
@@ -1320,7 +1320,7 @@ export async function getProfessionalUsers(options?: { limit?: number }) {
         isVerified: true,
         availabilityStatus: true,
       },
-    });
+    }));
 
       return rows.map((user) => ({
       ...user,
