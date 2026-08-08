@@ -7,7 +7,9 @@ import '../../core/api/api_client.dart';
 import '../../core/auth/biometric_service.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialError});
+
+  final String? initialError;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -25,7 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAutoBiometric();
+    _loginError = widget.initialError;
+    // Landing here specifically because the session expired means biometric
+    // was just tried (or would immediately fail again with the same message
+    // this screen already shows) — don't prompt it a second time.
+    if (widget.initialError == null) _checkAutoBiometric();
   }
 
   Future<void> _checkAutoBiometric() async {

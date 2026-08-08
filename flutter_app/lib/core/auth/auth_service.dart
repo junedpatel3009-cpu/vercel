@@ -111,6 +111,22 @@ class AuthService {
     // We DON'T remove _biometricUserKey here so they can log back in with biometrics
   }
 
+  /// Called when the server rejects the current bearer token as expired or
+  /// invalid (including a restored biometric session older than the server's
+  /// 24h token lifetime). Unlike [logout], this also clears the biometric
+  /// shortcut, since it stores that same now-invalid token — restoring it
+  /// again would only recreate the same failure. The user has to sign in
+  /// with a password once more, which re-saves a fresh biometric shortcut
+  /// via [login].
+  Future<void> handleSessionExpired() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_userKey);
+    await prefs.remove(_accessTokenKey);
+    await prefs.remove(_biometricUserKey);
+    await prefs.remove(_biometricTokenKey);
+    ApiClient.instance.setAccessToken(null);
+  }
+
   Future<bool> isLoggedIn() async {
     final user = await getUser();
     return user != null && user.isNotEmpty;
@@ -174,6 +190,13 @@ class AuthService {
     final user = Map<String, dynamic>.from(result['user'] as Map);
     await saveSession(user, result['accessToken'] as String,
         isProfileComplete: result['isProfileComplete'] == true);
+    // Every full password login carries a fresh access token. If this device
+    // already has biometric login enabled, re-save it under the biometric
+    // keys too so the biometric shortcut keeps working for another 24h
+    // instead of quietly going stale between password logins.
+    if (await isBiometricEnabled()) {
+      await setBiometricPreference(true, await getBiometricType());
+    }
     return getUser();
   }
 

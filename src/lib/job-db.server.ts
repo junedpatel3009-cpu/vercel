@@ -247,7 +247,7 @@ function availableJobPredicate() {
       SELECT 1
       FROM "ProjectTracking"
       WHERE "ProjectTracking".jobId = ClientJob.id
-        AND "ProjectTracking".status = 'ACTIVE'
+        AND "ProjectTracking".status IN ('ACTIVE', 'COMPLETED')
     )
   `;
 }

@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.servio_flutter"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android requires Android SDK 37.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -26,6 +27,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Debug installs go to physical phones here, not the emulator.
+            // Skipping the x86/x86_64 native libs (flutter_webrtc ships large
+            // per-ABI .so files) cuts the merge-native-libs/dex memory spike
+            // that was crashing the low-RAM Gradle daemon during `flutter run`.
+            ndk {
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            }
+        }
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.

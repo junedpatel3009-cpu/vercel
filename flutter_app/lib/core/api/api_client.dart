@@ -31,6 +31,14 @@ class ApiClient {
   final Map<String, _CachedList> _listCache = {};
   final Map<String, Future<List<Map<String, dynamic>>>> _pendingListRequests = {};
 
+  /// Called once when an authenticated request comes back 401 (expired or
+  /// invalid bearer token, including a restored biometric session that has
+  /// outlived the server's 24h token expiry). Wired up in main.dart to clear
+  /// the local session and send the user back to the login screen instead of
+  /// leaving them stuck on a signed-in-looking screen with no data.
+  static void Function()? onUnauthorized;
+  bool _handlingUnauthorized = false;
+
   String get baseUrl {
     // Flutter web runs on this computer; physical phones use the LAN address.
     const fallback = kIsWeb ? 'http://localhost:5173' : _localNetworkBaseUrl;
@@ -38,7 +46,17 @@ class ApiClient {
     return value.replaceFirst(RegExp(r'/$'), '');
   }
 
-  void setAccessToken(String? token) => _accessToken = token;
+  void setAccessToken(String? token) {
+    _accessToken = token;
+    if (token != null && token.trim().isNotEmpty) _handlingUnauthorized = false;
+  }
+
+  void _notifyUnauthorized() {
+    if (_handlingUnauthorized) return;
+    _handlingUnauthorized = true;
+    _accessToken = null;
+    onUnauthorized?.call();
+  }
 
   /// A screen can be opened before the app bootstrap has restored its bearer
   /// token (for example after an Android activity resume). Restore it lazily
@@ -150,6 +168,7 @@ class ApiClient {
       throw ApiException('Unable to reach the website server at $baseUrl.');
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (authenticated && response.statusCode == 401) _notifyUnauthorized();
       final error = decoded is Map<String, dynamic> ? decoded['error'] : null;
       throw ApiException(
         error is Map ? (error['message'] ?? 'Request failed').toString() : 'Request failed',
@@ -196,14 +215,15 @@ class ApiClient {
       throw ApiException('Unable to reach the website server at $baseUrl.');
     }
 
-    final result = _decodeMapResponse(response);
+    final result = _decodeMapResponse(response, authenticated: authenticated);
     if (method != 'GET') _listCache.clear();
     return result;
   }
 
-  Map<String, dynamic> _decodeMapResponse(http.Response response) {
+  Map<String, dynamic> _decodeMapResponse(http.Response response, {bool authenticated = true}) {
     final decoded = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (authenticated && response.statusCode == 401) _notifyUnauthorized();
       final error = decoded is Map ? decoded['error'] : null;
       final message = error is Map
           ? (error['message'] ?? 'Request failed').toString()

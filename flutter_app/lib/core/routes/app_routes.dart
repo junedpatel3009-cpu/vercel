@@ -100,7 +100,11 @@ class AppRoutes {
       _route('/', (context, state) => const LandingScreen()),
       _route('/welcome', (context, state) => const WelcomeScreen()),
       _route('/setup/:role', (context, state) => ProfileSetupScreen(role: state.pathParameters['role']!)),
-      _route('/login', (context, state) => const LoginScreen()),
+      _route('/login', (context, state) => LoginScreen(
+        initialError: state.uri.queryParameters['sessionExpired'] == '1'
+            ? 'Your session has expired. Please sign in again.'
+            : null,
+      )),
       _route('/signup', (context, state) => const SignupScreen()),
       _route('/dashboard', (context, state) => const DashboardScreen()),
       _route('/reports', (context, state) => const ClientReportsScreen()),

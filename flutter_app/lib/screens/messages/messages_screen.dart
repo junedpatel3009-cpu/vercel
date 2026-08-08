@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_service.dart';
 import '../../core/theme/app_theme.dart';
+import 'call_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   final String? initialProfessionalId;
@@ -38,7 +40,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _connecting = true;
   bool _otherTyping = false;
   bool _isProfessional = false;
+  bool _inCall = false;
   Timer? _typingTimer;
+  static const _uuid = Uuid();
 
   String get _socketUrl => _configuredSocketUrl.isEmpty
       ? '${ApiClient.instance.baseUrl.replaceFirst(RegExp(r':5173$'), '')}:4001'
@@ -84,6 +88,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     socket.on('conversation:upsert', _receiveConversationUpdate);
     socket.on('typing:start', _receiveTypingStart);
     socket.on('typing:stop', _receiveTypingStop);
+    socket.on('call:incoming', _handleIncomingCall);
     _socket = socket;
     if (widget.initialProfessionalId != null) {
       _openProfessional(widget.initialProfessionalId!, widget.initialProfessionalName ?? 'Professional', widget.initialProfessionalAvatar);
@@ -251,6 +256,83 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  /// Fires whenever anyone calls this user, from the website or another
+  /// device, regardless of which conversation is currently open here.
+  void _handleIncomingCall(dynamic raw) {
+    if (raw is! Map || !mounted || _inCall) return;
+    final payload = Map<String, dynamic>.from(raw);
+    final callId = payload['callId']?.toString();
+    final conversationId = payload['conversationId']?.toString();
+    final fromUserId = payload['fromUserId'];
+    final offer = payload['offer'];
+    final user = _user;
+    if (callId == null || conversationId == null || fromUserId == null || offer is! Map || user == null) {
+      return;
+    }
+    _openCallScreen(
+      callId: callId,
+      conversationId: conversationId,
+      peerUserId: fromUserId,
+      mode: payload['mode'] == 'video' ? 'video' : 'voice',
+      initialStatus: 'incoming',
+      peerName: (payload['fromName'] ?? 'Someone').toString(),
+      peerAvatarUrl: payload['fromAvatarUrl']?.toString(),
+      offer: Map<String, dynamic>.from(offer),
+    );
+  }
+
+  void _startCall(String mode) {
+    final conversation = _selectedConversation;
+    final user = _user;
+    final peerUserId = conversation?['otherUserId'];
+    if (conversation == null || user == null || peerUserId == null || _inCall) return;
+    _openCallScreen(
+      callId: _uuid.v4(),
+      conversationId: conversation['id'].toString(),
+      peerUserId: peerUserId,
+      mode: mode,
+      initialStatus: 'outgoing',
+      peerName: (conversation['name'] ?? 'Servio user').toString(),
+      peerAvatarUrl: conversation['avatarUrl']?.toString(),
+    );
+  }
+
+  Future<void> _openCallScreen({
+    required String callId,
+    required String conversationId,
+    required dynamic peerUserId,
+    required String mode,
+    required String initialStatus,
+    required String peerName,
+    String? peerAvatarUrl,
+    Map<String, dynamic>? offer,
+  }) async {
+    final user = _user;
+    final socket = _socket;
+    if (user == null || socket == null) return;
+    setState(() => _inCall = true);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CallScreen(
+          socket: socket,
+          callId: callId,
+          conversationId: conversationId,
+          selfUserId: user['id'],
+          peerUserId: peerUserId,
+          mode: mode,
+          initialStatus: initialStatus,
+          peerName: peerName,
+          selfName: (user['full_name'] ?? user['firstName'] ?? 'Servio user').toString(),
+          peerAvatarUrl: peerAvatarUrl,
+          selfAvatarUrl: (user['profile_image'] ?? user['avatarUrl'])?.toString(),
+          offer: offer,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+    if (mounted) setState(() => _inCall = false);
+  }
+
   void _sendTyping() {
     final conversation = _selectedConversation;
     final user = _user;
@@ -301,13 +383,63 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final pros = _directorySource.where((pro) => '${pro['name']} ${pro['profession']}'.toLowerCase().contains(query)).toList();
     return Scaffold(
       backgroundColor: AppTheme.bgLight,
-      appBar: AppBar(
-        title: const Text('Messages'),
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : context.go('/')),
-        actions: [Padding(padding: const EdgeInsets.only(right: 16), child: Center(child: _statusChip()))],
-      ),
+      appBar: _selectedConversation == null ? _directoryAppBar() : _chatAppBar(_selectedConversation!),
       body: _selectedConversation == null ? _directory(pros) : _chat(),
     );
+  }
+
+  PreferredSizeWidget _directoryAppBar() => AppBar(
+    title: const Text('Messages'),
+    leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).canPop() ? Navigator.pop(context) : context.go('/')),
+    actions: [Padding(padding: const EdgeInsets.only(right: 16), child: Center(child: _statusChip()))],
+  );
+
+  PreferredSizeWidget _chatAppBar(Map<String, dynamic> conversation) => AppBar(
+    titleSpacing: 0,
+    leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _selectedConversation = null)),
+    title: Row(children: [
+      CircleAvatar(radius: 18, backgroundImage: _avatar(conversation['avatarUrl']), child: _avatar(conversation['avatarUrl']) == null ? const Icon(Icons.person_outline, size: 20) : null),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(conversation['name'] ?? 'Conversation', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            Text(_otherTyping ? 'Typing...' : 'Active now', style: TextStyle(fontSize: 12, color: _otherTyping ? AppTheme.brandBlue : const Color(0xFF16A34A))),
+          ],
+        ),
+      ),
+    ]),
+    actions: [
+      IconButton(onPressed: () => _startCall('voice'), icon: const Icon(Icons.call_outlined)),
+      IconButton(onPressed: () => _startCall('video'), icon: const Icon(Icons.videocam_outlined)),
+      PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert),
+        onSelected: (value) => _handleChatMenu(value, conversation),
+        itemBuilder: (context) => [
+          if (!_isProfessional) const PopupMenuItem(value: 'profile', child: Text('View profile')),
+          const PopupMenuItem(value: 'clear', child: Text('Clear chat')),
+        ],
+      ),
+      const SizedBox(width: 4),
+    ],
+  );
+
+  void _handleChatMenu(String value, Map<String, dynamic> conversation) {
+    switch (value) {
+      case 'profile':
+        final proId = conversation['otherUserId']?.toString();
+        if (proId != null) context.push('/pro/$proId');
+        break;
+      case 'clear':
+        setState(() {
+          conversation['messages'] = <Map<String, dynamic>>[];
+          final index = _conversations.indexWhere((item) => item['id'] == conversation['id']);
+          if (index >= 0) _conversations[index] = conversation;
+        });
+        break;
+    }
   }
 
   Widget _statusChip() => Container(
@@ -408,7 +540,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final conversation = _selectedConversation!;
     final messages = List<Map<String, dynamic>>.from(conversation['messages'] ?? []);
     return Column(children: [
-      _chatHeader(conversation),
       Expanded(child: DecoratedBox(
         decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFF8FBFF), Color(0xFFEAF2FF)])),
         child: messages.isEmpty ? _emptyChat(conversation) : ListView.builder(padding: const EdgeInsets.all(18), itemCount: messages.length, itemBuilder: (_, index) => _bubble(messages[index])),
@@ -418,19 +549,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
       _composer(),
     ]);
   }
-
-  Widget _chatHeader(Map<String, dynamic> conversation) => Container(
-    padding: const EdgeInsets.fromLTRB(10, 8, 14, 10),
-    color: Colors.white,
-    child: Row(children: [
-      IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => setState(() => _selectedConversation = null)),
-      CircleAvatar(backgroundImage: _avatar(conversation['avatarUrl']), child: _avatar(conversation['avatarUrl']) == null ? const Icon(Icons.person_outline) : null),
-      const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(conversation['name'] ?? 'Conversation', style: const TextStyle(fontWeight: FontWeight.w800)), Text(_otherTyping ? 'Typing...' : 'Active now', style: TextStyle(fontSize: 12, color: _otherTyping ? AppTheme.brandBlue : const Color(0xFF16A34A)))])),
-      IconButton(onPressed: () => _comingSoon('Voice calls'), icon: const Icon(Icons.call_outlined)),
-      IconButton(onPressed: () => _comingSoon('Video calls'), icon: const Icon(Icons.videocam_outlined)),
-    ]),
-  );
 
   Widget _emptyChat(Map<String, dynamic> conversation) => Center(child: Padding(
     padding: const EdgeInsets.all(30),

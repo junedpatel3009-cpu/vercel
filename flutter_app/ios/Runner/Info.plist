@@ -49,6 +49,10 @@
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Servio needs Face ID access to allow you to log in securely.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Servio needs camera access for video calls with professionals and clients.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Servio needs microphone access for voice and video calls.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
